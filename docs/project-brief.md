@@ -54,8 +54,10 @@ The system automates **existing** shutters — it does not lift them, only rotat
 - Slats: **11 per panel**
 - Slat height: **~75 mm (3")**
 - Material: lightweight wood or PVC blades, plastic tilt linkage
-- **One vertical tilt rod at the edge of the frame** links all 11 slats; moving it rotates every
-  slat simultaneously.
+- **Each slat pivots about its centre** (pinned into the frame stiles). **One vertical tilt rod at
+  the edge of the frame** links to a point just ahead of each pivot, so lifting/lowering the rod
+  rotates all 11 slats together about their centres — the rod moves at one end; the slats turn about
+  their middles.
 
 Because the actuator only overcomes slat-rotation friction (not panel weight), the required force
 is low — expected **< 1 kg** at the tilt rod. This makes a micro servo entirely adequate.

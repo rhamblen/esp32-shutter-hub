@@ -1,63 +1,131 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" font-family="Segoe UI, Arial, sans-serif">
-  <rect x="0" y="0" width="760" height="480" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="Segoe UI, Arial, sans-serif">
+  <rect x="0" y="0" width="940" height="600" fill="#ffffff"/>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
   <style>
-    .tb  { fill:#1c2430; font-size:15px; font-weight:bold; }
-    .t   { fill:#1c2430; font-size:13px; }
-    .ts  { fill:#4a5568; font-size:12px; }
-    .dim { fill:#b23; font-size:12px; font-weight:bold; }
-    .metal { fill:#c9d2e0; stroke:#5a6b85; stroke-width:1.5; }
+    .title { fill:#1c2430; font-size:19px; font-weight:bold; }
+    .sub   { fill:#1f4e9c; font-size:15px; font-weight:bold; }
+    .t     { fill:#1c2430; font-size:13px; }
+    .ts    { fill:#4a5568; font-size:12.5px; }
+    .dim   { fill:#b23; font-size:13px; font-weight:bold; }
     .servo { fill:#eaf1ff; stroke:#1f4e9c; stroke-width:2; }
-    .rod  { stroke:#333; stroke-width:5; stroke-linecap:round; }
-    .arm  { stroke:#3f8a3f; stroke-width:6; stroke-linecap:round; }
-    .horn { stroke:#c07a2a; stroke-width:6; stroke-linecap:round; }
-    .slat { stroke:#8a6a3f; stroke-width:6; stroke-linecap:round; }
-    .dimline { stroke:#b23; stroke-width:1; }
+    .metal { fill:#c9d2e0; stroke:#5a6b85; stroke-width:1.5; }
+    .horn  { stroke:#c07a2a; stroke-width:6; stroke-linecap:round; }
+    .rod   { stroke:#555; stroke-width:5; stroke-linecap:round; }
+    .arm   { stroke:#3f8a3f; stroke-width:6; stroke-linecap:round; }
+    .slat  { stroke:#8a6a3f; stroke-width:8; stroke-linecap:round; }
+    .link  { stroke:#888; stroke-width:3; }
+    .lead  { stroke:#b23; stroke-width:1; }
+    .guide { stroke:#b0b8c4; stroke-width:1.5; stroke-dasharray:4 4; }
+    .arr   { stroke:#333; stroke-width:2.5; fill:none; }
   </style>
 
-  <text x="380" y="30" text-anchor="middle" class="tb" font-size="18">Actuator Linkage Geometry (2:1 mechanical advantage)</text>
+  <text x="470" y="32" text-anchor="middle" class="title">Actuator &amp; Shutter Tilt Mechanism</text>
+  <line x1="468" y1="52" x2="468" y2="470" stroke="#d8dee8" stroke-width="1.5"/>
 
-  <!-- Servo body -->
-  <rect class="servo" x="70" y="300" width="120" height="70" rx="6"/>
-  <text x="130" y="330" text-anchor="middle" class="t">MG90D</text>
-  <text x="130" y="348" text-anchor="middle" class="ts">servo</text>
+  <!-- ============ PANEL 1 : servo leverage ============ -->
+  <text x="235" y="72" text-anchor="middle" class="sub">1 · Servo leverage (2:1)</text>
 
-  <!-- Servo output shaft + horn (10mm radius) -->
-  <circle cx="130" cy="300" r="6" fill="#c07a2a"/>
-  <line class="horn" x1="130" y1="300" x2="180" y2="230"/>
-  <circle cx="180" cy="230" r="6" fill="#333"/>
-  <text x="118" y="272" class="dim" text-anchor="end">horn 10 mm</text>
-  <text x="70" y="392" class="ts">horn options: 8 / 10 / 12 mm</text>
+  <!-- servo -->
+  <rect class="servo" x="70" y="360" width="120" height="72" rx="6"/>
+  <text x="130" y="392" text-anchor="middle" class="t">MG90D</text>
+  <text x="130" y="411" text-anchor="middle" class="ts">digital servo</text>
+  <circle cx="130" cy="360" r="5" fill="#c07a2a"/>
 
-  <!-- Pushrod (M2 x 50, hole-to-hole 68-78mm) -->
-  <line class="rod" x1="180" y1="230" x2="470" y2="180"/>
-  <text x="300" y="192" class="dim" transform="rotate(-9 300 192)">M2 × 50 pushrod · hole-to-hole 68–78 mm</text>
+  <!-- horn -->
+  <line class="horn" x1="130" y1="360" x2="180" y2="320"/>
+  <circle cx="180" cy="320" r="5" fill="#333"/>
+  <line class="lead" x1="152" y1="342" x2="96" y2="316"/>
+  <text x="92" y="313" text-anchor="end" class="dim">horn 10 mm</text>
 
-  <!-- Shutter arm (20mm) on tilt shaft -->
-  <circle cx="520" cy="250" r="9" class="metal"/>
-  <line class="arm" x1="520" y1="250" x2="470" y2="180"/>
-  <circle cx="470" cy="180" r="6" fill="#333"/>
-  <text x="500" y="215" class="dim" text-anchor="start">arm 20 mm</text>
-  <text x="470" y="300" class="ts">arm holes: 15 / 20 / 25 mm</text>
+  <!-- pushrod -->
+  <line class="rod" x1="180" y1="320" x2="330" y2="250"/>
+  <text x="150" y="212" class="t">M2 × 50 pushrod</text>
+  <text x="150" y="230" class="ts">(hole-to-hole 68–78 mm)</text>
+  <line class="lead" x1="205" y1="235" x2="252" y2="285"/>
 
-  <!-- Tilt shaft down to slats -->
-  <line class="rod" x1="520" y1="250" x2="520" y2="330" stroke="#555" stroke-width="4"/>
-  <text x="532" y="300" class="ts">tilt rod (frame edge)</text>
+  <!-- shutter arm on tilt-rod pivot -->
+  <line class="arm" x1="370" y1="305" x2="330" y2="250"/>
+  <circle cx="370" cy="305" r="6" class="metal"/>
+  <line class="lead" x1="352" y1="278" x2="392" y2="266"/>
+  <text x="396" y="270" class="dim">arm 20 mm</text>
 
-  <!-- Slats (rotated) -->
+  <!-- tilt rod up -->
+  <line class="rod" x1="370" y1="305" x2="370" y2="168"/>
+  <path class="arr" d="M370,168 l0,-2" marker-end="url(#ah)"/>
+  <path class="arr" d="M370,180 L370,158" marker-end="url(#ah)"/>
+  <text x="382" y="180" class="t">to tilt rod</text>
+
+  <!-- panel 1 notes -->
+  <text x="40" y="498" class="ts">Horn (8/10/12 mm) drives the shutter arm (15/20/25 mm) through the pushrod.</text>
+  <text x="40" y="518" class="ts">Start 10 : 20 → 2:1 — half the force at the servo, double the travel.</text>
+  <text x="40" y="538" class="ts">~90° of servo ≈ 8 mm arm movement: enough for the full slat range.</text>
+
+  <!-- ============ PANEL 2 : slat tilt, side view ============ -->
+  <text x="702" y="72" text-anchor="middle" class="sub">2 · How the slats tilt (side view)</text>
+
+  <!-- centre-pivot guide -->
+  <line class="guide" x1="775" y1="118" x2="775" y2="432"/>
+
+  <!-- tilt rod (vertical, at frame edge) -->
+  <line class="rod" x1="690" y1="120" x2="690" y2="452"/>
+  <text x="500" y="146" class="t">tilt rod</text>
+  <text x="500" y="164" class="ts">(edge of frame)</text>
+  <line class="lead" x1="558" y1="150" x2="686" y2="140" stroke="#8a94a6"/>
+
+  <!-- up/down motion arrow -->
+  <path class="arr" d="M645,205 L645,365" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <text x="632" y="275" text-anchor="end" class="t">rod lifts</text>
+  <text x="632" y="293" text-anchor="end" class="t">/ lowers</text>
+
+  <!-- slats: pivot at centre (x=775), tilted; link ahead of pivot to the rod -->
   <g>
-    <line class="slat" x1="560" y1="120" x2="700" y2="132"/>
-    <line class="slat" x1="560" y1="150" x2="700" y2="162"/>
-    <line class="slat" x1="560" y1="180" x2="700" y2="192"/>
-    <line class="slat" x1="560" y1="210" x2="700" y2="222"/>
-    <line class="slat" x1="560" y1="240" x2="700" y2="252"/>
+    <!-- slat rows -->
+    <g>
+      <line class="slat" x1="723" y1="132" x2="827" y2="168"/>
+      <circle cx="775" cy="150" r="5" fill="#5a4a2a"/>
+      <line class="link" x1="742" y1="140" x2="690" y2="140"/>
+    </g>
+    <g>
+      <line class="slat" x1="723" y1="196" x2="827" y2="232"/>
+      <circle cx="775" cy="214" r="5" fill="#5a4a2a"/>
+      <line class="link" x1="742" y1="204" x2="690" y2="204"/>
+    </g>
+    <g>
+      <line class="slat" x1="723" y1="260" x2="827" y2="296"/>
+      <circle cx="775" cy="278" r="5" fill="#5a4a2a"/>
+      <line class="link" x1="742" y1="268" x2="690" y2="268"/>
+    </g>
+    <g>
+      <line class="slat" x1="723" y1="324" x2="827" y2="360"/>
+      <circle cx="775" cy="342" r="5" fill="#5a4a2a"/>
+      <line class="link" x1="742" y1="332" x2="690" y2="332"/>
+    </g>
+    <g>
+      <line class="slat" x1="723" y1="388" x2="827" y2="424"/>
+      <circle cx="775" cy="406" r="5" fill="#5a4a2a"/>
+      <line class="link" x1="742" y1="396" x2="690" y2="396"/>
+    </g>
   </g>
-  <line x1="560" y1="110" x2="560" y2="340" stroke="#8a6a3f" stroke-width="3"/>
-  <text x="630" y="290" text-anchor="middle" class="ts">11 slats / panel (~450 mm wide)</text>
 
-  <!-- Motion note -->
-  <g transform="translate(70,410)">
-    <text x="0" y="0" class="t" font-weight="bold">Motion budget</text>
-    <text x="0" y="20" class="ts">Servo ~90° with a 10 mm horn ≈ 16 mm pushrod travel → ≈ 8 mm at the 20 mm arm — enough for full slat tilt.</text>
-    <text x="0" y="38" class="ts">2:1 ratio → half the force at the servo, double the travel at the rod. Longer arm = more torque; shorter arm = more travel.</text>
-  </g>
+  <!-- rotation arc about a centre pivot -->
+  <path class="arr" d="M806,140 A22 22 0 0 0 782,124" marker-end="url(#ah)"/>
+
+  <!-- callouts -->
+  <text x="842" y="150" class="t">slat</text>
+  <line class="lead" x1="838" y1="146" x2="820" y2="160" stroke="#8a94a6"/>
+
+  <text x="842" y="286" class="t">centre</text>
+  <text x="842" y="304" class="t">pivot</text>
+  <line class="lead" x1="838" y1="284" x2="782" y2="278" stroke="#8a94a6"/>
+
+  <text x="775" y="452" text-anchor="middle" class="ts">centre-pivot line</text>
+
+  <!-- panel 2 notes -->
+  <text x="490" y="498" class="ts">Each slat is pinned at its CENTRE to the frame and rotates about that point.</text>
+  <text x="490" y="518" class="ts">The tilt rod links just ahead of each pivot, so raising / lowering the rod</text>
+  <text x="490" y="538" class="ts">turns all 11 slats together — the rod lifts at one end; slats rotate about their middles.</text>
 </svg>
