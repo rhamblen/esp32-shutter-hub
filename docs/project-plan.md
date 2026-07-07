@@ -10,6 +10,7 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | Phase | Version | Title                          | Status |
 | ----- | ------- | ------------------------------ | ------ |
 | 0     | —       | Mechanical proving / force test| ☐      |
+| S     | v0.0.1  | Firmware framework + OTA scaffold | ☑   |
 | 1     | v0.1.0  | Bench bring-up (1 servo)       | ☐      |
 | 2     | v0.2.0  | Web UI + calibration           | ☐      |
 | 3     | v0.3.0  | WiFiManager + mDNS + OTA       | ☐      |
@@ -19,6 +20,23 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
 
 Documentation-only progress so far: master brief + architecture + ADRs written. No hardware built.
+
+**OTA-first reordering:** the web-server + ElegantOTA stack **and** WiFiManager captive-portal
+provisioning (originally inside Phase 3) were pulled forward as a standalone **Phase S** scaffold
+(`v0.0.1`, in `firmware/`) so every later phase flashes over WiFi instead of USB, with no
+credentials compiled into the binary. Runs on a bare ESP32. (Phase 3 now only needs to fold WiFi
+provisioning into the eventual settings UI alongside the servo/HA config.)
+
+---
+
+## Phase S — Firmware framework + OTA scaffold (v0.0.1) ☑
+- **Objective:** a buildable base image with on-device WiFi setup + browser control + OTA, before
+  any servo work.
+- **What we built:** PlatformIO project (`esp32dev` + `esp32-c3-devkitm-1`, Arduino Core);
+  WiFiManager AP `Shutter-Hub-Setup` + captive portal storing creds in NVS (survives OTA); mDNS
+  `shutter-hub.local`; ESPAsyncWebServer status page with a "Change WiFi" control; ElegantOTA at
+  `/update`. Per board: an OTA `firmware.bin` + a merged full-flash image for the one-time USB flash.
+- **Exit criteria:** ☑ compiles; set WiFi on-device, then update over the air from the browser.
 
 ---
 

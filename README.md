@@ -46,8 +46,11 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **no hardware/firmware built yet**. See
-[docs/project-plan.md](docs/project-plan.md) for the phased roadmap (Phase 0: mechanical force test).
+Design complete on paper; **firmware framework + OTA scaffold built** (`v0.0.1`) — a bare ESP32
+joins WiFi, serves a status page, and takes browser OTA updates. No servo hardware yet. See
+[docs/project-plan.md](docs/project-plan.md) for the phased roadmap and
+[firmware/](firmware/) to build/flash. Prebuilt bins (ESP32-D + ESP32-C3) ship on each
+[release](https://github.com/rhamblen/esp32-shutter-hub/releases).
 
 ## Repo layout
 
@@ -60,6 +63,7 @@ Design complete on paper; **no hardware/firmware built yet**. See
 | [docs/ai-context.md](docs/ai-context.md) | Cold-start map for the next AI session |
 | [docs/decisions/](docs/decisions/) | Architecture Decision Records |
 | [docs/diagrams/](docs/diagrams/) | Architecture, wiring, and linkage SVGs |
+| [firmware/](firmware/) | ESP32 firmware (PlatformIO, Arduino Core) — build/flash/OTA |
 | [hardware/](hardware/) | KiCad schematic / PCB + fabrication outputs |
 | [cad/](cad/) | 3D-printer source + STL/STEP for enclosures & parts |
 | [CHANGELOG.md](CHANGELOG.md) | Change history (Keep a Changelog + SemVer) |

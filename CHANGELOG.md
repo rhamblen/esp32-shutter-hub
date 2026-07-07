@@ -6,7 +6,23 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+## [0.0.1] — 2026-07-07
+
+First tagged release: documentation baseline + a buildable firmware framework with OTA.
+
 ### Added
+- **Firmware framework scaffold (v0.0.1)** — first buildable ESP32 firmware (`firmware/`):
+  PlatformIO project (Arduino Core) advertising `shutter-hub.local` over mDNS, serving a status
+  page, and accepting browser OTA updates at `/update` (ElegantOTA + ESPAsyncWebServer). Runs on a
+  bare ESP32 — no servo/PCA9685 hardware.
+- **On-device WiFi provisioning** (WiFiManager) — first boot raises a `Shutter-Hub-Setup` access
+  point with a captive portal; credentials are stored in NVS and **survive OTA updates**. No WiFi
+  credentials are compiled into the binary (mirrors the HomeKey-ESP32 SoftAP + captive-portal
+  pattern; pulled forward from Phase 3). A "Change WiFi" control clears saved creds and reopens the
+  portal.
+- Two board targets: `esp32dev` (ESP32-D, primary/locked board) and `esp32-c3-devkitm-1`
+  (ESP32-C3). Each produces a merged full-flash image (one-time USB flash at `0x0`) and an
+  app-only OTA bin; all four land in `firmware/dist/`. Releases ship both boards' bins + source.
 - Master engineering brief consolidating all design discussion (`docs/project-brief.md`).
 - Phased roadmap with status table and open decisions (`docs/project-plan.md`).
 - Architecture notes and trade-off table (`docs/architecture.md`).
@@ -27,4 +43,8 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 - **Linkage:** M2 × 50 mm ball-link pushrod; adjustable horn/arm ratios.
 - **Firmware:** custom Arduino (HomeSpan + MQTT), not ESPHome.
 
-_No hardware or firmware built yet — documentation baseline only._
+### Notes
+- OTA-first reordering: the web-server + ElegantOTA stack **and** the WiFiManager captive-portal
+  provisioning were pulled forward from Phase 3 into a standalone "Phase S" scaffold, so every later
+  phase flashes over WiFi instead of USB and no credentials ever live in the binary.
+- No servo/sensor hardware built yet — the firmware runs on a bare ESP32 dev board.
