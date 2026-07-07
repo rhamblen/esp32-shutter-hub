@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 600" font-family="Segoe UI, Arial, sans-serif">
+  <rect x="0" y="0" width="860" height="600" fill="#ffffff"/>
+  <style>
+    .box   { fill:#f4f6fb; stroke:#3a5a8c; stroke-width:2; rx:8; }
+    .hub   { fill:#eaf1ff; stroke:#1f4e9c; stroke-width:2.5; }
+    .servo { fill:#eef7ee; stroke:#3f8a3f; stroke-width:2; }
+    .t     { fill:#1c2430; font-size:15px; }
+    .tb    { fill:#1c2430; font-size:16px; font-weight:bold; }
+    .ts    { fill:#4a5568; font-size:12px; }
+    .wire  { stroke:#7a8aa0; stroke-width:2; fill:none; }
+    .wl    { fill:#5a6b85; font-size:11px; }
+  </style>
+
+  <text x="430" y="30" text-anchor="middle" class="tb" font-size="19">ESP32 Smart Shutter Hub — System Architecture</text>
+
+  <!-- Clients -->
+  <rect class="box" x="90"  y="60" width="200" height="60" rx="8"/>
+  <text x="190" y="86"  text-anchor="middle" class="t">iPhone / Siri</text>
+  <text x="190" y="106" text-anchor="middle" class="ts">Apple Home app</text>
+
+  <rect class="box" x="570" y="60" width="200" height="60" rx="8"/>
+  <text x="670" y="86"  text-anchor="middle" class="t">Home Assistant</text>
+  <text x="670" y="106" text-anchor="middle" class="ts">automations · scenes</text>
+
+  <!-- Client to hub wires -->
+  <path class="wire" d="M190,120 L190,175 L300,175"/>
+  <text x="196" y="150" class="wl">HomeKit · WiFi</text>
+  <path class="wire" d="M670,120 L670,175 L560,175"/>
+  <text x="612" y="150" text-anchor="end" class="wl">MQTT · WiFi</text>
+
+  <!-- Hub -->
+  <rect class="hub" x="250" y="160" width="360" height="150" rx="10"/>
+  <text x="430" y="188" text-anchor="middle" class="tb">SHUTTER HUB — ESP32-D</text>
+  <line x1="270" y1="200" x2="590" y2="200" stroke="#c3d0e6" stroke-width="1.5"/>
+  <text x="285" y="226" class="ts">• HomeSpan bridge (1 accessory / shutter)</text>
+  <text x="285" y="248" class="ts">• MQTT discovery → HA covers + sensors</text>
+  <text x="285" y="270" class="ts">• Web UI · calibration · ElegantOTA</text>
+  <text x="285" y="292" class="ts">• VEML7700 light sensor (I2C) → solar logic</text>
+
+  <!-- Hub to PCA9685 -->
+  <path class="wire" d="M430,310 L430,350" stroke="#1f4e9c"/>
+  <text x="440" y="335" class="wl">I2C · GPIO21/22</text>
+
+  <!-- PCA9685 -->
+  <rect class="box" x="330" y="350" width="200" height="50" rx="8"/>
+  <text x="430" y="372" text-anchor="middle" class="t">PCA9685</text>
+  <text x="430" y="390" text-anchor="middle" class="ts">16-ch servo driver · 0x40</text>
+
+  <!-- Fan out to servos -->
+  <g stroke="#3f8a3f">
+    <path class="wire" d="M430,400 L155,440" />
+    <path class="wire" d="M430,400 L340,440" />
+    <path class="wire" d="M430,400 L525,440" />
+    <path class="wire" d="M430,400 L710,440" />
+  </g>
+  <text x="430" y="422" text-anchor="middle" class="wl">CH0–CH3 · PWM</text>
+
+  <!-- Servos -->
+  <g>
+    <rect class="servo" x="100"  y="440" width="120" height="48" rx="8"/>
+    <text x="160" y="462" text-anchor="middle" class="t">MG90D</text>
+    <text x="160" y="480" text-anchor="middle" class="ts">CH0</text>
+
+    <rect class="servo" x="285"  y="440" width="120" height="48" rx="8"/>
+    <text x="345" y="462" text-anchor="middle" class="t">MG90D</text>
+    <text x="345" y="480" text-anchor="middle" class="ts">CH1</text>
+
+    <rect class="servo" x="470"  y="440" width="120" height="48" rx="8"/>
+    <text x="530" y="462" text-anchor="middle" class="t">MG90D</text>
+    <text x="530" y="480" text-anchor="middle" class="ts">CH2</text>
+
+    <rect class="servo" x="655"  y="440" width="120" height="48" rx="8"/>
+    <text x="715" y="462" text-anchor="middle" class="t">MG90D</text>
+    <text x="715" y="480" text-anchor="middle" class="ts">CH3</text>
+  </g>
+
+  <!-- Shutters -->
+  <g stroke="#8a6a3f">
+    <path class="wire" d="M160,488 L160,520"/>
+    <path class="wire" d="M345,488 L345,520"/>
+    <path class="wire" d="M530,488 L530,520"/>
+    <path class="wire" d="M715,488 L715,520"/>
+  </g>
+  <text x="160" y="540" text-anchor="middle" class="ts">Front Room</text>
+  <text x="160" y="556" text-anchor="middle" class="ts">Left</text>
+  <text x="345" y="540" text-anchor="middle" class="ts">Front Room</text>
+  <text x="345" y="556" text-anchor="middle" class="ts">Left Centre</text>
+  <text x="530" y="540" text-anchor="middle" class="ts">Front Room</text>
+  <text x="530" y="556" text-anchor="middle" class="ts">Right Centre</text>
+  <text x="715" y="540" text-anchor="middle" class="ts">Front Room</text>
+  <text x="715" y="556" text-anchor="middle" class="ts">Right</text>
+
+  <text x="430" y="585" text-anchor="middle" class="wl">Servo count is configurable — the same firmware iterates a shutters[] array.</text>
+</svg>

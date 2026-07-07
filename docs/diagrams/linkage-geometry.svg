@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" font-family="Segoe UI, Arial, sans-serif">
+  <rect x="0" y="0" width="760" height="480" fill="#ffffff"/>
+  <style>
+    .tb  { fill:#1c2430; font-size:15px; font-weight:bold; }
+    .t   { fill:#1c2430; font-size:13px; }
+    .ts  { fill:#4a5568; font-size:12px; }
+    .dim { fill:#b23; font-size:12px; font-weight:bold; }
+    .metal { fill:#c9d2e0; stroke:#5a6b85; stroke-width:1.5; }
+    .servo { fill:#eaf1ff; stroke:#1f4e9c; stroke-width:2; }
+    .rod  { stroke:#333; stroke-width:5; stroke-linecap:round; }
+    .arm  { stroke:#3f8a3f; stroke-width:6; stroke-linecap:round; }
+    .horn { stroke:#c07a2a; stroke-width:6; stroke-linecap:round; }
+    .slat { stroke:#8a6a3f; stroke-width:6; stroke-linecap:round; }
+    .dimline { stroke:#b23; stroke-width:1; }
+  </style>
+
+  <text x="380" y="30" text-anchor="middle" class="tb" font-size="18">Actuator Linkage Geometry (2:1 mechanical advantage)</text>
+
+  <!-- Servo body -->
+  <rect class="servo" x="70" y="300" width="120" height="70" rx="6"/>
+  <text x="130" y="330" text-anchor="middle" class="t">MG90D</text>
+  <text x="130" y="348" text-anchor="middle" class="ts">servo</text>
+
+  <!-- Servo output shaft + horn (10mm radius) -->
+  <circle cx="130" cy="300" r="6" fill="#c07a2a"/>
+  <line class="horn" x1="130" y1="300" x2="180" y2="230"/>
+  <circle cx="180" cy="230" r="6" fill="#333"/>
+  <text x="118" y="272" class="dim" text-anchor="end">horn 10 mm</text>
+  <text x="70" y="392" class="ts">horn options: 8 / 10 / 12 mm</text>
+
+  <!-- Pushrod (M2 x 50, hole-to-hole 68-78mm) -->
+  <line class="rod" x1="180" y1="230" x2="470" y2="180"/>
+  <text x="300" y="192" class="dim" transform="rotate(-9 300 192)">M2 × 50 pushrod · hole-to-hole 68–78 mm</text>
+
+  <!-- Shutter arm (20mm) on tilt shaft -->
+  <circle cx="520" cy="250" r="9" class="metal"/>
+  <line class="arm" x1="520" y1="250" x2="470" y2="180"/>
+  <circle cx="470" cy="180" r="6" fill="#333"/>
+  <text x="500" y="215" class="dim" text-anchor="start">arm 20 mm</text>
+  <text x="470" y="300" class="ts">arm holes: 15 / 20 / 25 mm</text>
+
+  <!-- Tilt shaft down to slats -->
+  <line class="rod" x1="520" y1="250" x2="520" y2="330" stroke="#555" stroke-width="4"/>
+  <text x="532" y="300" class="ts">tilt rod (frame edge)</text>
+
+  <!-- Slats (rotated) -->
+  <g>
+    <line class="slat" x1="560" y1="120" x2="700" y2="132"/>
+    <line class="slat" x1="560" y1="150" x2="700" y2="162"/>
+    <line class="slat" x1="560" y1="180" x2="700" y2="192"/>
+    <line class="slat" x1="560" y1="210" x2="700" y2="222"/>
+    <line class="slat" x1="560" y1="240" x2="700" y2="252"/>
+  </g>
+  <line x1="560" y1="110" x2="560" y2="340" stroke="#8a6a3f" stroke-width="3"/>
+  <text x="630" y="290" text-anchor="middle" class="ts">11 slats / panel (~450 mm wide)</text>
+
+  <!-- Motion note -->
+  <g transform="translate(70,410)">
+    <text x="0" y="0" class="t" font-weight="bold">Motion budget</text>
+    <text x="0" y="20" class="ts">Servo ~90° with a 10 mm horn ≈ 16 mm pushrod travel → ≈ 8 mm at the 20 mm arm — enough for full slat tilt.</text>
+    <text x="0" y="38" class="ts">2:1 ratio → half the force at the servo, double the travel at the rod. Longer arm = more torque; shorter arm = more travel.</text>
+  </g>
+</svg>

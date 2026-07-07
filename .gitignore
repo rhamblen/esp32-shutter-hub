@@ -1,0 +1,33 @@
+# Secrets / runtime state — never commit
+secrets.h
+*.local.yaml
+wifi_credentials*
+*.env
+
+# Firmware build output (Arduino / PlatformIO)
+.pio/
+build/
+*.bin
+*.elf
+*.map
+
+# KiCad backups / autosave / fabrication temp
+*-backups/
+*.kicad_pcb-bak
+*.kicad_sch-bak
+fp-info-cache
+*.bak
+_autosave-*
+
+# CAD source app clutter (keep exported STL/STEP, ignore locks/backups)
+*.FCBak
+*.FCStd1
+*.f3d.lock
+*.stl.tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.swp
