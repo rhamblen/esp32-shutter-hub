@@ -6,6 +6,25 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+## [0.0.3] — 2026-07-07
+
+Web-UI refinement on top of v0.0.2.
+
+### Added
+- **Dedicated "Change network" page** (`/wifi`) — the WiFi section now has a single **Change network**
+  button that opens its own page with the scan → select → password → **Set** flow and a **Back** link,
+  instead of doing it inline.
+- **Reset** and **Reboot** buttons pinned to the **bottom of the page** (below the tabs), each with a
+  confirmation prompt. **Reset** forgets WiFi and restarts into the setup portal; **Reboot** restarts.
+- **Three explicit firmware actions** on the Firmware tab — **Flash firmware**, **Flash LittleFS**, and
+  **Flash both** (filesystem first, then firmware) — replacing the single auto-detecting button.
+
+### Removed
+- **Management access-point toggle** and the inline **Re-run setup** button (the "hub mode" idea) —
+  along with the `apEnabled` setting, `/ap` route, `WiFiSetup::setSoftAP()`, and `ap_enabled` in
+  `/info`. WiFi is changed in-browser; first-time setup still uses the portal, and **Reset** remains
+  as the portal fallback.
+
 ## [0.0.2] — 2026-07-07
 
 Skeleton completion on top of v0.0.1.

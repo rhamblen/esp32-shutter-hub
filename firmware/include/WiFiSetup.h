@@ -9,7 +9,6 @@
 namespace WiFiSetup {
 void connect();          // blocks until connected (opens the portal if unprovisioned)
 void forgetAndReboot();  // clear saved WiFi from NVS and restart into the setup AP
-void setSoftAP(bool on); // bring the management AP up (reachable at 192.168.4.1) or tear it down
 
 // Switch to a different network in place (no reboot). Persists the new credentials
 // on success; on failure reverts to the previous network. Returns true if joined.

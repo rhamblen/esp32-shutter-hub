@@ -12,8 +12,6 @@ void     begin();                              // open NVS, load settings, bump 
 String   deviceName();                         // used for hostname / mDNS (default "shutter-hub")
 void     setDeviceName(const String &name);
 uint32_t bootCount();                          // total boots (diagnostics)
-bool     apEnabled();                          // keep the management access point up? (default false)
-void     setApEnabled(bool on);
 
 // Last OTA flash record (what + when + result), persisted across reboots/OTA.
 String   lastFlashType();                       // "firmware" | "filesystem" | "none"

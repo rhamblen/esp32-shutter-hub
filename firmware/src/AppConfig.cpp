@@ -6,7 +6,6 @@ Preferences prefs;
 const char *NS = "shutterhub";
 String   g_deviceName = "shutter-hub";
 uint32_t g_bootCount  = 0;
-bool     g_apEnabled  = false;
 String   g_lfType     = "none";
 bool     g_lfOk       = false;
 uint32_t g_lfEpoch    = 0;
@@ -17,7 +16,6 @@ namespace AppConfig {
 void begin() {
   prefs.begin(NS, false);                       // read/write namespace
   g_deviceName = prefs.getString("devName", "shutter-hub");
-  g_apEnabled  = prefs.getBool("apEn", false);
   g_lfType     = prefs.getString("lfType", "none");
   g_lfOk       = prefs.getBool("lfOk", false);
   g_lfEpoch    = prefs.getUInt("lfEpoch", 0);
@@ -33,13 +31,6 @@ void setDeviceName(const String &name) {
 }
 
 uint32_t bootCount() { return g_bootCount; }
-
-bool apEnabled() { return g_apEnabled; }
-
-void setApEnabled(bool on) {
-  g_apEnabled = on;
-  prefs.putBool("apEn", on);
-}
 
 String   lastFlashType()  { return g_lfType; }
 bool     lastFlashOk()    { return g_lfOk; }

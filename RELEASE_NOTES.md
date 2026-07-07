@@ -1,41 +1,33 @@
-# v0.0.2 — Skeleton complete: tabbed UI, config store, diagnostics
+# v0.0.3 — Web-UI refinement
 
-Completes the firmware framework on top of v0.0.1. The device now has a tabbed web UI, a
-persisted settings store, structured diagnostics, and a modular codebase ready for the real
-feature phases. Still runs on a bare ESP32-D — no servo/PCA9685 hardware required.
+Polishes the v0.0.2 skeleton's web interface. Still runs on a bare ESP32-D — no servo/PCA9685
+hardware required.
 
-> Supersedes v0.0.1 (which also included a captive-portal responsiveness fix rolled in here).
-
-## What's new since v0.0.1
-- **Tabbed web UI** — **Network** (connection info, Change WiFi, Reboot, `/info`), **Firmware**
-  (custom OTA, below), **Apple Home** (blank placeholder for the Phase 5 HomeKit UI).
-- **Custom OTA page** — shows the installed version, takes a firmware image and a LittleFS
-  filesystem image in separate boxes (flash either independently or both together), and records the
-  last flash (what / when / result). Replaces ElegantOTA.
-- **On-device WiFi setup** stays snappy (WiFi modem power-save disabled) and, once WiFi is saved,
-  the `Shutter-Hub-Setup` access point is **switched off**. A setting (default off) + a Network-tab
-  button can re-enable it as a management AP at `192.168.4.1`.
-- **Settings store** (`AppConfig`, NVS) and **Diagnostics** — structured serial logging, a `/info`
-  JSON endpoint, and a Reboot control.
-- **Modular firmware** — thin `main.cpp` wiring real modules plus stubs for the servo/MQTT/HomeKit/
-  light-sensor phases.
+## What's new since v0.0.2
+- **Change network on its own page** — the System tab's WiFi section has a single **Change network**
+  button that opens a dedicated `/wifi` page (scan → pick → password → **Set**, with a **Back** link).
+- **Reset & Reboot at the bottom of every page** — both ask for confirmation first. **Reset** forgets
+  WiFi and restarts into the setup portal; **Reboot** restarts the hub.
+- **Three firmware actions** — **Flash firmware**, **Flash LittleFS**, **Flash both** (filesystem
+  first, then firmware), instead of one auto-detecting button.
+- **Removed** the management access-point toggle and the inline re-run-setup button (the "hub mode"
+  idea). WiFi is changed in-browser; **Reset** stays as the portal fallback.
 
 ## Download (ESP32-D)
 | First flash over USB (offset `0x0`) | Update over the air |
 | ----------------------------------- | ------------------- |
-| `shutter-hub-esp32d-full-v0.0.2.bin` | `shutter-hub-esp32d-ota-v0.0.2.bin` |
+| `shutter-hub-esp32d-full-v0.0.3.bin` | `shutter-hub-esp32d-ota-v0.0.3.bin` |
 
 _ESP32-C3 bins are deferred to a later release._
 
 ## Flash it
 First time, over USB:
 ```
-esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-full-v0.0.2.bin
+esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-full-v0.0.3.bin
 ```
 Then join `Shutter-Hub-Setup`, pick your network, and open `http://shutter-hub.local/`. After that,
-update over the air from the **Firmware** tab — select the `-ota-` bin in the **Firmware image** box
-and click Flash (leave the Filesystem box empty; no LittleFS image ships yet). Saved WiFi and
-settings live in NVS and survive updates.
+update over the air from the **Firmware** tab (select the `-ota-` bin, **Flash firmware**). Saved WiFi
+and settings live in NVS and survive updates.
 
 ## Build from source
 PlatformIO project in [`firmware/`](firmware/) — `pio run` builds the ESP32-D target. See

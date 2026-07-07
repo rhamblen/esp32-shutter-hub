@@ -40,7 +40,6 @@ void setup() {
   WiFiSetup::connect();    // blocks until on WiFi (or opens the setup portal)
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");  // UTC clock for last-flash timestamps
   WebUI::begin();          // mDNS + web UI + OTA
-  WiFiSetup::setSoftAP(AppConfig::apEnabled());  // apply persisted AP state (off by default)
 
   // Future subsystems — stubs today, filled in by their phases:
   ServoController::begin();

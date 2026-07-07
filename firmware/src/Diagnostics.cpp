@@ -74,7 +74,6 @@ String infoJson() {
   j += "\"uptime\":"       + jstr(humanUptime()) + ",";
   j += "\"uptime_s\":"     + String(millis() / 1000UL) + ",";
   j += "\"boot_count\":"   + String(AppConfig::bootCount()) + ",";
-  j += "\"ap_enabled\":"   + String(AppConfig::apEnabled() ? "true" : "false") + ",";
   j += "\"last_flash\":{\"type\":" + jstr(AppConfig::lastFlashType()) +
        ",\"ok\":" + String(AppConfig::lastFlashOk() ? "true" : "false") +
        ",\"epoch\":" + String(AppConfig::lastFlashEpoch()) + "},";

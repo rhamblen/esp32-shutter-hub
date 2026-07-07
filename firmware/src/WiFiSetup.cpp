@@ -39,8 +39,7 @@ void connect() {
     delay(3000);
     ESP.restart();
   }
-  // WiFi is set: tear the setup AP down and stay station-only. It can be brought
-  // back later as a management AP via setSoftAP(true) (a persisted setting).
+  // WiFi is set: tear the setup AP down and stay station-only.
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_STA);
   LOGI("wifi", "connected to \"%s\": %s (RSSI %d dBm)",
@@ -66,19 +65,6 @@ bool connectTo(const String &ssid, const String &pass) {
   start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 12000UL) delay(200);
   return false;
-}
-
-void setSoftAP(bool on) {
-  if (on) {
-    WiFi.mode(WIFI_AP_STA);
-    bool ok = WiFi.softAP(AP_NAME);           // open management AP; serves the normal web UI
-    LOGI("wifi", "management AP \"%s\" %s (http://192.168.4.1)",
-         AP_NAME, ok ? "ENABLED" : "failed to start");
-  } else {
-    WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_STA);
-    LOGI("wifi", "management AP disabled");
-  }
 }
 
 void forgetAndReboot() {
