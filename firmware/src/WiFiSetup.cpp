@@ -1,0 +1,92 @@
+#include "WiFiSetup.h"
+#include "AppConfig.h"
+#include "Diagnostics.h"
+#include <WiFi.h>
+#include <WiFiManager.h>
+
+static const char    *AP_NAME          = "Shutter-Hub-Setup";
+static const uint16_t  PORTAL_TIMEOUT_S = 180;  // reboot & retry if left unconfigured
+
+namespace WiFiSetup {
+
+void connect() {
+  String host = AppConfig::deviceName();
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setHostname(host.c_str());
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);            // disable modem power-save — keeps portal + web UI snappy
+
+  WiFiManager wm;
+  wm.setHostname(host.c_str());
+  wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
+  wm.setAPClientCheck(true);       // pause the timeout while a phone is connected
+  wm.setWiFiAPChannel(1);          // fixed channel — avoids slow hopping on the portal
+  wm.setMinimumSignalQuality(15);  // drop very weak APs -> shorter scan list
+  wm.setRemoveDuplicateAPs(true);
+  wm.setShowInfoUpdate(false);
+  wm.setCustomMenuHTML(
+    "<div style='padding:8px;margin-top:8px;border:1px solid #8886;border-radius:8px;"
+    "opacity:.85;font-size:.9em'>Tap <b>Configure WiFi</b>, then allow a few seconds "
+    "while the hub scans for nearby networks &mdash; this only happens during setup.</div>");
+  wm.setAPCallback([](WiFiManager *) {
+    WiFi.setSleep(false);
+    LOGI("wifi", "setup AP \"%s\" up — join it and open http://192.168.4.1", AP_NAME);
+  });
+
+  if (!wm.autoConnect(AP_NAME)) {
+    LOGW("wifi", "not configured / timed out — rebooting to retry");
+    delay(3000);
+    ESP.restart();
+  }
+  // WiFi is set: tear the setup AP down and stay station-only. It can be brought
+  // back later as a management AP via setSoftAP(true) (a persisted setting).
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+  LOGI("wifi", "connected to \"%s\": %s (RSSI %d dBm)",
+       WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
+}
+
+bool connectTo(const String &ssid, const String &pass) {
+  String oldSsid = WiFi.SSID();
+  String oldPsk  = WiFi.psk();
+  LOGI("wifi", "switching to \"%s\"…", ssid.c_str());
+
+  WiFi.begin(ssid.c_str(), pass.c_str());   // disconnects old, persists new creds on success
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 12000UL) delay(200);
+
+  if (WiFi.status() == WL_CONNECTED) {
+    LOGI("wifi", "now on \"%s\": %s", ssid.c_str(), WiFi.localIP().toString().c_str());
+    return true;
+  }
+
+  LOGW("wifi", "could not join \"%s\" — reverting to \"%s\"", ssid.c_str(), oldSsid.c_str());
+  WiFi.begin(oldSsid.c_str(), oldPsk.c_str());
+  start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 12000UL) delay(200);
+  return false;
+}
+
+void setSoftAP(bool on) {
+  if (on) {
+    WiFi.mode(WIFI_AP_STA);
+    bool ok = WiFi.softAP(AP_NAME);           // open management AP; serves the normal web UI
+    LOGI("wifi", "management AP \"%s\" %s (http://192.168.4.1)",
+         AP_NAME, ok ? "ENABLED" : "failed to start");
+  } else {
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+    LOGI("wifi", "management AP disabled");
+  }
+}
+
+void forgetAndReboot() {
+  LOGW("wifi", "clearing saved credentials and restarting into setup AP");
+  WiFiManager wm;
+  wm.resetSettings();
+  delay(200);
+  ESP.restart();
+}
+
+}  // namespace WiFiSetup

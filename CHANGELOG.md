@@ -6,6 +6,46 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+## [0.0.2] — 2026-07-07
+
+Skeleton completion on top of v0.0.1.
+
+### Added
+- **Tabbed device web UI** — three tabs: **System** — a **WiFi** section (network, IP, MAC, signal,
+  access-point state, in-browser network picker + access-point toggle + Re-run setup) and a
+  **System** section (device name,
+  firmware version, hostname, uptime, boot count, free heap, last-restart reason, **Restart hub**,
+  `/info`); **Firmware** (custom OTA, below); and **Apple Home** (blank placeholder for the Phase 5
+  HomeKit UI).
+- **Custom OTA page** (replaces ElegantOTA; mirrors HomeKey-ESP32's dual-target updater) — shows the
+  installed firmware version, takes a **firmware** image and a **filesystem (LittleFS)** image in
+  separate pickers, and flashes either independently or **both together** (filesystem first, then
+  firmware, which reboots). Records the **last flash** — target, result, and UTC time (NTP) — shown
+  on the page and in `/info`. Uploads stream through the core `Update` library; the ElegantOTA
+  dependency is dropped.
+- **`AppConfig`** — NVS/Preferences settings store (device name, boot count, AP-enabled flag) that
+  survives OTA; the home for future shutter/HomeKit/MQTT settings.
+- **`Diagnostics`** — structured serial logging (`LOGI/LOGW/LOGE`), a `/info` JSON endpoint
+  (firmware, uptime, heap, reset reason, boot count, `ap_enabled`, WiFi), and a Reboot control.
+- **In-browser WiFi change** — the WiFi section scans for nearby networks and lets you pick an SSID
+  + password and **switch live, no reboot** (`GET /api/wifi/scan`, `POST /api/wifi/connect`). A wrong
+  password reverts to the current network so you're never stranded. A **Re-run setup** fallback
+  reboots into the setup portal for moving to a network you can't reach in-browser; first-time
+  provisioning still uses the WiFiManager portal. (Replaces the earlier reboot-to-portal "Change
+  WiFi" button.)
+- **Management access point toggle** — the `Shutter-Hub-Setup` AP is explicitly torn down once WiFi
+  is provisioned. A persisted setting (default **off**) plus a WiFi-section button can re-enable it
+  as a management AP reachable at `192.168.4.1` — it serves the normal web UI and does **not**
+  relaunch the setup portal.
+- **Modular firmware layout** — `main.cpp` reduced to a thin entry point; real modules
+  `AppConfig` / `Diagnostics` / `WiFiSetup` / `WebUI` / `Ota`, plus empty `begin()` stubs for
+  `ServoController` (Phase 1/2), `Mqtt` (Phase 4), `HomeKit` (Phase 5), `LightSensor` (Phase 6).
+
+### Changed
+- Captive-portal responsiveness: disable WiFi modem power-save (`WiFi.setSleep(false)`), fixed AP
+  channel, weak-AP filtering, and a "scanning takes a few seconds" note on the portal menu.
+- Builds are ESP32-D only for now (`default_envs = esp32dev`); the ESP32-C3 target is deferred.
+
 ## [0.0.1] — 2026-07-07
 
 First tagged release: documentation baseline + a buildable firmware framework with OTA.

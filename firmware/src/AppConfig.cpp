@@ -1,0 +1,55 @@
+#include "AppConfig.h"
+#include <Preferences.h>
+
+namespace {
+Preferences prefs;
+const char *NS = "shutterhub";
+String   g_deviceName = "shutter-hub";
+uint32_t g_bootCount  = 0;
+bool     g_apEnabled  = false;
+String   g_lfType     = "none";
+bool     g_lfOk       = false;
+uint32_t g_lfEpoch    = 0;
+}
+
+namespace AppConfig {
+
+void begin() {
+  prefs.begin(NS, false);                       // read/write namespace
+  g_deviceName = prefs.getString("devName", "shutter-hub");
+  g_apEnabled  = prefs.getBool("apEn", false);
+  g_lfType     = prefs.getString("lfType", "none");
+  g_lfOk       = prefs.getBool("lfOk", false);
+  g_lfEpoch    = prefs.getUInt("lfEpoch", 0);
+  g_bootCount  = prefs.getUInt("bootCount", 0) + 1;
+  prefs.putUInt("bootCount", g_bootCount);
+}
+
+String deviceName() { return g_deviceName; }
+
+void setDeviceName(const String &name) {
+  g_deviceName = name;
+  prefs.putString("devName", name);
+}
+
+uint32_t bootCount() { return g_bootCount; }
+
+bool apEnabled() { return g_apEnabled; }
+
+void setApEnabled(bool on) {
+  g_apEnabled = on;
+  prefs.putBool("apEn", on);
+}
+
+String   lastFlashType()  { return g_lfType; }
+bool     lastFlashOk()    { return g_lfOk; }
+uint32_t lastFlashEpoch() { return g_lfEpoch; }
+
+void recordFlash(const String &type, bool ok, uint32_t epoch) {
+  g_lfType = type; g_lfOk = ok; g_lfEpoch = epoch;
+  prefs.putString("lfType", type);
+  prefs.putBool("lfOk", ok);
+  prefs.putUInt("lfEpoch", epoch);
+}
+
+}  // namespace AppConfig

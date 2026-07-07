@@ -46,10 +46,11 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **firmware framework + OTA scaffold built** (`v0.0.1`) — a bare ESP32
-joins WiFi, serves a status page, and takes browser OTA updates. No servo hardware yet. See
-[docs/project-plan.md](docs/project-plan.md) for the phased roadmap and
-[firmware/](firmware/) to build/flash. Prebuilt bins (ESP32-D + ESP32-C3) ship on each
+Design complete on paper; **firmware skeleton built** (`v0.0.2`) — a bare ESP32 does on-device
+WiFi setup (incl. an in-browser network picker), a tabbed web UI (System / Firmware / Apple Home),
+a custom firmware+filesystem OTA updater, and settings/diagnostics in NVS. No servo hardware yet.
+See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
+to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases).
 
 ## Repo layout

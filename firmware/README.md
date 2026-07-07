@@ -32,20 +32,22 @@ the portal to reappear).
 
 ## Build
 
-Two board targets are defined: `esp32dev` (ESP32-D, primary) and `esp32-c3-devkitm-1` (ESP32-C3).
+`esp32dev` (ESP32-D) is the only build target right now. An `esp32-c3-devkitm-1`
+(ESP32-C3) env is defined but **deferred** — excluded from `pio run` until it's
+brought into a later release.
 
 ```
-pio run                            # builds BOTH targets
-pio run -e esp32dev                # just the ESP32-D
-pio run -e esp32-c3-devkitm-1      # just the ESP32-C3
+pio run                            # builds ESP32-D only (default_envs)
+pio run -e esp32-c3-devkitm-1      # ESP32-C3 (deferred; build explicitly if needed)
 ```
 
-Prebuilt bins for both boards are collected in [`dist/`](dist/):
+Prebuilt bins are collected in [`dist/`](dist/):
 
 | Board | First USB flash (merged, `0x0`) | OTA (`/update`) |
 | ----- | ------------------------------- | --------------- |
 | ESP32-D  | `shutter-hub-esp32d-full-vX.Y.Z.bin`  | `shutter-hub-esp32d-ota-vX.Y.Z.bin`  |
-| ESP32-C3 | `shutter-hub-esp32c3-full-vX.Y.Z.bin` | `shutter-hub-esp32c3-ota-vX.Y.Z.bin` |
+
+_ESP32-C3 bins are not built or released yet._
 
 ## First flash (USB — one time only)
 
@@ -57,34 +59,53 @@ pio run -e esp32dev -t upload      # auto-detects the port; monitor with:  pio d
 ```
 
 **Option B — single merged image (NodeMCU-PyFlasher / esptool):**
-Flash the `...-full-...bin` for your board at offset `0x0`:
+Flash the `-full-` image at offset `0x0`:
 ```
-esptool --chip esp32   write_flash 0x0 dist/shutter-hub-esp32d-full-v0.0.1.bin    # ESP32-D
-esptool --chip esp32c3 write_flash 0x0 dist/shutter-hub-esp32c3-full-v0.0.1.bin   # ESP32-C3
+esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-full-v0.0.2.bin
 ```
 In NodeMCU-PyFlasher: select the `...-full-...bin`, address `0x0`, flash.
 
-> Merge recipe (how the `-full-` images are made): `esptool --chip <chip> merge-bin`
-> with bootloader + partitions + boot_app0 + firmware. **ESP32-D bootloader sits at `0x1000`,
-> ESP32-C3 bootloader at `0x0`** — the app is always at `0x10000`.
+> Merge recipe (how the `-full-` image is made): `esptool --chip esp32 merge-bin`
+> with bootloader + partitions + boot_app0 + firmware. The ESP32-D bootloader sits at
+> `0x1000` and the app at `0x10000`.
 
 ## Update over the air (every time after the first)
 
-1. Build a new bin (`pio run`), or grab `...-ota-...bin` from a release.
-2. Browse to `http://shutter-hub.local/update` (or the device IP).
-3. Upload the matching board's `...-ota-...bin`. The board reboots into the new
-   build — your saved WiFi is untouched (it lives in NVS, not the app partition).
+The **Firmware** tab at `http://shutter-hub.local/` is a custom OTA page: it shows the
+installed version, the last flash (what/when/result), and two file pickers — a
+**Firmware** image and a **Filesystem (LittleFS)** image.
+
+1. Build a new bin (`pio run`), or grab the `-ota-` bin from a release.
+2. Select it in the **Firmware image** box (leave Filesystem empty — we don't ship a
+   LittleFS image until Phase 2) and click **Flash selected**.
+3. The board reboots into the new build — your saved WiFi and settings are untouched
+   (they live in NVS, not the app partition).
+
+You can also select both a firmware and a filesystem image to flash together (the
+filesystem is written first, then the firmware).
 
 ## Layout
 
 ```
 firmware/
 ├─ platformio.ini              board targets + libraries + build flags
+├─ include/                    module headers (*.h)
 ├─ src/
-│  └─ main.cpp                 WiFiManager + mDNS + AsyncWebServer + ElegantOTA
+│  ├─ main.cpp                 thin entry point — wires the modules together
+│  ├─ AppConfig.cpp            persisted settings (NVS)                [real]
+│  ├─ Diagnostics.cpp          logging, /info, uptime, reboot          [real]
+│  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal         [real]
+│  ├─ WebUI.cpp                tabbed status page + routes + mDNS       [real]
+│  ├─ Ota.cpp                  ElegantOTA /update                      [real]
+│  ├─ ServoController.cpp      PCA9685 + MG90D            [stub, Phase 1/2]
+│  ├─ Mqtt.cpp                 HA MQTT discovery          [stub, Phase 4]
+│  ├─ HomeKit.cpp              HomeSpan bridge            [stub, Phase 5]
+│  └─ LightSensor.cpp          VEML7700 solar protection  [stub, Phase 6]
 ├─ dist/                       prebuilt bins (gitignored; attached to releases)
 └─ README.md
 ```
 
-Future phases add `ServoController`, `Config`, `Mqtt`, `HomeKit`, `LightSensor`,
-`Diagnostics` modules and a LittleFS `data/` web UI (see ADR 0004).
+The `*.cpp` stubs are empty `begin()` placeholders so each later phase drops into
+its own file. A LittleFS `data/` web UI replaces the embedded HTML in Phase 2 (see
+ADR 0004). The web module is `WebUI` (not `WebServer`) to avoid clashing with the
+Arduino core's `WebServer.h` that WiFiManager includes.
