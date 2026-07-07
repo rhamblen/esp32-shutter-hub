@@ -146,7 +146,7 @@ large safety margin. Final horn/arm ratio confirmed after the bench force test (
 
 The hub is the single point of integration, configuration, OTA, and light sensing. Actuator
 modules are mechanical-only (MG90D + horn + pushrod + printed bracket). Servo count is driven by a
-config array, so 1, 2, 4, or more shutters work with the same firmware.
+config array, so any number of shutters (1 or more) works with the same firmware.
 
 ---
 

@@ -9,7 +9,7 @@ Zemismart JM36/JC601.
 ## Features
 
 - **Hub architecture** — one ESP32 drives all shutters via a PCA9685; simple MG90D actuator modules.
-- **Variable shutter count** — 1, 2, 4, or more, by configuration only (no firmware change).
+- **Variable shutter count** — any number from 1 upward, by configuration only (no firmware change).
 - **Apple HomeKit** — HomeSpan bridge exposes each shutter as its own Window Covering accessory.
 - **Home Assistant** — one `cover.*` per shutter via MQTT discovery, plus lux/position sensors.
 - **Local web UI** — control, per-shutter calibration, and OTA at `http://shutter-hub.local`.
