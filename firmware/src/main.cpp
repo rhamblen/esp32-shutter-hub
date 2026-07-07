@@ -6,7 +6,7 @@
 //   WiFiSetup       WiFiManager AP + captive portal (creds->NVS) [real]
 //   WebUI           tabbed status page + routes + mDNS           [real]
 //   Ota             ElegantOTA /update                           [real]
-//   ServoController PCA9685 + MG90D                              [stub, Phase 1/2]
+//   ServoController single-servo bench test (Phase 1) → PCA9685  [Phase 1 real]
 //   Mqtt            Home Assistant discovery                     [stub, Phase 4]
 //   HomeKit         HomeSpan bridge                              [stub, Phase 5]
 //   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
@@ -52,5 +52,6 @@ void setup() {
 
 void loop() {
   WebUI::loop();
+  ServoController::loop();   // advances the non-blocking servo sweep, if running
   delay(5);
 }

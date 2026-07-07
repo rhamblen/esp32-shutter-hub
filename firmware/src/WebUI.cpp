@@ -3,6 +3,7 @@
 #include "Diagnostics.h"
 #include "WiFiSetup.h"
 #include "Ota.h"
+#include "ServoController.h"
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <ESPAsyncWebServer.h>
@@ -83,6 +84,7 @@ static String statusPage() {
     "<div class=tabs>"
     "<button class='tab active' data-t=sys>System</button>"
     "<button class=tab data-t=fw>Firmware</button>"
+    "<button class=tab data-t=servo>Servo test</button>"
     "<button class=tab data-t=home>Apple Home</button>"
     "</div>"
     "<section id=sys class='pane active'><h2>WiFi</h2><table>");
@@ -122,6 +124,37 @@ static String statusPage() {
     "<p class=muted style='font-size:.85em'>Firmware flashes reboot the hub; the filesystem flash does "
     "not. <b>Flash both</b> writes the filesystem first, then the firmware. Saved WiFi and settings are "
     "kept.</p></section>"
+
+    // ---- Servo test tab — Phase-1 single-servo bench test ----
+    "<section id=servo class=pane>"
+    "<p class=muted style='font-size:.85em'>Phase-1 bench test &mdash; drives one servo straight from an "
+    "ESP32 GPIO (default <b>GPIO13</b>). Power the servo from <b>5&nbsp;V</b> with a common ground; expect "
+    "a brief current surge when it attaches.</p>"
+    "<h2>Signal pin</h2>"
+    "<div class=row>"
+    "<input type=number id=svpin min=0 max=33 style='width:5rem'>"
+    "<button class=btn id=svsetpin type=button>Set pin</button>"
+    "</div>"
+    "<p id=svpinwarn class=muted style='font-size:.85em'></p>"
+    "<h2>Status</h2><table>"
+    "<tr><td>Signal GPIO</td><td id=svPin>&ndash;</td></tr>"
+    "<tr><td>State</td><td id=svState>&ndash;</td></tr>"
+    "<tr><td>Angle</td><td id=svAngle>&ndash;</td></tr>"
+    "<tr><td>Pulse width</td><td id=svUs>&ndash;</td></tr>"
+    "</table>"
+    "<h2>Move</h2>"
+    "<input type=range id=svslider min=0 max=180 value=90 style='width:100%'>"
+    "<div class=row>"
+    "<button class=btn data-deg=0>Min 0&deg;</button>"
+    "<button class=btn data-deg=90>Centre 90&deg;</button>"
+    "<button class=btn data-deg=180>Max 180&deg;</button>"
+    "</div>"
+    "<div class=row>"
+    "<button class=btn id=svsweep type=button>Sweep</button>"
+    "<button class=btn id=svattach type=button>Attach</button>"
+    "<button class='btn danger' id=svdetach type=button>Detach (release)</button>"
+    "</div>"
+    "<p id=svmsg class=muted></p></section>"
 
     // ---- Apple Home tab ----
     "<section id=home class=pane>"
@@ -171,6 +204,41 @@ static String statusPage() {
     "up('filesystem',b).then(function(){set('Filesystem done; flashing firmware\\u2026');return up('firmware',a);})"
     ".then(function(){set('Both flashed \\u2014 rebooting, reconnect in ~15s\\u2026');})"
     ".catch(function(e){set('Failed: '+e);}).then(function(){busy(false);});});"
+    "})();"
+
+    // ---- Servo test tab behaviour ----
+    "(function(){"
+    "var $=function(i){return document.getElementById(i);};"
+    "var strap=[0,2,12,15];"
+    "function msg(m){$('svmsg').textContent=m||'';}"
+    "function render(s){"
+    "$('svPin').textContent='GPIO'+s.pin;"
+    "$('svState').textContent=s.attached?(s.sweeping?'sweeping\\u2026':'attached'):'detached (released)';"
+    "$('svAngle').textContent=s.angle+'\\u00b0';"
+    "$('svUs').textContent=s.us+' \\u00b5s';"
+    "if(document.activeElement!==$('svslider'))$('svslider').value=s.angle;"
+    "if($('svpin').value==='')$('svpin').value=s.pin;"
+    "$('svsweep').textContent=s.sweeping?'Stop sweep':'Sweep';"
+    "$('svpinwarn').textContent=strap.indexOf(s.pin)>=0?"
+    "('Note: GPIO'+s.pin+' is a strapping/boot pin \\u2014 fine for a quick test, avoid for the final build.'):'';"
+    "}"
+    "function refresh(){fetch('/api/servo').then(function(r){return r.json();}).then(render).catch(function(){});}"
+    "function post(u){return fetch(u,{method:'POST'}).then(function(r){return r.json();})"
+    ".then(function(j){if(j.error){msg('Error: '+j.error);}else{render(j);msg('');}return j;})"
+    ".catch(function(e){msg('Failed: '+e);});}"
+    "$('svsetpin').addEventListener('click',function(){var g=$('svpin').value;"
+    "if(g===''){msg('Enter a GPIO number first.');return;}"
+    "post('/api/servo/pin?gpio='+g).then(function(j){if(j&&!j.error){msg('Signal pin set to GPIO'+j.pin+'.');}});});"
+    "var sl=$('svslider');"
+    "sl.addEventListener('input',function(){$('svAngle').textContent=sl.value+'\\u00b0';});"
+    "sl.addEventListener('change',function(){post('/api/servo/write?deg='+sl.value);});"
+    "document.querySelectorAll('#servo [data-deg]').forEach(function(b){"
+    "b.addEventListener('click',function(){sl.value=b.dataset.deg;post('/api/servo/write?deg='+b.dataset.deg);});});"
+    "$('svsweep').addEventListener('click',function(){post('/api/servo/sweep');});"
+    "$('svattach').addEventListener('click',function(){post('/api/servo/attach');});"
+    "$('svdetach').addEventListener('click',function(){post('/api/servo/detach');});"
+    "setInterval(function(){if(document.querySelector('.tab[data-t=servo]').classList.contains('active')){refresh();}},1000);"
+    "refresh();"
     "})();"
     "</script></body></html>");
   return html;
@@ -286,6 +354,36 @@ void begin() {
       "Connecting to \"" + connSsid + "\"… If the password is right the hub moves to that "
       "network (reconnect there, e.g. shutter-hub.local). A wrong password reverts to the current "
       "network — refresh in ~20s.");
+  });
+
+  // ---- Servo test (Phase 1) — all replies are the servo status JSON ----
+  server.on("/api/servo", HTTP_GET, [](AsyncWebServerRequest *r) {
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/pin", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!r->hasParam("gpio")) { r->send(400, "application/json", "{\"error\":\"missing gpio\"}"); return; }
+    long g = r->getParam("gpio")->value().toInt();
+    if (g < 0 || g > 39 || !ServoController::setPin((uint8_t)g)) {
+      r->send(400, "application/json", "{\"error\":\"GPIO not usable for servo output\"}"); return;
+    }
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/write", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!r->hasParam("deg")) { r->send(400, "application/json", "{\"error\":\"missing deg\"}"); return; }
+    ServoController::writeAngle((int)r->getParam("deg")->value().toInt());
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/attach", HTTP_POST, [](AsyncWebServerRequest *r) {
+    ServoController::attach();
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/detach", HTTP_POST, [](AsyncWebServerRequest *r) {
+    ServoController::detach();
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/sweep", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (ServoController::sweeping()) ServoController::stopSweep(); else ServoController::startSweep();
+    r->send(200, "application/json", ServoController::statusJson());
   });
 
   Ota::begin(server);   // /api/ota

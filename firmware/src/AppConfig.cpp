@@ -9,6 +9,7 @@ uint32_t g_bootCount  = 0;
 String   g_lfType     = "none";
 bool     g_lfOk       = false;
 uint32_t g_lfEpoch    = 0;
+uint8_t  g_servoPin   = 13;
 }
 
 namespace AppConfig {
@@ -19,6 +20,7 @@ void begin() {
   g_lfType     = prefs.getString("lfType", "none");
   g_lfOk       = prefs.getBool("lfOk", false);
   g_lfEpoch    = prefs.getUInt("lfEpoch", 0);
+  g_servoPin   = prefs.getUChar("servoPin", 13);
   g_bootCount  = prefs.getUInt("bootCount", 0) + 1;
   prefs.putUInt("bootCount", g_bootCount);
 }
@@ -31,6 +33,13 @@ void setDeviceName(const String &name) {
 }
 
 uint32_t bootCount() { return g_bootCount; }
+
+uint8_t servoPin() { return g_servoPin; }
+
+void setServoPin(uint8_t gpio) {
+  g_servoPin = gpio;
+  prefs.putUChar("servoPin", gpio);
+}
 
 String   lastFlashType()  { return g_lfType; }
 bool     lastFlashOk()    { return g_lfOk; }

@@ -13,6 +13,10 @@ String   deviceName();                         // used for hostname / mDNS (defa
 void     setDeviceName(const String &name);
 uint32_t bootCount();                          // total boots (diagnostics)
 
+// Phase-1 servo bench test — signal GPIO for the single test servo (default 13).
+uint8_t  servoPin();
+void     setServoPin(uint8_t gpio);
+
 // Last OTA flash record (what + when + result), persisted across reboots/OTA.
 String   lastFlashType();                       // "firmware" | "filesystem" | "none"
 bool     lastFlashOk();

@@ -46,10 +46,10 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **firmware skeleton built** (`v0.0.3`) — a bare ESP32 does on-device
-WiFi setup (incl. an in-browser network picker on its own page), a tabbed web UI (System / Firmware /
-Apple Home), a custom firmware+filesystem OTA updater, and settings/diagnostics in NVS. No servo
-hardware yet.
+Design complete on paper; **Phase 1 servo bring-up** (`v0.1.0`) — on top of the skeleton (on-device
+WiFi setup with an in-browser network picker, a tabbed web UI, a custom firmware+filesystem OTA
+updater, and settings/diagnostics in NVS), a new **Servo test** tab drives one servo directly from an
+ESP32 GPIO (default GPIO13, configurable) so hardware can be exercised before the PCA9685/power chain.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases).

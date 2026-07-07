@@ -27,8 +27,8 @@ This uses [WiFiManager](https://github.com/tzapu/WiFiManager) — the Arduino-na
 version of the SoftAP + captive-portal pattern in
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). Because nothing is
 compiled in, the same prebuilt bin works on anyone's network. To change networks
-later, hit **Change WiFi** on the status page (or hold the reset long enough for
-the portal to reappear).
+later, use **Change network** on the System tab (opens its own `/wifi` page);
+**Reset** at the bottom of the page reboots back into this setup portal.
 
 ## Build
 
@@ -41,11 +41,18 @@ pio run                            # builds ESP32-D only (default_envs)
 pio run -e esp32-c3-devkitm-1      # ESP32-C3 (deferred; build explicitly if needed)
 ```
 
-Prebuilt bins are collected in [`dist/`](dist/):
+Prebuilt bins are collected in [`dist/`](dist/). A release ships **three bins per
+board** — but the LittleFS filesystem image only exists once the web UI moves into
+a `data/` folder (Phase 2), so v0.0.1–v0.0.3 carry just the first two:
 
-| Board | First USB flash (merged, `0x0`) | OTA (`/update`) |
-| ----- | ------------------------------- | --------------- |
-| ESP32-D  | `shutter-hub-esp32d-full-vX.Y.Z.bin`  | `shutter-hub-esp32d-ota-vX.Y.Z.bin`  |
+| Per board | File | Use | Since |
+| --------- | ---- | --- | ----- |
+| Full image | `shutter-hub-<board>-full-vX.Y.Z.bin` | first USB flash, merged at `0x0` | now |
+| Firmware  | `shutter-hub-<board>-ota-vX.Y.Z.bin` | Firmware tab → **Flash firmware** | now |
+| Filesystem | `shutter-hub-<board>-littlefs-vX.Y.Z.bin` | Firmware tab → **Flash LittleFS** | **Phase 2** |
+
+Build the filesystem image (once a `data/` folder exists) with
+`pio run -e esp32dev -t buildfs` → `.pio/build/esp32dev/littlefs.bin`.
 
 _ESP32-C3 bins are not built or released yet._
 

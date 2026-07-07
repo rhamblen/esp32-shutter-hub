@@ -6,6 +6,32 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Release checklist / notes
+- **Three bins per board** once the web UI moves into LittleFS (Phase 2): `full` (USB flash),
+  `ota` (firmware), and **`littlefs`** (filesystem image). Build the filesystem image with
+  `pio run -e <env> -t buildfs` (→ `.pio/build/<env>/littlefs.bin`) and attach it as
+  `shutter-hub-<board>-littlefs-vX.Y.Z.bin`. v0.0.1–v0.1.0 ship only `full` + `ota` (no filesystem
+  image yet). See [firmware/README.md](firmware/README.md).
+
+## [0.1.0] — 2026-07-07
+
+First hardware-phase release: single-servo bench test on top of the v0.0.3 skeleton.
+
+### Added
+- **Servo test tab (Phase 1)** — a new **Servo test** tab in the device web UI drives **one servo
+  directly from an ESP32 GPIO** for hardware bring-up, before the PCA9685 / power chain exist. Signal
+  pin defaults to **GPIO13** and is **changeable + persisted** (`AppConfig::servoPin`, NVS). Controls:
+  set/validate the signal pin (rejects input-only/flash pins, flags strapping pins), a **0–180° angle
+  slider**, **Min / Centre / Max** presets, a non-blocking **Sweep** toggle, and **Attach / Detach
+  (release)**. Live status shows pin, attached/sweeping state, angle, and pulse width. The servo stays
+  **detached at boot** so nothing moves until you act.
+- **`ServoController`** promoted from stub to a real single-servo bench driver
+  (`madhephaestus/ESP32Servo`, LEDC-backed; 50 Hz, 500–2500 µs). REST: `GET /api/servo`,
+  `POST /api/servo/{pin,write,attach,detach,sweep}`.
+
+### Changed
+- `FW_VERSION` bumped to **0.1.0** (Phase 1 servo work).
+
 ## [0.0.3] — 2026-07-07
 
 Web-UI refinement on top of v0.0.2.
