@@ -2,17 +2,23 @@
 #include "AppConfig.h"
 #include "Diagnostics.h"
 
-// Single-servo driver. Position is tracked in MICROSECONDS (pulse width) — the
-// servo's native unit — so Phase-2 blind calibration can land a slat far more
-// finely than whole degrees. The Servo-test page still talks in degrees; those
-// are derived from µs on the way in/out.
+// Multi-slot µs driver. Position is tracked in MICROSECONDS (pulse width) — the
+// servo's native unit — so blind calibration can land a slat far more finely than
+// whole degrees. The Servo-test page still talks in degrees; those are derived
+// from µs on the way in/out.
 //
-// The µs core (slew/speed/sweep) below is backend-independent. The hardware layer
-// is selected at build time (see platformio.ini / ADR 0008):
-//   USE_PCA9685=0  ESP32Servo on a signal GPIO (LEDC-backed).
-//   USE_PCA9685=1  Adafruit PWM driver on a PCA9685 channel, over I2C.
-// Stays DETACHED at boot so nothing twitches until the user acts — this also dodges
-// the attach-time current surge on a bare/USB-powered board.
+// v0.4.0 (ADR 0010): each physical output ("slot") carries its OWN slew state, so
+// several shutters can move simultaneously — an HA "close all" slews every
+// commanded channel at once. The PCA9685 generates all 16 waveforms autonomously
+// in hardware; the loop() below just nudges each moving channel's pulse width
+// once per 50 Hz frame (a few short I2C writes — trivial bus load). The bench
+// API (writeUs, jog, run, sweep, attach…) acts on the ACTIVE slot only.
+//
+// The hardware layer is selected at build time (see platformio.ini / ADR 0008):
+//   USE_PCA9685=0  ESP32Servo on a signal GPIO (LEDC-backed) — one slot.
+//   USE_PCA9685=1  Adafruit PWM driver on PCA9685 channels over I2C — 16 slots.
+// All slots stay DETACHED at boot so nothing twitches until something commands a
+// move — this also dodges the attach-time current surge on a bare/USB-powered board.
 
 #ifndef USE_PCA9685
 #define USE_PCA9685 0
@@ -26,16 +32,6 @@
 #endif
 
 namespace {
-// ---- Shared position state --------------------------------------------------
-float    g_curUs    = 1500;       // pulse width actually on the output right now
-int      g_tgtUs    = 1500;       // pulse width we're slewing toward
-uint16_t g_speed    = 25;         // max slew rate in deg/s; 0 = unlimited (snap)
-bool     g_sweep    = false;
-uint32_t g_lastTick = 0;
-bool     g_moving   = false;      // was the servo mid-slew last tick? (settle-edge detect)
-bool     g_posDirty = false;      // a settled position is waiting to be written to NVS
-uint32_t g_settledMs = 0;         // millis() when the last move settled (debounce persistence)
-
 // MG90-class pulse envelope. Wider than the classic 1000–2000 µs so the endpoints
 // reach the servo's real mechanical limits during calibration.
 const int      MIN_US          = 500;
@@ -53,9 +49,31 @@ const int HOME_US = MIN_US;
 // the deg/s speed limit into a µs/s slew rate.
 const float US_PER_DEG = (float)(MAX_US - MIN_US) / 180.0f;
 
+#if USE_PCA9685
+const int NSLOTS = 16;
+#else
+const int NSLOTS = 1;
+#endif
+
+// Per-slot slew state — one entry per physical output.
+struct SlotState {
+  float    cur       = (float)HOME_US;  // pulse width on the output right now
+  int      tgt       = HOME_US;         // pulse width we're slewing toward
+  bool     live      = false;           // attached / emitting pulses?
+  bool     moving    = false;           // was mid-slew last tick (settle-edge detect)
+  bool     dirty     = false;           // settled position awaiting NVS write
+  uint32_t settledMs = 0;               // when it settled (debounce persistence)
+};
+SlotState g_s[NSLOTS];
+
+uint16_t g_speed    = 25;              // max slew rate in deg/s; 0 = unlimited (snap)
+bool     g_sweep    = false;           // bench sweep — active slot only
+uint32_t g_lastTick = 0;
+
 int   angleToUs(int a) { return map(constrain(a, 0, 180), 0, 180, MIN_US, MAX_US); }
 int   usToAngle(int u) { return map(constrain(u, MIN_US, MAX_US), MIN_US, MAX_US, 0, 180); }
 int   clampUs(int u)   { return constrain(u, MIN_US, MAX_US); }
+int   clampSlot(int s) { return constrain(s, 0, NSLOTS - 1); }
 
 // A GPIO that can act as a servo signal / I2C line on the ESP32-D: excludes
 // input-only 34–39, flash 6–11 and non-existent pins. Reused to validate the
@@ -66,17 +84,11 @@ bool validGpio(uint8_t g) {
   return false;
 }
 
-// ---- Backend: hardware primitives ------------------------------------------
+// ---- Backend: hardware primitives (all slot-addressed) ----------------------
 #if USE_PCA9685
 Adafruit_PWMServoDriver g_pwm(0x40);   // default I2C address (ADR 0003)
-uint8_t g_ch       = 0;                // active test channel 0–15
-uint8_t g_sda      = 21, g_scl = 22;   // I2C bus pins
-bool    g_attached = false;            // PCA9685 has no attach() — track it ourselves
-// Last commanded pulse width per channel. Selecting a channel restores its own
-// position (never the previous channel's), so switching focus moves nothing — a
-// safety must when each channel is a different blind. Seeded from NVS at boot (or HOME
-// if never driven) so a warm reboot/OTA restores each channel's real position.
-float   g_chPos[16];
+uint8_t g_ch  = 0;                     // ACTIVE test slot (Servo-test / calibration focus)
+uint8_t g_sda = 21, g_scl = 22;        // I2C bus pins
 
 void hwInit() {
   Wire.begin(g_sda, g_scl);
@@ -84,14 +96,13 @@ void hwInit() {
   g_pwm.setOscillatorFrequency(27000000);  // datasheet internal osc — trims writeMicroseconds accuracy
   g_pwm.setPWMFreq(50);                     // standard analog-servo frame rate
 }
-bool hwAttached()      { return g_attached; }
-void hwWriteUs(int us) { g_pwm.writeMicroseconds(g_ch, us); }
-void hwEnsureAttached(){ g_attached = true; }  // channel goes live on the next write
-void hwDetach() {
-  g_pwm.setPWM(g_ch, 0, 4096);   // full-OFF — releases the servo (no holding torque)
-  g_attached = false;
+void hwWrite(int slot, int us) { g_pwm.writeMicroseconds(slot, us); }
+void hwAttach(int slot)        { g_s[slot].live = true; }   // channel goes live on the next write
+void hwDetach(int slot) {
+  g_pwm.setPWM(slot, 0, 4096);   // full-OFF — releases the servo (no holding torque)
+  g_s[slot].live = false;
 }
-int  curSlot() { return g_ch; }  // NVS position slot = the active channel
+int  activeSlot() { return g_ch; }
 #else
 Servo   g_servo;
 uint8_t g_pin = 13;               // signal GPIO
@@ -103,43 +114,42 @@ void hwInit() {
   ESP32PWM::allocateTimer(2);
   ESP32PWM::allocateTimer(3);
 }
-bool hwAttached()      { return g_servo.attached(); }
-void hwWriteUs(int us) { g_servo.writeMicroseconds(us); }
-void hwEnsureAttached(){
+void hwWrite(int, int us) { g_servo.writeMicroseconds(us); }
+void hwAttach(int) {
   if (!g_servo.attached()) {
     g_servo.setPeriodHertz(50);            // standard analog-servo frame rate
     g_servo.attach(g_pin, MIN_US, MAX_US);
   }
+  g_s[0].live = true;
 }
-void hwDetach() { if (g_servo.attached()) g_servo.detach(); }
-int  curSlot() { return 0; }     // one servo — always NVS position slot 0
+void hwDetach(int) {
+  if (g_servo.attached()) g_servo.detach();
+  g_s[0].live = false;
+}
+int  activeSlot() { return 0; }
 #endif
 
-// Record where the servo just settled so a warm reboot restores it (and the first move
+// Record where a slot just settled so a warm reboot restores it (and the first move
 // slews from that reference instead of a guess). RAM first; the NVS write is debounced
 // in loop() to spare the flash during calibration jogging.
-void rememberPos() {
-#if USE_PCA9685
-  g_chPos[g_ch] = g_curUs;
-#endif
-  g_posDirty  = true;
-  g_settledMs = millis();
-}
-void persistPos() {
-  AppConfig::setServoPos(curSlot(), (int)roundf(g_curUs));
-  g_posDirty = false;
+void rememberPos(int slot) { g_s[slot].dirty = true; g_s[slot].settledMs = millis(); }
+void persistPos(int slot) {
+  AppConfig::setServoPos(slot, (int)roundf(g_s[slot].cur));
+  g_s[slot].dirty = false;
 }
 
-// Point the servo at an absolute pulse width, honouring the speed limit.
-void moveToUs(int us) {
-  g_sweep = false;                         // a direct move cancels an in-progress sweep
-  g_tgtUs = clampUs(us);
-  hwEnsureAttached();
-  if (g_speed == 0) {                      // Max speed — snap straight there
-    g_curUs = g_tgtUs;
-    hwWriteUs(g_tgtUs);
-    rememberPos();                         // slewed moves are remembered on settle in loop()
-  }                                        // otherwise loop() slews there at g_speed
+// Point a slot at an absolute pulse width, honouring the speed limit.
+void moveToUs(int slot, int us) {
+  slot = clampSlot(slot);
+  if (slot == activeSlot()) g_sweep = false;   // a direct move cancels a bench sweep
+  SlotState &S = g_s[slot];
+  S.tgt = clampUs(us);
+  hwAttach(slot);
+  if (g_speed == 0) {                          // Max speed — snap straight there
+    S.cur = (float)S.tgt;
+    hwWrite(slot, S.tgt);
+    rememberPos(slot);                         // slewed moves are remembered on settle in loop()
+  }                                            // otherwise loop() slews there at g_speed
 }
 }  // namespace
 
@@ -151,21 +161,22 @@ void begin() {
   g_sda = AppConfig::i2cSda();
   g_scl = AppConfig::i2cScl();
   g_ch  = AppConfig::servoChannel();
-  // Restore each channel's last-known position (or HOME if never driven) so the first
-  // move after a warm reboot / OTA slews from where the servo actually is.
-  for (int i = 0; i < 16; i++) { int p = AppConfig::servoPos(i); g_chPos[i] = (p < 0) ? HOME_US : p; }
-  g_curUs = g_chPos[g_ch];
-  g_tgtUs = (int)roundf(g_curUs);
-  hwInit();
-  LOGI("servo", "driver ready — PCA9685 @0x40, SDA GPIO%u/SCL GPIO%u, channel %u @ %d µs, detached (idle)",
-       g_sda, g_scl, g_ch, (int)roundf(g_curUs));
 #else
   g_pin = AppConfig::servoPin();
-  int p = AppConfig::servoPos(0);           // restore last-known position (or HOME if never driven)
-  g_curUs = (p < 0) ? HOME_US : p;
-  g_tgtUs = (int)roundf(g_curUs);
+#endif
+  // Restore each slot's last-known position (or assembly HOME if never driven) so
+  // the first move after a warm reboot / OTA slews from where the servo actually is.
+  for (int i = 0; i < NSLOTS; i++) {
+    int p = AppConfig::servoPos(i);
+    g_s[i].cur = (p < 0) ? (float)HOME_US : (float)p;
+    g_s[i].tgt = (int)roundf(g_s[i].cur);
+  }
   hwInit();
-  LOGI("servo", "driver ready — direct GPIO%u @ %d µs, detached (idle)", g_pin, (int)roundf(g_curUs));
+#if USE_PCA9685
+  LOGI("servo", "driver ready — PCA9685 @0x40, SDA GPIO%u/SCL GPIO%u, 16 slots, test channel %u @ %d µs, all detached (idle)",
+       g_sda, g_scl, g_ch, (int)roundf(g_s[g_ch].cur));
+#else
+  LOGI("servo", "driver ready — direct GPIO%u @ %d µs, detached (idle)", g_pin, (int)roundf(g_s[0].cur));
 #endif
 }
 
@@ -183,16 +194,14 @@ uint8_t channel() { return g_ch; }
 bool setChannel(uint8_t ch) {
   if (ch > 15) { LOGW("servo", "rejected channel %u (0–15 only)", ch); return false; }
   if (ch == g_ch) return true;
-  // Just move the control focus — never drive or release a channel on selection.
-  // Each channel keeps holding its own last value; the next move slews from there.
-  g_chPos[g_ch] = g_curUs;                   // remember where we left the current channel
-  if (g_posDirty) persistPos();              // commit its position to NVS before leaving it
-  g_sweep = false;
+  // Just move the test focus — never drive or release a channel on selection. With
+  // per-slot state (ADR 0010) an in-flight move on the old channel keeps slewing to
+  // completion; each channel keeps holding its own position.
+  g_sweep = false;                           // the bench sweep doesn't follow a focus change
   g_ch = ch;
   AppConfig::setServoChannel(ch);
-  g_curUs = g_chPos[ch];                     // restore this channel's last commanded position
-  g_tgtUs = (int)roundf(g_curUs);            // settled → loop() makes no move
-  LOGI("servo", "test channel set to %u (holding %d µs)", g_ch, g_tgtUs);
+  LOGI("servo", "test focus → channel %u (at %d µs%s)", g_ch, (int)roundf(g_s[g_ch].cur),
+       g_s[g_ch].moving ? ", mid-move" : "");
   return true;
 }
 
@@ -203,14 +212,13 @@ bool setI2cPins(uint8_t sda, uint8_t scl) {
   if (!validGpio(sda) || !validGpio(scl) || sda == scl) {
     LOGW("servo", "rejected I2C pins SDA%u/SCL%u", sda, scl); return false;
   }
-  bool wasAttached = g_attached;
   g_sweep = false;
-  if (wasAttached) hwDetach();
   Wire.end();
   g_sda = sda; g_scl = scl;
   AppConfig::setI2cPins(sda, scl);
   hwInit();                                 // re-open the bus on the new pins
-  if (wasAttached) { hwEnsureAttached(); hwWriteUs((int)roundf(g_curUs)); }
+  for (int i = 0; i < NSLOTS; i++)          // re-assert every live output on the re-opened bus
+    if (g_s[i].live) hwWrite(i, (int)roundf(g_s[i].cur));
   LOGI("servo", "I2C pins set to SDA GPIO%u / SCL GPIO%u", g_sda, g_scl);
   return true;
 }
@@ -224,7 +232,7 @@ bool setPin(uint8_t g) {
   if (wasAttached) g_servo.detach();
   g_pin = g;
   AppConfig::setServoPin(g);
-  if (wasAttached) { hwEnsureAttached(); g_servo.writeMicroseconds((int)roundf(g_curUs)); }
+  if (wasAttached) { hwAttach(0); g_servo.writeMicroseconds((int)roundf(g_s[0].cur)); }
   LOGI("servo", "signal pin set to GPIO%u", g_pin);
   return true;
 }
@@ -238,40 +246,44 @@ bool    setI2cPins(uint8_t, uint8_t) { return false; }
 #endif
 
 bool attach() {
-  hwEnsureAttached();
-  g_tgtUs = (int)roundf(g_curUs);      // hold position — no surprise move on attach
-  hwWriteUs(g_tgtUs);
-  LOGI("servo", "attached at %d µs", g_tgtUs);
-  return hwAttached();
+  int s = activeSlot();
+  hwAttach(s);
+  g_s[s].tgt = (int)roundf(g_s[s].cur);   // hold position — no surprise move on attach
+  hwWrite(s, g_s[s].tgt);
+  LOGI("servo", "attached at %d µs", g_s[s].tgt);
+  return g_s[s].live;
 }
 
 void detach() {
+  int s = activeSlot();
   g_sweep = false;
-  g_tgtUs = (int)roundf(g_curUs);      // freeze any in-flight move where it stopped
-  hwDetach();
-  rememberPos(); persistPos();         // a deliberate stop — save the frozen position now
-  LOGI("servo", "detached (released) at %d µs", (int)roundf(g_curUs));
+  g_s[s].tgt = (int)roundf(g_s[s].cur);   // freeze any in-flight move where it stopped
+  hwDetach(s);
+  rememberPos(s); persistPos(s);          // a deliberate stop — save the frozen position now
+  LOGI("servo", "detached (released) at %d µs", (int)roundf(g_s[s].cur));
 }
 
-bool attached() { return hwAttached(); }
+bool attached() { return g_s[activeSlot()].live; }
 
-void writeAngle(int deg) { moveToUs(angleToUs(constrain(deg, 0, 180))); }
-void writeUs(int us)     { moveToUs(us); }
+void writeAngle(int deg) { moveToUs(activeSlot(), angleToUs(constrain(deg, 0, 180))); }
+void writeUs(int us)     { moveToUs(activeSlot(), us); }
 
 void jogUs(int deltaUs) {
   // Nudge relative to the current target so repeated clicks accumulate cleanly,
   // even if a slew is still settling from the last one.
-  moveToUs(g_tgtUs + deltaUs);
+  int s = activeSlot();
+  moveToUs(s, g_s[s].tgt + deltaUs);
 }
 
 void run(int dir) {
-  if      (dir > 0) moveToUs(MAX_US);          // slow-open toward the max endpoint
-  else if (dir < 0) moveToUs(MIN_US);          // slow-close toward the min endpoint
-  else { g_sweep = false; g_tgtUs = (int)roundf(g_curUs); }  // stop where we are
+  int s = activeSlot();
+  if      (dir > 0) moveToUs(s, MAX_US);       // slow-open toward the max endpoint
+  else if (dir < 0) moveToUs(s, MIN_US);       // slow-close toward the min endpoint
+  else { g_sweep = false; g_s[s].tgt = (int)roundf(g_s[s].cur); }  // stop where we are
 }
 
-int angle()        { return usToAngle((int)roundf(g_curUs)); }
-int microseconds() { return (int)roundf(g_curUs); }
+int angle()        { return usToAngle((int)roundf(g_s[activeSlot()].cur)); }
+int microseconds() { return (int)roundf(g_s[activeSlot()].cur); }
 int minUs()        { return MIN_US; }
 int maxUs()        { return MAX_US; }
 
@@ -285,46 +297,71 @@ void setSpeed(uint16_t dps) {
 }
 
 void startSweep() {
-  hwEnsureAttached();
+  int s = activeSlot();
+  hwAttach(s);
   g_sweep = true;
-  g_tgtUs = (g_curUs < (MIN_US + MAX_US) / 2) ? MAX_US : MIN_US;
+  g_s[s].tgt = (g_s[s].cur < (MIN_US + MAX_US) / 2) ? MAX_US : MIN_US;
   LOGI("servo", "sweep started");
 }
 
 void stopSweep() {
+  int s = activeSlot();
   g_sweep = false;
-  g_tgtUs = (int)roundf(g_curUs);      // stop where we are, not at the far end
+  g_s[s].tgt = (int)roundf(g_s[s].cur);   // stop where we are, not at the far end
   LOGI("servo", "sweep stopped");
 }
 bool sweeping()  { return g_sweep; }
+
+// ---- Slot API (ADR 0010) -----------------------------------------------------
+
+void moveSlotUs(uint8_t slot, int us) { moveToUs(slot, us); }
+
+void stopSlot(uint8_t slot) {
+  int s = clampSlot(slot);
+  if (s == activeSlot()) g_sweep = false;
+  g_s[s].tgt = (int)roundf(g_s[s].cur);   // freeze where it is (keeps holding torque)
+}
+
+int  slotUs(uint8_t slot)       { return (int)roundf(g_s[clampSlot(slot)].cur); }
+int  slotTargetUs(uint8_t slot) { return g_s[clampSlot(slot)].tgt; }
+
+bool slotMoving(uint8_t slot) {
+  const SlotState &S = g_s[clampSlot(slot)];
+  return S.live && abs((int)roundf(S.cur) - S.tgt) > 1;
+}
 
 void loop() {
   uint32_t now = millis();
   if (now - g_lastTick < MOVE_TICK_MS) return;
   float dt = (now - g_lastTick) / 1000.0f;
   g_lastTick = now;
-  // Debounced write of the last settled position (runs even while detached).
-  if (g_posDirty && (now - g_settledMs) > POS_PERSIST_MS) persistPos();
-  if (!hwAttached()) return;
-  if (g_sweep && fabsf(g_tgtUs - g_curUs) < 1.0f)
-    g_tgtUs = (g_tgtUs <= MIN_US) ? MAX_US : MIN_US;   // bounce off the ends
-  if (fabsf(g_tgtUs - g_curUs) < 0.5f) {               // settled — nothing to do
-    if (g_moving) { g_moving = false; rememberPos(); } // just arrived — remember where
-    return;
+  for (int i = 0; i < NSLOTS; i++) {
+    SlotState &S = g_s[i];
+    // Debounced write of a settled position (runs even while detached).
+    if (S.dirty && (now - S.settledMs) > POS_PERSIST_MS) persistPos(i);
+    if (!S.live) continue;
+    bool sweepHere = g_sweep && i == activeSlot();
+    if (sweepHere && fabsf(S.tgt - S.cur) < 1.0f)
+      S.tgt = (S.tgt <= MIN_US) ? MAX_US : MIN_US;     // bounce off the ends
+    if (fabsf(S.tgt - S.cur) < 0.5f) {                 // settled — nothing to do
+      if (S.moving) { S.moving = false; rememberPos(i); }  // just arrived — remember where
+      continue;
+    }
+    S.moving = true;
+    // Slew toward the target in µs. deg/s → µs/s via US_PER_DEG. Sweeping at "Max"
+    // uses a sane fixed rate instead of teleporting.
+    float dps  = g_speed ? g_speed : (sweepHere ? SWEEP_DPS_UNCAP : 0);
+    float step = dps ? dps * US_PER_DEG * dt : fabsf(S.tgt - S.cur);
+    if (fabsf(S.tgt - S.cur) <= step) S.cur = S.tgt;
+    else S.cur += (S.tgt > S.cur) ? step : -step;
+    hwWrite(i, (int)roundf(S.cur));
   }
-  g_moving = true;
-  // Slew toward the target in µs. deg/s → µs/s via US_PER_DEG. Sweeping at "Max"
-  // uses a sane fixed rate instead of teleporting.
-  float dps  = g_speed ? g_speed : (g_sweep ? SWEEP_DPS_UNCAP : 0);
-  float step = dps ? dps * US_PER_DEG * dt : fabsf(g_tgtUs - g_curUs);
-  if (fabsf(g_tgtUs - g_curUs) <= step) g_curUs = g_tgtUs;
-  else g_curUs += (g_tgtUs > g_curUs) ? step : -step;
-  hwWriteUs((int)roundf(g_curUs));
 }
 
 String statusJson() {
-  int curUs = (int)roundf(g_curUs);
-  bool moving = hwAttached() && abs(curUs - g_tgtUs) > 1;
+  const SlotState &S = g_s[activeSlot()];
+  int curUs = (int)roundf(S.cur);
+  bool moving = S.live && abs(curUs - S.tgt) > 1;
   String j = "{";
   j += "\"backend\":\""  + String(backend()) + "\"";
   j += ",\"usesPca\":"   + String(usesPca() ? "true" : "false");
@@ -332,11 +369,11 @@ String statusJson() {
   j += ",\"channel\":"   + String(channel());
   j += ",\"sda\":"       + String(sdaPin());
   j += ",\"scl\":"       + String(sclPin());
-  j += ",\"attached\":"  + String(hwAttached() ? "true" : "false");
+  j += ",\"attached\":"  + String(S.live ? "true" : "false");
   j += ",\"angle\":"     + String(usToAngle(curUs));
-  j += ",\"target\":"    + String(usToAngle(g_tgtUs));
+  j += ",\"target\":"    + String(usToAngle(S.tgt));
   j += ",\"us\":"        + String(curUs);
-  j += ",\"targetUs\":"  + String(g_tgtUs);
+  j += ",\"targetUs\":"  + String(S.tgt);
   j += ",\"moving\":"    + String(moving ? "true" : "false");
   j += ",\"speed\":"     + String(g_speed);
   j += ",\"sweeping\":"  + String(g_sweep ? "true" : "false");

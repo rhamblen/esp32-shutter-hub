@@ -73,6 +73,8 @@ async function loadInfo() {
 }
 
 // ---- MQTT -------------------------------------------------------------------
+let mqShutters = [];   // cached /api/shutters for the Topics tab
+
 function mqttPill(d) {
   const p = $("#mq_pill");
   const ok = d.connected, on = d.enabled;
@@ -80,10 +82,26 @@ function mqttPill(d) {
   p.querySelector(".dot").classList.toggle("off", !ok);
   p.querySelector("span:last-child").textContent =
     ok ? "Connected" : on ? (d.state || "connecting") : "Disabled";
-  const base = $("#mq_base").value || "shutter-hub";
+  renderTopics();
+}
+// Live topic map on the Topics sub-tab: hub-wide rows + one block per shutter.
+function renderTopics() {
+  const base = $("#mq_base").value.trim() || "shutter-hub";
   $("#t_status").textContent = base + "/status";
   $("#t_state").textContent  = base + "/state";
-  $("#t_cmd").textContent    = base + "/cover/<id>/set";
+  $("#t_none").classList.toggle("hidden", mqShutters.length > 0);
+  const row = (label, dir, topic, hint) =>
+    `<div class="kv"><span>${label} <i class="tdir">${dir}</i>${hint ? `<small class="thint">${hint}</small>` : ""}</span><b class="mono">${topic}</b></div>`;
+  $("#t_shutters").innerHTML = mqShutters.map(s => {
+    const b = `${base}/cover/${s.id}`;
+    return `<div class="tsh"><div class="tsh-name">${esc(s.name)} <span class="muted">· ${s.id}</span></div>` +
+      row("Command", "→ hub", `${b}/set`, "OPEN · CLOSE · STOP") +
+      row("Position target", "→ hub", `${b}/position/set`, "0–100") +
+      row("Custom command", "→ hub", `${b}/cmd`, "jog_open · jog_close · recall:daylight · recall:privacy · save:daylight · save:privacy") +
+      row("Position", "hub →", `${b}/position`, "0–100, retained") +
+      row("State", "hub →", `${b}/state`, "opening · closing · open · closed · stopped") +
+      `</div>`;
+  }).join("");
 }
 async function loadMqtt() {
   try {
@@ -92,9 +110,11 @@ async function loadMqtt() {
     $("#mq_client").value = d.clientId; $("#mq_user").value = d.user;
     $("#mq_pass").value = ""; $("#mq_pass").placeholder = d.hasPass ? "•••••• (unchanged)" : "password";
     $("#mq_base").value = d.base; $("#mq_ha").checked = d.haDiscovery; $("#mq_en").checked = d.enabled;
+    try { mqShutters = await apiGet("/api/shutters"); } catch (e) { mqShutters = []; }
     mqttPill(d);
   } catch (e) { $("#mq_msg").textContent = "Load failed: " + e.message; }
 }
+$("#mq_base").addEventListener("input", renderTopics);
 $("#mq_save").addEventListener("click", async () => {
   $("#mq_msg").textContent = "Saving…";
   try {

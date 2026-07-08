@@ -18,6 +18,16 @@ int    count();
 String listJson();                 // JSON array of all shutters (id,name,channel,closedUs,openUs,daylightUs,privacyUs,calibrated)
 bool   exists(const String &id);
 
+// Index-based access for iteration (MQTT discovery + state publishing, Phase 4).
+// Resolve an id to an index with find(); *At() getters return safe defaults when
+// the index is out of range.
+int    find(const String &id);     // index 0..count()-1, or -1 if unknown
+String idAt(int i);
+String nameAt(int i);
+int    channelAt(int i);
+bool   invertedAt(int i);
+bool   calibratedAt(int i);        // both edges snapshotted
+
 // Mutations — each persists immediately and returns success.
 bool   add(const String &name, int channel);   // false if full; id auto-slugged from name
 bool   remove(const String &id);

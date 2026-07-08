@@ -4,22 +4,25 @@ PlatformIO project (Arduino Core, `esp32dev`). Structural reference:
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). See
 [../docs/project-plan.md](../docs/project-plan.md) for the phased roadmap.
 
-## What this version does (v0.3.0 — web UI + logs + MQTT/HA + servo test + blind calibration + build variants)
+## What this version does (v0.4.0 — Home Assistant cover control over MQTT)
 
 On-device WiFi setup, advertises `shutter-hub.local` over mDNS, and serves a
 **single-page web UI from LittleFS** (sidebar: Info · MQTT · Servo test · Shutters ·
 System · OTA · Logs) over a JSON/REST API. A **live log stream** runs over WebSocket
-(`/ws/logs`); **MQTT** connects to a broker and publishes **Home Assistant discovery**
-so the hub appears in HA. Custom **OTA** flashes firmware and/or the LittleFS image. The
-**Servo test** page is a low-level bench diagnostic (one servo direct from a GPIO, in
-degrees) with a persisted **speed slider** (5–120 °/s, default 25). The **Shutters**
-page (Phase 2) is per-blind **calibration**: define a shutter, then use a microsecond
-scrubber + transport controls (slow-run → stop → frame-step nudge) to snapshot its
-closed/open endpoints and Daylight/Privacy favourites — all persisted in NVS (survives a
-filesystem OTA). The servo backend is a **build variant** — the `-direct` builds run on a bare
-ESP32 (one servo off a GPIO, no extra hardware), while the `-pca9685` builds drive servos through a
-PCA9685 over I2C; the Servo-test page adapts to whichever it's running. This is the base every later
-phase (shutter covers, HomeKit, solar) builds on.
+(`/ws/logs`). **MQTT (Phase 4)**: every shutter defined on the Shutters page becomes a
+native **Home Assistant `cover`** (open/close/stop + position 0–100) plus **six
+`button` entities** (jog open/close, Daylight/Privacy recall, save Daylight/Privacy)
+via MQTT discovery — commands drive each shutter's own PCA9685 channel, **several
+simultaneously** (ADR 0010), and retained `position`/`state` topics track every move,
+web-UI ones included. The MQTT page's **Topics** tab shows the live per-shutter topic
+map. Custom **OTA** flashes firmware and/or the LittleFS image. The **Servo test** page
+is a low-level bench diagnostic with a persisted **speed slider** (5–120 °/s); the
+**Shutters** page (Phase 2) is per-blind **calibration**: a microsecond scrubber +
+transport controls (slow-run → stop → frame-step nudge) snapshot each blind's
+closed/open endpoints and Daylight/Privacy favourites, all persisted in NVS (survives a
+filesystem OTA). The servo backend is a **build variant** — `-direct` (one servo off a
+GPIO, bare ESP32) or `-pca9685` (I2C multi-channel); the web UI adapts to whichever
+it's running.
 
 ## WiFi setup (on-device — no credentials in the binary)
 
@@ -90,7 +93,7 @@ pio run -e esp32d-pca9685 -t upload   # auto-detects the port; monitor with:  pi
 **Option B — single merged image (NodeMCU-PyFlasher / esptool):**
 Flash the `-full-` image for your variant at offset `0x0`:
 ```
-esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.3.0.bin
+esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.4.0.bin
 ```
 In NodeMCU-PyFlasher: select the `...-full-...bin`, address `0x0`, flash.
 
@@ -124,9 +127,9 @@ firmware/
 │  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal                 [real]
 │  ├─ WebUI.cpp                static SPA + JSON API + /ws/logs + mDNS         [real]
 │  ├─ Ota.cpp                  custom firmware + LittleFS OTA                  [real]
-│  ├─ ServoController.cpp      single-servo µs driver, backend = GPIO | PCA9685  [real]
+│  ├─ ServoController.cpp      multi-slot µs driver, backend = GPIO | PCA9685   [real]
 │  ├─ Shutters.cpp             per-blind definitions + calibration (NVS) [Phase 2 real]
-│  ├─ Mqtt.cpp                 broker connect + HA discovery scaffold  [v0.2.0; covers Phase 4]
+│  ├─ Mqtt.cpp                 HA covers/buttons + discovery + state   [Phase 4 real, v0.4.0]
 │  ├─ HomeKit.cpp              HomeSpan bridge            [stub, Phase 5]
 │  └─ LightSensor.cpp          VEML7700 solar protection  [stub, Phase 6]
 ├─ dist/                       prebuilt bins (gitignored; attached to releases)

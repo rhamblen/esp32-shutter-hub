@@ -1,13 +1,18 @@
-// ServoController — single-servo bench-test driver (compile-time backend, v0.3.0).
+// ServoController — multi-slot µs servo driver (compile-time backend, v0.4.0).
 //
-// Drives ONE MG90-class servo so it can be exercised from the "Servo test" web tab.
 // The backend is chosen at build time (see platformio.ini / ADR 0008):
-//   USE_PCA9685=0  direct GPIO  — ESP32Servo (LEDC), servo on a signal GPIO.
-//   USE_PCA9685=1  PCA9685      — Adafruit PWM driver over I2C; the servo lives on a
-//                                 channel (0–15), the bus on the configured SDA/SCL.
+//   USE_PCA9685=0  direct GPIO  — ESP32Servo (LEDC), one servo on a signal GPIO.
+//   USE_PCA9685=1  PCA9685      — Adafruit PWM driver over I2C; servos live on
+//                                 channels (0–15), the bus on the configured SDA/SCL.
 // The µs-based position core (slew, speed, sweep) is identical across backends; only
-// the hardware primitives (init, emit-µs, attach/detach, addressing) differ. Still
-// one active servo at a time — parallel 4-channel drive is a later phase (0002/0003).
+// the hardware primitives (init, emit-µs, attach/detach, addressing) differ.
+//
+// v0.4.0 (ADR 0010): every physical output ("slot") carries its own slew state, so
+// several shutters can move at once — an HA "close all" slews all channels
+// simultaneously. A slot is a PCA9685 channel on that build, or the one GPIO servo
+// on a direct build. The bench/test API below acts on the ACTIVE slot (the test
+// channel picked on the Servo-test page); the slot API at the bottom drives any
+// output regardless of focus (used by the MQTT cover handlers).
 #pragma once
 #include <Arduino.h>
 
@@ -56,4 +61,14 @@ void    stopSweep();
 bool    sweeping();
 
 String  statusJson();            // {backend,pin,channel,sda,scl,attached,angle,target,us,targetUs,moving,speed,sweeping,min,max}
+
+// ---- Slot API — drive any output, independent of the test focus (ADR 0010) --
+// Slot = PCA9685 channel (0–15) on that build; the direct build has a single slot
+// (the argument is clamped to 0). Every slot slews independently and concurrently
+// at the shared speed(). Used by the MQTT cover handlers (Phase 4).
+void    moveSlotUs(uint8_t slot, int us);   // absolute move; auto-attaches that slot
+void    stopSlot(uint8_t slot);             // freeze that slot where it is (keeps holding)
+int     slotUs(uint8_t slot);               // pulse width currently on that output
+int     slotTargetUs(uint8_t slot);         // pulse width it is slewing toward
+bool    slotMoving(uint8_t slot);           // true while that slot is mid-slew
 }

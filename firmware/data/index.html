@@ -89,11 +89,12 @@
           <button class="btn ghost" id="mq_reset">Reset</button><span class="msg" id="mq_msg"></span></div>
       </div>
       <div class="card tabpane hidden" data-pane="topics">
-        <p class="sub">Derived from the base topic. Read-only.</p>
-        <div class="kv"><span>Availability (LWT)</span><b id="t_status">–</b></div>
-        <div class="kv"><span>State (JSON)</span><b id="t_state">–</b></div>
-        <div class="kv"><span>Command</span><b id="t_cmd">–</b></div>
-        <div class="kv"><span>HA discovery prefix</span><b>homeassistant/…</b></div>
+        <p class="sub">Live topic map, derived from the base topic. The hub subscribes to the <b>→ hub</b> topics; <b>hub →</b> topics are published retained.</p>
+        <div class="kv"><span>Availability (LWT) <i class="tdir">hub →</i></span><b class="mono" id="t_status">–</b></div>
+        <div class="kv"><span>Hub state (JSON) <i class="tdir">hub →</i></span><b class="mono" id="t_state">–</b></div>
+        <div id="t_shutters"></div>
+        <p class="msg" id="t_none">No shutters defined yet — per-shutter cover topics appear here once you add one on the <b>Shutters</b> page.</p>
+        <p class="msg">With HA discovery on, entity configs are also published retained under <b>homeassistant/{cover,button,sensor}/…</b> — one cover + six buttons per shutter.</p>
       </div>
     </section>
 
@@ -163,7 +164,7 @@
             <label>Friendly name<input id="sh_name" placeholder="Front room – left"></label>
             <label>PCA9685 channel<select id="sh_ch"></select></label>
           </div>
-          <p class="msg">Channel is saved for later routing. On a PCA9685 build, calibration drives the one active test channel (set on the <b>Servo test</b> page); per-shutter channel routing arrives with the cover-control phase.</p>
+          <p class="msg">On a PCA9685 build, MQTT / Home Assistant cover commands drive this channel directly (each shutter moves independently). Selecting a shutter here also points the calibration transport below at its channel.</p>
           <div class="toggle-row">
             <div><b>Invert position scale</b><p>Report 0 % = fully open. Default is 0 % = closed (the Home Assistant standard).</p></div>
             <label class="switch"><input type="checkbox" id="sh_invert"><span class="slider"></span></label>

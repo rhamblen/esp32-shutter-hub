@@ -16,6 +16,59 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.4.0] — 2026-07-09
+
+MQTT / Home Assistant cover control (Phase 4): every configured shutter becomes a native HA
+`cover` plus six `button` entities via MQTT discovery, driving real servo channels — several at
+once. Implements the [ADR-0005](docs/decisions/0005-mqtt-command-structure.md) command table
+(the Phase-4b calibration-card commands — `goto_us`, `save:open`/`save:close`, raw-µs readback —
+stay deferred to that phase).
+
+### Added
+- **Per-shutter MQTT cover control** — the hub subscribes to
+  `<base>/cover/<id>/set` (`OPEN` | `CLOSE` | `STOP`), `<base>/cover/<id>/position/set` (`0–100`)
+  and `<base>/cover/<id>/cmd` (`jog_open` | `jog_close` | `recall:daylight` | `recall:privacy` |
+  `save:daylight` | `save:privacy`), wired to each shutter's calibrated endpoints/favourites and
+  its own PCA9685 channel. Jog steps **25 µs** per press, clamped to the calibrated travel.
+  `OPEN`/`CLOSE`/position commands on an **uncalibrated** shutter are ignored with a logged
+  warning (jog and save still work).
+- **Per-shutter state publishing** — `<base>/cover/<id>/position` (`0–100`) and
+  `<base>/cover/<id>/state` (`opening|closing|open|closed|stopped`), both **retained**, published
+  on change (≤4 Hz while moving). Position honours the per-shutter **Invert** scale; an
+  uncalibrated shutter reports `0`/`closed` per the assembly-home convention
+  ([ADR-0009](docs/decisions/0009-servo-position-memory.md)). Moves made from the web UI are
+  reflected too — HA always tracks the real position.
+- **Home Assistant discovery per shutter** — one `cover` (device class `shutter`, position +
+  set-position + state + availability) and six `button` entities (Jog open/close,
+  Daylight/Privacy recall, Save daylight/privacy — the save pair marked `entity_category:
+  config`), all grouped under the hub device and sharing the hub's `<base>/status` LWT.
+  Discovery **re-publishes automatically** when a shutter is added / removed / renamed /
+  re-channelled / inverted / recalibrated — a deleted shutter's entities and retained state are
+  removed from the broker (no reconnect needed).
+- **Concurrent per-channel servo drive** ([ADR-0010](docs/decisions/0010-concurrent-servo-drive.md))
+  — `ServoController` now keeps independent slew state per output ("slot"): every commanded
+  channel moves simultaneously at the shared speed limit, so an HA "close all" really closes all.
+  New slot API (`moveSlotUs`, `stopSlot`, `slotUs`, `slotTargetUs`, `slotMoving`); per-slot
+  position memory in NVS (extends ADR-0009). Direct-GPIO builds are unchanged (one slot).
+- **MQTT page — live Topics map** — the read-only Topics sub-tab now lists the real topics for
+  every configured shutter (command / position-target / custom / position / state, with payload
+  hints and direction badges), updating live as the base topic is edited, plus the hub-wide rows
+  and a discovery-prefix note.
+
+### Changed
+- **Servo-test channel switching no longer freezes an in-flight move** — with per-slot state,
+  changing the test focus lets the old channel finish its slew (previously it was abandoned
+  mid-travel). Detach still releases only the active channel.
+- **Shutters page channel hint** updated: on a PCA9685 build the per-shutter channel now routes
+  MQTT/HA cover commands directly.
+
+### Notes
+- **Simultaneous peak current is now real** — ~3–4 A with four MG90Ds moving at once, which the
+  XL4015 rail was sized for ([ADR-0003](docs/decisions/0003-power-chain-xl4015-pca9685.md)). On a
+  USB-powered bench rig, avoid multi-shutter scenes. Soft-start staggering is deferred (ADR-0010).
+- Uses wildcard subscriptions (`<base>/cover/+/…`), so no re-subscribe is needed when shutters
+  change; discovery/state refresh is deferred to the MQTT task loop for thread safety.
+
 ## [0.3.0] — 2026-07-08
 
 Build variants and a real PCA9685 servo backend. The servo hardware is now a compile-time choice,

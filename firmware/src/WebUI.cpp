@@ -363,12 +363,14 @@ void begin() {
     String name = r->hasParam("name", true) ? r->getParam("name", true)->value() : String("");
     int ch = r->hasParam("channel", true) ? r->getParam("channel", true)->value().toInt() : Shutters::count();
     if (!Shutters::add(name, ch)) { r->send(400, "application/json", "{\"error\":\"maximum shutters reached\"}"); return; }
+    Mqtt::shuttersChanged();
     r->send(200, "application/json", Shutters::listJson());
   });
   server.on("/api/shutters/remove", HTTP_POST, [](AsyncWebServerRequest *r) {
     if (!guard(r)) return;
     if (!r->hasParam("id", true) || !Shutters::remove(r->getParam("id", true)->value())) {
       r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    Mqtt::shuttersChanged();
     r->send(200, "application/json", Shutters::listJson());
   });
   server.on("/api/shutters/rename", HTTP_POST, [](AsyncWebServerRequest *r) {
@@ -376,6 +378,7 @@ void begin() {
     if (!r->hasParam("id", true) || !r->hasParam("name", true) ||
         !Shutters::rename(r->getParam("id", true)->value(), r->getParam("name", true)->value())) {
       r->send(400, "application/json", "{\"error\":\"rename failed\"}"); return; }
+    Mqtt::shuttersChanged();
     r->send(200, "application/json", Shutters::listJson());
   });
   server.on("/api/shutters/channel", HTTP_POST, [](AsyncWebServerRequest *r) {
@@ -383,6 +386,7 @@ void begin() {
     if (!r->hasParam("id", true) || !r->hasParam("channel", true) ||
         !Shutters::setChannel(r->getParam("id", true)->value(), r->getParam("channel", true)->value().toInt())) {
       r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    Mqtt::shuttersChanged();
     r->send(200, "application/json", Shutters::listJson());
   });
   server.on("/api/shutters/invert", HTTP_POST, [](AsyncWebServerRequest *r) {
@@ -392,6 +396,7 @@ void begin() {
     bool inv = r->getParam("inverted", true)->value() == "true" || r->getParam("inverted", true)->value() == "1";
     if (!Shutters::setInverted(r->getParam("id", true)->value(), inv)) {
       r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    Mqtt::shuttersChanged();
     r->send(200, "application/json", Shutters::listJson());
   });
   // Snapshot the servo's current pulse width into an endpoint (edge=open|closed).
@@ -402,6 +407,7 @@ void begin() {
     bool openEdge = r->getParam("edge", true)->value() == "open";
     if (!Shutters::setEdge(r->getParam("id", true)->value(), openEdge, ServoController::microseconds())) {
       r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    Mqtt::shuttersChanged();          // calibration affects the reported position scale
     r->send(200, "application/json", Shutters::listJson());
   });
   // Snapshot the current position into a favourite (fav=daylight|privacy).
@@ -412,6 +418,7 @@ void begin() {
     bool privacy = r->getParam("fav", true)->value() == "privacy";
     if (!Shutters::saveFav(r->getParam("id", true)->value(), privacy, ServoController::microseconds())) {
       r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    Mqtt::shuttersChanged();
     r->send(200, "application/json", Shutters::listJson());
   });
   // Move the servo to a stored position (fav=open|closed|daylight|privacy). Returns servo status.

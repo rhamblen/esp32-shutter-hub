@@ -6,9 +6,9 @@
 //   WiFiSetup       WiFiManager AP + captive portal (creds->NVS) [real]
 //   WebUI           tabbed status page + routes + mDNS           [real]
 //   Ota             custom firmware + LittleFS update             [real]
-//   ServoController single-servo µs driver, backend = GPIO | PCA9685  [real]
+//   ServoController multi-slot µs driver, backend = GPIO | PCA9685    [real]
 //   Shutters        per-blind definitions + calibration (NVS)     [Phase 2 real]
-//   Mqtt            broker connect + HA discovery scaffold        [v0.2.0 real; covers Phase 4]
+//   Mqtt            HA covers/buttons + discovery + state         [Phase 4 real, v0.4.0]
 //   HomeKit         HomeSpan bridge                               [stub, Phase 5]
 //   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
 //

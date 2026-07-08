@@ -14,7 +14,7 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | 1     | v0.1.0  | Bench bring-up (1 servo)       | ☑      |
 | S2    | v0.2.0  | Web UI shell (LittleFS SPA) + Logs (WS) + MQTT/HA config | ☑ |
 | 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
-| 4     | v0.4.0  | MQTT / Home Assistant covers   | ◐      |
+| 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
 | 4b    | v0.4.x  | HA Lovelace card (control + calibration) | ☐ |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
 | 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
@@ -33,8 +33,9 @@ info/OTA screens and in the artifact names. Four envs (`esp32d-` / `esp32c3-` ×
 `-pca9685`); only the ESP32-D pair is active, `esp32d-pca9685` is the default. See
 [decisions/0008-build-variants.md](decisions/0008-build-variants.md). Servo positions are remembered
 across reboots/OTA (NVS) with an assembly "home" default, so the first move slews rather than snaps
-([decisions/0009-servo-position-memory.md](decisions/0009-servo-position-memory.md)). Servo drive is
-still one active servo/channel at a time; parallel 4-channel drive stays in Phase 4/7.
+([decisions/0009-servo-position-memory.md](decisions/0009-servo-position-memory.md)). From **v0.4.0**
+servo drive is **concurrent per channel** — every commanded output slews independently, so an HA
+"close all" moves all shutters at once ([decisions/0010-concurrent-servo-drive.md](decisions/0010-concurrent-servo-drive.md)).
 
 **OTA-first reordering:** the web-server stack **and** WiFiManager captive-portal provisioning
 (originally Phase 3) were pulled forward as **Phase S** (`v0.0.1`) so every later phase flashes over
@@ -101,19 +102,26 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
   endpoint SET buttons, and Daylight/Privacy favourites.
 - **Prerequisites:** Phase 1 servo control; PCA9685 on I2C.
 - **Exit criteria:** ☑ calibrate closed/open + Daylight/Privacy per shutter in the browser; drive the
-  real per-channel servo; survive reboot. (Parallel 4-channel drive deferred to Phase 4/7.)
+  real per-channel servo; survive reboot. (Parallel multi-channel drive followed in v0.4.0, ADR 0010.)
 
 ## Phase 3 — WiFiManager + mDNS + OTA — RETIRED (folded into Phase S / S2)
 - Captive-portal provisioning + mDNS + custom OTA shipped in Phase S; in-place WiFi change now lives
   in **System > WiFi**. No separate release.
 
-## Phase 4 — MQTT / Home Assistant covers (v0.4.0)
+## Phase 4 — MQTT / Home Assistant covers (v0.4.0) ☑
 - **Objective:** HA cover entities per shutter, driving real servos.
-- **Config done in v0.2.0** (broker connection, HA discovery, ADR-0005 command structure). This phase
-  adds the per-shutter `cover` + `button` discovery and the `<base>/cover/<id>/{set,position/set,cmd}`
-  handlers wired to `ServoController` positions.
-- **Exit criteria:** `cover.front_room_left` etc. appear and control the servo from HA; jog buttons and
-  Daylight/Privacy presets work.
+- **Config done in v0.2.0** (broker connection, HA discovery, ADR-0005 command structure).
+- **What we built (v0.4.0):** per-shutter `cover` + six `button` entities via MQTT discovery
+  (re-published automatically on any shutter config change, deleted entities cleaned up); the
+  `<base>/cover/<id>/{set,position/set,cmd}` handlers wired to each shutter's calibrated
+  endpoints/favourites on its own channel; retained `position`/`state` publishing that also tracks
+  web-UI moves; **concurrent per-channel drive** ([ADR 0010](decisions/0010-concurrent-servo-drive.md))
+  so scenes move all shutters simultaneously; a live per-shutter **Topics** map on the MQTT page.
+  Phase-4b calibration-card commands (`goto_us`, `save:open`/`save:close`, raw-µs readback) stay
+  deferred to 4b.
+- **Exit criteria:** ☑ verified on hardware (2026-07-09, MQTT Explorer + HA) — covers appear and
+  control the servo, jog buttons and Daylight/Privacy presets work, state/position topics track
+  as expected.
 
 ## Phase 4b — Home Assistant Lovelace card (v0.4.x)
 - **Objective:** a purpose-built dashboard tile for the shutters, plus a hidden calibration tile.

@@ -26,7 +26,7 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 | `docs/architecture.md` | Principles, trade-off table, topology, gotchas |
 | `docs/inventory.md` | Shutter facts + BOM + power budget |
 | `docs/hardware-layout.md` | Copper-breadboard build plan: placement, cuts, standoffs, cables, connectors |
-| `docs/decisions/000{1..5}` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware, MQTT command structure |
+| `docs/decisions/0001–0010` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware, MQTT commands, MQTT-only HA, Lovelace card, build variants, position memory, concurrent drive |
 | `firmware/data/` | LittleFS web UI (index.html, style.css, app.js) served by `WebUI` |
 | `CHANGELOG.md` | Keep-a-Changelog; update every phase |
 
@@ -45,9 +45,15 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 - **Firmware:** custom Arduino (not ESPHome); HomeSpan bridge + MQTT (PubSubClient); ESPAsyncWebServer
   + LittleFS SPA + `/ws/logs` WebSocket; WiFiManager; custom OTA (firmware + LittleFS);
   `ServoController.moveTo()` smooth/staggered.
-- **MQTT/HA (ADR 0005):** browser-owned config; servos declared manually (no PWM auto-scan); each
-  shutter = one HA `cover` (position 0–100 = slat angle) on `<base>/cover/<id>/…`; favourites are two
-  named presets **Daylight**/**Privacy**; Up/Down = incremental jog. Config in NVS, web assets in LittleFS.
+- **MQTT/HA (ADR 0005, implemented v0.4.0):** browser-owned config; servos declared manually (no PWM
+  auto-scan); each shutter = one HA `cover` (position 0–100 = slat angle) on `<base>/cover/<id>/…` +
+  six `button`s (jog_open/jog_close on `cmd`, `recall:`/`save:` `daylight`/`privacy`); state topics
+  `position` + `state` retained; hub-wide LWT `<base>/status`. Jog = 25 µs/press, clamped to
+  calibration. Uncalibrated ⇒ reports 0/closed, OPEN/CLOSE/position ignored (logged). Discovery
+  re-publishes on shutter config change. Phase-4b cmds (`goto_us`, `save:open/close`) deferred.
+  Config in NVS, web assets in LittleFS.
+- **Servo drive (ADR 0010, v0.4.0):** per-slot slew state — all channels move concurrently at the
+  shared speed; bench API acts on the active test channel; slot API (`moveSlotUs` …) for MQTT.
 - **Solar:** trip lux>60000/10min → Privacy; clear lux<30000/20min → Daylight.
 - **Manual override:** suspend automation 2 h after a manual move, per shutter.
 
@@ -55,10 +61,11 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 
 Done: **S** (v0.0.1–3 framework + WiFi + OTA), **1** (v0.1.0 single-servo bench test; v0.2.1 adds a
 persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N`, slewed moves),
-**S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config). Phase 3 retired (folded into S/S2).
-Remaining: **2** shutters config + per-panel calibration (v0.2.x) → **4** MQTT covers wired to servos →
-**5** HomeKit → **6** light/solar → **7** production. **0** (mechanical force test) still open.
-Firmware builds + runs on a bare ESP32; no servo/sensor hardware built yet.
+**S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config), **2** (v0.2.2–v0.3.0 Shutters
+page + calibration; PCA9685 backend + build variants + position memory). Phase 3 retired (folded
+into S/S2), **4** (v0.4.0 MQTT/HA covers + buttons + discovery + concurrent drive; verified on
+hardware). Remaining: **4b** Lovelace card → **5** HomeKit → **6** light/solar → **7** production.
+**0** (mechanical force test) still open.
 
 ## Gotchas
 

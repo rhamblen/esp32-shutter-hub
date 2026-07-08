@@ -94,6 +94,17 @@ input[type=file]{padding:8px}
 .pill{display:inline-flex;gap:8px;align-items:center;background:var(--row);border:1px solid var(--line);
   border-radius:8px;padding:9px 13px;margin-bottom:16px;font-weight:600;font-size:.85rem;color:var(--green)}
 
+/* MQTT topics tab */
+.muted{color:var(--muted)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;font-weight:500;word-break:break-all}
+.tsh{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.tsh-name{font-weight:700;margin-bottom:4px}
+.tdir{font-style:normal;font-size:.7rem;font-weight:700;color:var(--teal);background:rgba(45,212,191,.12);
+  border-radius:5px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+.thint{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
+.kv span{min-width:0}
+.kv .mono{margin-left:14px;flex:0 1 auto}
+
 /* Range */
 .range{width:100%;margin:16px 0}
 

@@ -97,6 +97,13 @@ void begin() {
 int  count() { return g_count; }
 bool exists(const String &id) { return indexOf(id) >= 0; }
 
+int    find(const String &id) { return indexOf(id); }
+String idAt(int i)         { return (i >= 0 && i < g_count) ? g_list[i].id   : String(); }
+String nameAt(int i)       { return (i >= 0 && i < g_count) ? g_list[i].name : String(); }
+int    channelAt(int i)    { return (i >= 0 && i < g_count) ? g_list[i].channel : 0; }
+bool   invertedAt(int i)   { return (i >= 0 && i < g_count) ? g_list[i].inverted : false; }
+bool   calibratedAt(int i) { return (i >= 0 && i < g_count) ? calibrated(g_list[i]) : false; }
+
 String listJson() {
   String j = "[";
   for (int i = 0; i < g_count; i++) {
