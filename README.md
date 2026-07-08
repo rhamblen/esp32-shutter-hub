@@ -46,18 +46,21 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **web UI + servo bring-up + blind calibration** (`v0.2.2`) — the device
-interface is now a **LittleFS single-page app** (sidebar: Info · MQTT · Servo test · Shutters ·
+Design complete on paper; **web UI + servo bring-up + blind calibration + build variants** (`v0.3.0`).
+The device interface is a **LittleFS single-page app** (sidebar: Info · MQTT · Servo test · Shutters ·
 System · OTA · Logs) with a **live log stream** over WebSocket, **MQTT + Home Assistant discovery**
-scaffolding, web authentication, and a custom firmware+filesystem OTA updater. The **Servo test** tab
-drives one servo directly from an ESP32 GPIO (default GPIO13, configurable) with a persisted **speed
-slider** (5–120 °/s). The new **Shutters** page (Phase 2) is per-blind calibration: name a shutter,
-then use a microsecond scrubber + transport controls (slow-run → stop → frame-step nudge) to set its
-closed/open endpoints and Daylight/Privacy favourites, all persisted in NVS.
+scaffolding, web authentication, and a custom firmware+filesystem OTA updater. From v0.3.0 the servo
+backend is a **build variant** — **direct GPIO** (one bench servo) or **PCA9685** (I2C multi-channel) —
+identified on the Info/OTA screens and in the artifact names; the **Servo test** page adapts to
+whichever it runs (GPIO selector vs I2C-pins + channel selector) with a persisted **speed slider**
+(5–120 °/s). The **Shutters** page (Phase 2) is per-blind calibration: name a shutter, then use a
+microsecond scrubber + transport controls (slow-run → stop → frame-step nudge) to set its closed/open
+endpoints and Daylight/Privacy favourites, all persisted in NVS. Servo positions are remembered across
+reboots/OTA so the first move slews instead of snapping.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
-[release](https://github.com/rhamblen/esp32-shutter-hub/releases) — from v0.2.0 that's three per
-board: full (USB), firmware (OTA), and LittleFS filesystem.
+[release](https://github.com/rhamblen/esp32-shutter-hub/releases) — per variant: full (USB) and
+firmware (OTA), plus one shared LittleFS filesystem image.
 
 ## Repo layout
 
