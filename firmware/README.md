@@ -4,12 +4,18 @@ PlatformIO project (Arduino Core, `esp32dev`). Structural reference:
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). See
 [../docs/project-plan.md](../docs/project-plan.md) for the phased roadmap.
 
-## What this version does (v0.0.1 — framework scaffold)
+## What this version does (v0.2.1 — LittleFS web UI + logs + MQTT/HA + servo speed)
 
-On-device WiFi setup, advertises `shutter-hub.local` over mDNS, serves a status
-page, and accepts **over-the-air firmware updates at `/update`** (ElegantOTA). No
-servo, PCA9685 or power hardware required — it runs on a bare ESP32 dev board.
-This is the base every later phase (servos, HomeKit, MQTT, solar) builds on.
+On-device WiFi setup, advertises `shutter-hub.local` over mDNS, and serves a
+**single-page web UI from LittleFS** (sidebar: Info · MQTT · Actions · System · OTA ·
+Logs) over a JSON/REST API. A **live log stream** runs over WebSocket (`/ws/logs`);
+**MQTT** connects to a broker and publishes **Home Assistant discovery** so the hub
+appears in HA. Custom **OTA** flashes firmware and/or the LittleFS image. A Phase-1
+**servo bench test** lives on the Actions page, with a persisted **speed slider**
+(5–120 °/s, default 25) so moves can run slow enough to watch a real blind linkage.
+No servo/PCA9685/power hardware
+required — it runs on a bare ESP32 dev board. This is the base every later phase
+(shutter covers, HomeKit, solar) builds on.
 
 ## WiFi setup (on-device — no credentials in the binary)
 
@@ -27,8 +33,8 @@ This uses [WiFiManager](https://github.com/tzapu/WiFiManager) — the Arduino-na
 version of the SoftAP + captive-portal pattern in
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). Because nothing is
 compiled in, the same prebuilt bin works on anyone's network. To change networks
-later, use **Change network** on the System tab (opens its own `/wifi` page);
-**Reset** at the bottom of the page reboots back into this setup portal.
+later, use **System → WiFi** (scan/connect in place); **Reset WiFi** in the System
+page's Quick Actions reboots back into this setup portal.
 
 ## Build
 
@@ -41,18 +47,18 @@ pio run                            # builds ESP32-D only (default_envs)
 pio run -e esp32-c3-devkitm-1      # ESP32-C3 (deferred; build explicitly if needed)
 ```
 
-Prebuilt bins are collected in [`dist/`](dist/). A release ships **three bins per
-board** — but the LittleFS filesystem image only exists once the web UI moves into
-a `data/` folder (Phase 2), so v0.0.1–v0.0.3 carry just the first two:
+Prebuilt bins are collected in [`dist/`](dist/). From **v0.2.0** a release ships
+**three bins per board** (the web UI now lives in `data/`):
 
 | Per board | File | Use | Since |
 | --------- | ---- | --- | ----- |
 | Full image | `shutter-hub-<board>-full-vX.Y.Z.bin` | first USB flash, merged at `0x0` | now |
-| Firmware  | `shutter-hub-<board>-ota-vX.Y.Z.bin` | Firmware tab → **Flash firmware** | now |
-| Filesystem | `shutter-hub-<board>-littlefs-vX.Y.Z.bin` | Firmware tab → **Flash LittleFS** | **Phase 2** |
+| Firmware  | `shutter-hub-<board>-ota-vX.Y.Z.bin` | OTA page → **Upload Firmware** | now |
+| Filesystem | `shutter-hub-<board>-littlefs-vX.Y.Z.bin` | OTA page → **Upload LittleFS** | **v0.2.0** |
 
-Build the filesystem image (once a `data/` folder exists) with
-`pio run -e esp32dev -t buildfs` → `.pio/build/esp32dev/littlefs.bin`.
+Build the filesystem image with `pio run -e esp32dev -t buildfs` →
+`.pio/build/esp32dev/littlefs.bin`. **Flash it alongside the firmware** — without it
+the device serves an embedded recovery page (OTA upload only).
 
 _ESP32-C3 bins are not built or released yet._
 
@@ -78,18 +84,15 @@ In NodeMCU-PyFlasher: select the `...-full-...bin`, address `0x0`, flash.
 
 ## Update over the air (every time after the first)
 
-The **Firmware** tab at `http://shutter-hub.local/` is a custom OTA page: it shows the
-installed version, the last flash (what/when/result), and two file pickers — a
-**Firmware** image and a **Filesystem (LittleFS)** image.
+The **OTA Update** page at `http://shutter-hub.local/` is a custom updater: it shows the
+installed version, chip, last flash, and two uploaders — **Firmware** and
+**Filesystem (LittleFS)** — with an upload log.
 
-1. Build a new bin (`pio run`), or grab the `-ota-` bin from a release.
-2. Select it in the **Firmware image** box (leave Filesystem empty — we don't ship a
-   LittleFS image until Phase 2) and click **Flash selected**.
+1. Build new bins: `pio run` (firmware) and `pio run -t buildfs` (filesystem).
+2. **Upload Firmware** with the app bin; **Upload LittleFS** when the web UI (`data/`)
+   changed. Upload the filesystem first if both changed, then the firmware (which reboots).
 3. The board reboots into the new build — your saved WiFi and settings are untouched
-   (they live in NVS, not the app partition).
-
-You can also select both a firmware and a filesystem image to flash together (the
-filesystem is written first, then the firmware).
+   (they live in NVS, not the app/filesystem partitions).
 
 ## Layout
 
@@ -97,22 +100,23 @@ filesystem is written first, then the firmware).
 firmware/
 ├─ platformio.ini              board targets + libraries + build flags
 ├─ include/                    module headers (*.h)
+├─ data/                       LittleFS web UI (index.html, style.css, app.js)
 ├─ src/
 │  ├─ main.cpp                 thin entry point — wires the modules together
-│  ├─ AppConfig.cpp            persisted settings (NVS)                [real]
-│  ├─ Diagnostics.cpp          logging, /info, uptime, reboot          [real]
-│  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal         [real]
-│  ├─ WebUI.cpp                tabbed status page + routes + mDNS       [real]
-│  ├─ Ota.cpp                  ElegantOTA /update                      [real]
-│  ├─ ServoController.cpp      PCA9685 + MG90D            [stub, Phase 1/2]
-│  ├─ Mqtt.cpp                 HA MQTT discovery          [stub, Phase 4]
+│  ├─ AppConfig.cpp            persisted settings: device, servo, MQTT, auth (NVS) [real]
+│  ├─ Diagnostics.cpp          logging + log ring buffer + WS sink, /info      [real]
+│  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal                 [real]
+│  ├─ WebUI.cpp                static SPA + JSON API + /ws/logs + mDNS         [real]
+│  ├─ Ota.cpp                  custom firmware + LittleFS OTA                  [real]
+│  ├─ ServoController.cpp      single-servo bench test → PCA9685      [Phase 1 real]
+│  ├─ Mqtt.cpp                 broker connect + HA discovery scaffold  [v0.2.0; covers Phase 4]
 │  ├─ HomeKit.cpp              HomeSpan bridge            [stub, Phase 5]
 │  └─ LightSensor.cpp          VEML7700 solar protection  [stub, Phase 6]
 ├─ dist/                       prebuilt bins (gitignored; attached to releases)
 └─ README.md
 ```
 
-The `*.cpp` stubs are empty `begin()` placeholders so each later phase drops into
-its own file. A LittleFS `data/` web UI replaces the embedded HTML in Phase 2 (see
-ADR 0004). The web module is `WebUI` (not `WebServer`) to avoid clashing with the
-Arduino core's `WebServer.h` that WiFiManager includes.
+The web UI is static files in `data/` (LittleFS), served by `WebUI` over a JSON API +
+WebSocket; the firmware falls back to an embedded recovery page if the FS image is
+missing (see ADR 0004/0005). `WebUI` is named that (not `WebServer`) to avoid clashing
+with the Arduino core's `WebServer.h` that WiFiManager includes.

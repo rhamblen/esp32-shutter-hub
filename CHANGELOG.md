@@ -7,11 +7,80 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 ## [Unreleased]
 
 ### Release checklist / notes
-- **Three bins per board** once the web UI moves into LittleFS (Phase 2): `full` (USB flash),
+- **Three bins per board from v0.2.0 on** (the web UI now lives in LittleFS): `full` (USB flash),
   `ota` (firmware), and **`littlefs`** (filesystem image). Build the filesystem image with
   `pio run -e <env> -t buildfs` (→ `.pio/build/<env>/littlefs.bin`) and attach it as
-  `shutter-hub-<board>-littlefs-vX.Y.Z.bin`. v0.0.1–v0.1.0 ship only `full` + `ota` (no filesystem
-  image yet). See [firmware/README.md](firmware/README.md).
+  `shutter-hub-<board>-littlefs-vX.Y.Z.bin`. v0.0.1–v0.1.0 shipped only `full` + `ota`. **Flash the
+  LittleFS image alongside the firmware** or the device serves the embedded recovery page. See
+  [firmware/README.md](firmware/README.md).
+
+## [0.2.1] — 2026-07-08
+
+Servo-test speed control, so bench moves can run slow enough for real blind linkages.
+
+### Added
+- **Servo speed control (Servo test tab)** — a **Speed** slider (5–120 °/s in steps of 5)
+  limits how fast the bench servo slews. Angle commands and presets now **ramp** to the target at the
+  set rate instead of snapping (`ServoController` keeps a current/target pair and steps it every 20 ms
+  servo frame); Sweep obeys the same limit. The setting is **persisted**
+  (`AppConfig::servoSpeedDps`, NVS, default **25 °/s**).
+  New REST: `POST /api/servo/speed?dps=N` (0 = Max); `GET /api/servo` gains `target`, `moving`,
+  `speed`. Status line shows *moving → N°* during a slewed move, and **Detach / Stop sweep freeze the
+  move where it is** — a safety win when a linkage binds mid-travel.
+- **[docs/hardware-layout.md](docs/hardware-layout.md)** — physical build plan for the hub
+  prototype on a solderable copper breadboard: plan-view component placement (socketed ESP32,
+  screw-terminal power spur, JST-XH I2C connectors), rail assignments with track cuts/bridges,
+  nylon-standoff mounting + drill plan for the raised modules (PCA9685, XL4015, PD trigger,
+  VEML7700), cable loom with connector recommendations, and a build-order checklist. Key rule:
+  servo current runs point-to-point in 18 AWG and never through breadboard strips.
+
+### Changed
+- `FW_VERSION` → **0.2.1**. Servo test page polls at 0.5 s while a move/sweep is in flight
+  (1.5 s when idle).
+
+## [0.2.0] — 2026-07-07
+
+Web-UI rebuild: the device interface becomes a LittleFS single-page app (sidebar shell modelled on
+HomeKey-ESP32) with a live log stream and MQTT / Home Assistant scaffolding. Runs on a bare ESP32.
+
+### Added
+- **LittleFS single-page web UI** — the interface moved out of embedded C++ strings into static
+  assets (`firmware/data/{index.html,style.css,app.js}`) served from LittleFS, with a persistent
+  **sidebar**: **Info · MQTT · Actions · System · OTA Update · Logs**. The firmware now exposes a
+  JSON/REST API + a WebSocket; a tiny **embedded recovery page** still offers OTA if the filesystem
+  image hasn't been flashed, so a device can't strand itself.
+- **Live log stream (Logs page)** — every `LOG*` line lands in an in-RAM ring buffer and streams to
+  the browser over **`/ws/logs`** (WebSocket). Level filter chips (E/W/I/D/V), a minimum-level
+  selector, text search, auto-scroll, export, and clear. Captures boot sequence, WiFi events, and
+  MQTT rx/tx. New `LOGD` / `LOGV` macros; `Diagnostics` gains a log ring buffer + sink.
+- **MQTT + Home Assistant scaffold** — real broker connection (`knolleary/PubSubClient`) with
+  configurable host/port/client-ID/credentials/base-topic and a **HA MQTT Discovery** toggle, all
+  persisted in NVS (`AppConfig::setMqtt`). Publishes hub availability (LWT) and **HA discovery for
+  diagnostic sensors** (WiFi signal, uptime) so the device appears in Home Assistant. Per-shutter
+  `cover` entities + command handling are Phase 4 (see below). `GET/POST /api/mqtt`.
+- **System page** — a single **Quick Actions** card (Reboot · Reset WiFi · Reset config) plus
+  **Device / WiFi / HomeKit / Security** sub-tabs. WiFi provisioning (scan/connect) moved here from
+  the standalone `/wifi` page. **Security** adds a **web-authentication** toggle (HTTP basic auth,
+  `AppConfig::setAuth`) guarding the UI + API; HTTPS shown as planned/disabled. **Reset config**
+  factory-resets app settings while keeping WiFi credentials.
+- **OTA page** — device-info strip, Firmware + LittleFS uploaders with an upload log, and a **Reboot**
+  control (a firmware flash reboots automatically; a LittleFS flash needs a manual reboot to apply, so
+  the button highlights after a filesystem upload).
+- REST surface: `GET /api/info` (dashboard), `GET/POST /api/mqtt`, `GET/POST /api/auth`,
+  `POST /api/system/{reboot,reset-wifi,reset-config}`; existing `/api/wifi/*`, `/api/servo/*`,
+  `/api/ota` retained.
+
+### Changed
+- `FW_VERSION` → **0.2.0**. New deps: `PubSubClient` (+ `MQTT_MAX_PACKET_SIZE=1024`). LittleFS is
+  mounted at boot (`LittleFS.begin(true)`); `Mqtt::loop()` is pumped from the main loop.
+- **Reset/Reboot no longer sit in a per-tab footer** — they are consolidated into the System page's
+  Quick Actions card (ADR-driven "one page only" decision).
+- MQTT command structure + config ownership for Home Assistant locked in **ADR 0005** — browser-owned
+  config, manual servo inventory, named **Daylight/Privacy** favourites, incremental jog for Up/Down.
+
+### Migration
+- **Flash the LittleFS image** (`-t buildfs` → `littlefs.bin`) with this firmware. Without it the
+  device serves the recovery page (firmware/filesystem upload only).
 
 ## [0.1.0] — 2026-07-07
 

@@ -20,13 +20,16 @@ bool    attach();                // start emitting pulses at the last angle
 void    detach();                // stop pulses — releases the servo (no holding torque)
 bool    attached();
 
-void    writeAngle(int deg);     // 0..180; auto-attaches; cancels any sweep
-int     angle();                 // last commanded angle
-int     microseconds();          // pulse width for the last commanded angle
+void    writeAngle(int deg);     // 0..180; auto-attaches; cancels any sweep; slews at speed()
+int     angle();                 // angle currently on the output (mid-move it trails the target)
+int     microseconds();          // pulse width for the current angle
 
-void    startSweep();            // continuous 0<->180 sweep (non-blocking, stepped)
+uint16_t speed();                // max slew rate, deg/s; 0 = unlimited ("Max", snap)
+void     setSpeed(uint16_t dps); // clamp to 0..1000 + persist (AppConfig)
+
+void    startSweep();            // continuous 0<->180 sweep (non-blocking, speed-limited)
 void    stopSweep();
 bool    sweeping();
 
-String  statusJson();            // {pin,attached,angle,us,sweeping,min,max}
+String  statusJson();            // {pin,attached,angle,target,moving,speed,us,sweeping,min,max}
 }

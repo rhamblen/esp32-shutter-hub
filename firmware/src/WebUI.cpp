@@ -3,19 +3,28 @@
 #include "Diagnostics.h"
 #include "WiFiSetup.h"
 #include "Ota.h"
+#include "Mqtt.h"
 #include "ServoController.h"
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <LittleFS.h>
 #include <ESPAsyncWebServer.h>
 #include <time.h>
+
+// WebUI (v0.2.0) — the sidebar single-page app is static files in LittleFS
+// (data/index.html, style.css, app.js). The firmware serves those plus a JSON/REST
+// API and a WebSocket log feed. If the filesystem image hasn't been flashed yet a
+// tiny embedded bootstrap page still offers OTA, so a device can't strand itself.
 
 #ifndef FW_VERSION
 #define FW_VERSION "0.0.0"
 #endif
 
 static AsyncWebServer server(80);
+static AsyncWebSocket ws("/ws/logs");
 static bool   pendingReboot      = false;
 static bool   pendingForget      = false;
+static bool   pendingFactory     = false;
 static bool   pendingWifiConnect = false;
 static String connSsid, connPass;
 
@@ -30,263 +39,99 @@ static String jesc(const String &s) {
   return o;
 }
 
-// Format a stored flash timestamp for display (UTC; 0 = clock never synced).
-static String fmtWhen(uint32_t epoch) {
-  if (epoch == 0) return "time not synced";
-  time_t t = (time_t)epoch;
-  struct tm tmv;
-  gmtime_r(&t, &tmv);
-  char b[32];
-  strftime(b, sizeof(b), "%Y-%m-%d %H:%M:%S UTC", &tmv);
-  return String(b);
+// Web-auth gate: true if the request may proceed; otherwise a 401 is sent.
+static bool guard(AsyncWebServerRequest *r) {
+  if (!AppConfig::authEnabled()) return true;
+  if (!r->authenticate(AppConfig::authUser().c_str(), AppConfig::authPass().c_str())) {
+    r->requestAuthentication();
+    return false;
+  }
+  return true;
 }
 
-static String lastFlashText() {
-  if (AppConfig::lastFlashType() == "none") return "none yet";
-  return AppConfig::lastFlashType() + " — " + (AppConfig::lastFlashOk() ? "OK" : "FAILED") +
-         " — " + fmtWhen(AppConfig::lastFlashEpoch());
+// ---- JSON builders ----------------------------------------------------------
+
+static String dashInfoJson() {
+  String j = "{";
+  j += "\"fw\":\"" FW_VERSION "\",";
+  j += "\"chip\":\"" + String(ESP.getChipModel()) + "\",";
+  j += "\"device\":\"" + jesc(AppConfig::deviceName()) + "\",";
+  j += "\"host\":\"" + jesc(AppConfig::deviceName()) + ".local\",";
+  j += "\"uptime\":\"" + Diagnostics::humanUptime() + "\",";
+  j += "\"boot_count\":" + String(AppConfig::bootCount()) + ",";
+  j += "\"reset_reason\":\"" + Diagnostics::resetReason() + "\",";
+  j += "\"free_heap\":" + String(ESP.getFreeHeap()) + ",";
+  j += "\"min_free_heap\":" + String(ESP.getMinFreeHeap()) + ",";
+  j += "\"wifi\":{";
+  j += "\"connected\":" + String(WiFi.status() == WL_CONNECTED ? "true" : "false") + ",";
+  j += "\"ssid\":\"" + jesc(WiFi.SSID()) + "\",";
+  j += "\"rssi\":" + String(WiFi.RSSI()) + ",";
+  j += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+  j += "\"mac\":\"" + WiFi.macAddress() + "\"},";
+  j += "\"mqtt\":{\"enabled\":" + String(AppConfig::mqttEnabled() ? "true" : "false") +
+       ",\"connected\":" + String(Mqtt::connected() ? "true" : "false") +
+       ",\"state\":\"" + jesc(Mqtt::stateText()) + "\"},";
+  j += "\"last_flash\":{\"type\":\"" + jesc(AppConfig::lastFlashType()) +
+       "\",\"ok\":" + String(AppConfig::lastFlashOk() ? "true" : "false") +
+       ",\"epoch\":" + String(AppConfig::lastFlashEpoch()) + "}";
+  j += "}";
+  return j;
 }
 
-// Shared <head> + <style> for both pages (embedded; migrates to LittleFS in Phase 2).
-static String pageHead(const String &title) {
-  String h = F("<!doctype html><html lang=en><head><meta charset=utf-8>"
-    "<meta name=viewport content='width=device-width,initial-scale=1'><title>");
-  h += title;
-  h += F("</title><style>"
-    ":root{color-scheme:light dark}"
-    "body{font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto;padding:0 1rem;line-height:1.5}"
-    "h1{font-size:1.4rem;margin-bottom:.25rem}.sub{opacity:.6;margin-top:0}"
-    "h2{font-size:1rem;margin:1.3rem 0 .3rem;opacity:.8}"
-    "table{border-collapse:collapse;width:100%;margin:.5rem 0}"
-    "td{padding:.35rem .5rem;border-bottom:1px solid #8884}td:first-child{opacity:.65;white-space:nowrap}"
-    "td:last-child{text-align:right;font-variant-numeric:tabular-nums}"
-    ".btn{display:inline-block;padding:.6rem 1rem;border:1px solid #8886;border-radius:.5rem;"
-    "text-decoration:none;background:none;color:inherit;font:inherit;cursor:pointer}"
-    ".btn:disabled{opacity:.5}.danger{border-color:#c0392b}"
-    ".row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}"
-    ".tabs{display:flex;gap:.25rem;border-bottom:1px solid #8886;margin-top:1rem}"
-    ".tab{padding:.55rem .9rem;border:none;background:none;color:inherit;font:inherit;cursor:pointer;"
-    "border-bottom:2px solid transparent;opacity:.6}"
-    ".tab:hover{opacity:.9}.tab.active{opacity:1;border-bottom-color:currentColor;font-weight:600}"
-    ".pane{display:none;padding-top:1rem}.pane.active{display:block}"
-    ".muted{opacity:.6}label{font-size:.9em;opacity:.75}input[type=file]{max-width:100%}"
-    "footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #8886}"
-    "progress{width:100%;height:.6rem;display:none;margin-top:.5rem}"
-    "</style></head><body>");
+static String mqttConfigJson() {
+  String j = "{";
+  j += "\"enabled\":" + String(AppConfig::mqttEnabled() ? "true" : "false") + ",";
+  j += "\"host\":\"" + jesc(AppConfig::mqttHost()) + "\",";
+  j += "\"port\":" + String(AppConfig::mqttPort()) + ",";
+  j += "\"clientId\":\"" + jesc(AppConfig::mqttClientId()) + "\",";
+  j += "\"user\":\"" + jesc(AppConfig::mqttUser()) + "\",";
+  j += "\"hasPass\":" + String(AppConfig::mqttPass().length() ? "true" : "false") + ",";
+  j += "\"base\":\"" + jesc(AppConfig::mqttBaseTopic()) + "\",";
+  j += "\"haDiscovery\":" + String(AppConfig::mqttHaDiscovery() ? "true" : "false") + ",";
+  j += "\"connected\":" + String(Mqtt::connected() ? "true" : "false") + ",";
+  j += "\"state\":\"" + jesc(Mqtt::stateText()) + "\"";
+  j += "}";
+  return j;
+}
+
+// ---- Embedded fallback (only used when data/ isn't flashed) ------------------
+
+static String bootstrapPage() {
+  String h = F("<!doctype html><meta charset=utf-8>"
+    "<meta name=viewport content='width=device-width,initial-scale=1'>"
+    "<title>Shutter Hub — recovery</title>"
+    "<body style='font-family:system-ui;max-width:34rem;margin:2rem auto;padding:0 1rem'>"
+    "<h1>Shutter Hub</h1>"
+    "<p style='color:#c0392b'><b>Web UI filesystem not found.</b> Upload the LittleFS image "
+    "(and/or firmware) below, then reboot. Firmware v" FW_VERSION ".</p>"
+    "<p><label>Firmware (.bin) <input type=file id=fw accept='.bin'></label></p>"
+    "<p><label>Filesystem (.bin) <input type=file id=fs accept='.bin'></label></p>"
+    "<button id=go>Upload</button> <span id=s></span>"
+    "<script>"
+    "function up(t,f){return new Promise(function(res,rej){var x=new XMLHttpRequest();"
+    "x.open('POST','/api/ota?target='+t);x.onload=function(){(x.status==200)?res():rej(x.responseText);};"
+    "x.onerror=function(){rej('network');};var d=new FormData();d.append('file',f);x.send(d);});}"
+    "document.getElementById('go').onclick=function(){var s=document.getElementById('s');"
+    "var fw=document.getElementById('fw').files[0],fs=document.getElementById('fs').files[0];"
+    "var p=Promise.resolve();if(fs)p=p.then(function(){s.textContent='fs\\u2026';return up('filesystem',fs);});"
+    "if(fw)p=p.then(function(){s.textContent='fw\\u2026';return up('firmware',fw);});"
+    "p.then(function(){s.textContent='done — reboot';}).catch(function(e){s.textContent='failed: '+e;});};"
+    "</script>");
   return h;
 }
 
-// ---- Main page (tabbed) -----------------------------------------------------
+// ---- WebSocket log feed -----------------------------------------------------
 
-static String statusPage() {
-  String html = pageHead("Shutter Hub");
-  html += F("<h1>ESP32 Shutter Hub</h1><p class=sub>Framework scaffold &middot; firmware v" FW_VERSION "</p>"
-    "<div class=tabs>"
-    "<button class='tab active' data-t=sys>System</button>"
-    "<button class=tab data-t=fw>Firmware</button>"
-    "<button class=tab data-t=servo>Servo test</button>"
-    "<button class=tab data-t=home>Apple Home</button>"
-    "</div>"
-    "<section id=sys class='pane active'><h2>WiFi</h2><table>");
-  html += "<tr><td>WiFi network</td><td>" + WiFi.SSID() + "</td></tr>";
-  html += "<tr><td>IP address</td><td>" + WiFi.localIP().toString() + "</td></tr>";
-  html += "<tr><td>MAC</td><td>" + WiFi.macAddress() + "</td></tr>";
-  html += "<tr><td>Signal</td><td>" + String(WiFi.RSSI()) + " dBm</td></tr>";
-  html += F("</table><div class=row><a class=btn href='/wifi'>Change network</a></div>"
-    "<h2>System</h2><table>");
-  html += "<tr><td>Device name</td><td>" + AppConfig::deviceName() + "</td></tr>";
-  html += "<tr><td>Firmware</td><td>v" FW_VERSION "</td></tr>";
-  html += "<tr><td>Hostname</td><td>" + AppConfig::deviceName() + ".local</td></tr>";
-  html += "<tr><td>Uptime</td><td>" + Diagnostics::humanUptime() + "</td></tr>";
-  html += "<tr><td>Boot count</td><td>" + String(AppConfig::bootCount()) + "</td></tr>";
-  html += "<tr><td>Free heap</td><td>" + String(ESP.getFreeHeap() / 1024) + " KB</td></tr>";
-  html += "<tr><td>Last restart</td><td>" + Diagnostics::resetReason() + "</td></tr>";
-  html += F("</table><div class=row><a class=btn href='/info' target=_blank>/info (JSON)</a></div>"
-    "</section>"
-
-    // ---- Firmware tab — custom OTA, three explicit actions ----
-    "<section id=fw class=pane><table>"
-    "<tr><td>Installed firmware</td><td>v" FW_VERSION "</td></tr>"
-    "<tr><td>Last flash</td><td>");
-  html += lastFlashText();
-  html += F("</td></tr></table>"
-    "<div class=field><label for=fwfile>Firmware image (.bin)</label><br>"
-    "<input type=file id=fwfile accept='.bin'></div>"
-    "<div class=field style='margin-top:.6rem'><label for=fsfile>Filesystem / LittleFS image (.bin)</label><br>"
-    "<input type=file id=fsfile accept='.bin'></div>"
-    "<div class=row>"
-    "<button class=btn id=flashfw type=button>Flash firmware</button>"
-    "<button class=btn id=flashfs type=button>Flash LittleFS</button>"
-    "<button class=btn id=flashboth type=button>Flash both</button>"
-    "</div>"
-    "<progress id=otaprog value=0 max=100></progress>"
-    "<p id=otastatus class=muted></p>"
-    "<p class=muted style='font-size:.85em'>Firmware flashes reboot the hub; the filesystem flash does "
-    "not. <b>Flash both</b> writes the filesystem first, then the firmware. Saved WiFi and settings are "
-    "kept.</p></section>"
-
-    // ---- Servo test tab — Phase-1 single-servo bench test ----
-    "<section id=servo class=pane>"
-    "<p class=muted style='font-size:.85em'>Phase-1 bench test &mdash; drives one servo straight from an "
-    "ESP32 GPIO (default <b>GPIO13</b>). Power the servo from <b>5&nbsp;V</b> with a common ground; expect "
-    "a brief current surge when it attaches.</p>"
-    "<h2>Signal pin</h2>"
-    "<div class=row>"
-    "<input type=number id=svpin min=0 max=33 style='width:5rem'>"
-    "<button class=btn id=svsetpin type=button>Set pin</button>"
-    "</div>"
-    "<p id=svpinwarn class=muted style='font-size:.85em'></p>"
-    "<h2>Status</h2><table>"
-    "<tr><td>Signal GPIO</td><td id=svPin>&ndash;</td></tr>"
-    "<tr><td>State</td><td id=svState>&ndash;</td></tr>"
-    "<tr><td>Angle</td><td id=svAngle>&ndash;</td></tr>"
-    "<tr><td>Pulse width</td><td id=svUs>&ndash;</td></tr>"
-    "</table>"
-    "<h2>Move</h2>"
-    "<input type=range id=svslider min=0 max=180 value=90 style='width:100%'>"
-    "<div class=row>"
-    "<button class=btn data-deg=0>Min 0&deg;</button>"
-    "<button class=btn data-deg=90>Centre 90&deg;</button>"
-    "<button class=btn data-deg=180>Max 180&deg;</button>"
-    "</div>"
-    "<div class=row>"
-    "<button class=btn id=svsweep type=button>Sweep</button>"
-    "<button class=btn id=svattach type=button>Attach</button>"
-    "<button class='btn danger' id=svdetach type=button>Detach (release)</button>"
-    "</div>"
-    "<p id=svmsg class=muted></p></section>"
-
-    // ---- Apple Home tab ----
-    "<section id=home class=pane>"
-    "<p class=muted>Apple Home (HomeKit) setup will appear here in a future release "
-    "&mdash; nothing to configure yet.</p></section>"
-
-    // ---- Bottom of page: Reset + Reboot, both with confirmation ----
-    "<footer><div class=row>"
-    "<form method=POST action='/forget-wifi' "
-    "onsubmit=\"return confirm('RESET: forget the saved WiFi and restart into setup mode? "
-    "You will need to reconnect the hub to your network.')\">"
-    "<button class='btn danger' type=submit>Reset</button></form>"
-    "<form method=POST action='/reboot' onsubmit=\"return confirm('Reboot the hub now?')\">"
-    "<button class=btn type=submit>Reboot</button></form>"
-    "</div></footer>"
-
-    "<script>"
-    // tab switching
-    "document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){"
-    "document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===b)});"
-    "document.querySelectorAll('.pane').forEach(function(x){x.classList.toggle('active',x.id===b.dataset.t)});"
-    "})});"
-    // OTA: three explicit actions
-    "(function(){"
-    "var st=document.getElementById('otastatus'),pg=document.getElementById('otaprog');"
-    "function set(m){st.textContent=m;}"
-    "function busy(b){['flashfw','flashfs','flashboth'].forEach(function(i){document.getElementById(i).disabled=b;});}"
-    "function fw(){return document.getElementById('fwfile').files[0];}"
-    "function fs(){return document.getElementById('fsfile').files[0];}"
-    "function up(t,f){return new Promise(function(res,rej){"
-    "var x=new XMLHttpRequest();x.open('POST','/api/ota?target='+t);"
-    "x.upload.onprogress=function(e){if(e.lengthComputable){pg.style.display='block';pg.value=Math.round(100*e.loaded/e.total);}};"
-    "x.onload=function(){pg.style.display='none';var r={};try{r=JSON.parse(x.responseText);}catch(e){}"
-    "if(x.status===200&&r.ok){res();}else{rej(r.error||('HTTP '+x.status));}};"
-    "x.onerror=function(){pg.style.display='none';rej('network error');};"
-    "var fd=new FormData();fd.append('file',f);set('Uploading '+t+'\\u2026');x.send(fd);});}"
-    "document.getElementById('flashfw').addEventListener('click',function(){var f=fw();"
-    "if(!f){set('Choose a firmware image first.');return;}busy(true);"
-    "up('firmware',f).then(function(){set('Firmware flashed \\u2014 rebooting, reconnect in ~15s\\u2026');})"
-    ".catch(function(e){set('Failed: '+e);}).then(function(){busy(false);});});"
-    "document.getElementById('flashfs').addEventListener('click',function(){var f=fs();"
-    "if(!f){set('Choose a filesystem image first.');return;}busy(true);"
-    "up('filesystem',f).then(function(){set('Filesystem flashed. Reboot to apply.');})"
-    ".catch(function(e){set('Failed: '+e);}).then(function(){busy(false);});});"
-    "document.getElementById('flashboth').addEventListener('click',function(){var a=fw(),b=fs();"
-    "if(!a||!b){set('Choose both a firmware and a filesystem image.');return;}busy(true);"
-    "up('filesystem',b).then(function(){set('Filesystem done; flashing firmware\\u2026');return up('firmware',a);})"
-    ".then(function(){set('Both flashed \\u2014 rebooting, reconnect in ~15s\\u2026');})"
-    ".catch(function(e){set('Failed: '+e);}).then(function(){busy(false);});});"
-    "})();"
-
-    // ---- Servo test tab behaviour ----
-    "(function(){"
-    "var $=function(i){return document.getElementById(i);};"
-    "var strap=[0,2,12,15];"
-    "function msg(m){$('svmsg').textContent=m||'';}"
-    "function render(s){"
-    "$('svPin').textContent='GPIO'+s.pin;"
-    "$('svState').textContent=s.attached?(s.sweeping?'sweeping\\u2026':'attached'):'detached (released)';"
-    "$('svAngle').textContent=s.angle+'\\u00b0';"
-    "$('svUs').textContent=s.us+' \\u00b5s';"
-    "if(document.activeElement!==$('svslider'))$('svslider').value=s.angle;"
-    "if($('svpin').value==='')$('svpin').value=s.pin;"
-    "$('svsweep').textContent=s.sweeping?'Stop sweep':'Sweep';"
-    "$('svpinwarn').textContent=strap.indexOf(s.pin)>=0?"
-    "('Note: GPIO'+s.pin+' is a strapping/boot pin \\u2014 fine for a quick test, avoid for the final build.'):'';"
-    "}"
-    "function refresh(){fetch('/api/servo').then(function(r){return r.json();}).then(render).catch(function(){});}"
-    "function post(u){return fetch(u,{method:'POST'}).then(function(r){return r.json();})"
-    ".then(function(j){if(j.error){msg('Error: '+j.error);}else{render(j);msg('');}return j;})"
-    ".catch(function(e){msg('Failed: '+e);});}"
-    "$('svsetpin').addEventListener('click',function(){var g=$('svpin').value;"
-    "if(g===''){msg('Enter a GPIO number first.');return;}"
-    "post('/api/servo/pin?gpio='+g).then(function(j){if(j&&!j.error){msg('Signal pin set to GPIO'+j.pin+'.');}});});"
-    "var sl=$('svslider');"
-    "sl.addEventListener('input',function(){$('svAngle').textContent=sl.value+'\\u00b0';});"
-    "sl.addEventListener('change',function(){post('/api/servo/write?deg='+sl.value);});"
-    "document.querySelectorAll('#servo [data-deg]').forEach(function(b){"
-    "b.addEventListener('click',function(){sl.value=b.dataset.deg;post('/api/servo/write?deg='+b.dataset.deg);});});"
-    "$('svsweep').addEventListener('click',function(){post('/api/servo/sweep');});"
-    "$('svattach').addEventListener('click',function(){post('/api/servo/attach');});"
-    "$('svdetach').addEventListener('click',function(){post('/api/servo/detach');});"
-    "setInterval(function(){if(document.querySelector('.tab[data-t=servo]').classList.contains('active')){refresh();}},1000);"
-    "refresh();"
-    "})();"
-    "</script></body></html>");
-  return html;
+static void broadcastLog(const String &jsonLine) {
+  if (ws.count() == 0) return;
+  ws.textAll(jsonLine);
 }
 
-// ---- Dedicated "Change network" page ----------------------------------------
-
-static String wifiPage() {
-  String html = pageHead("Change WiFi — Shutter Hub");
-  html += F("<h1>Change WiFi network</h1><p><a class=btn href='/'>&larr; Back</a></p><table>");
-  html += "<tr><td>Current network</td><td>" + WiFi.SSID() + "</td></tr>";
-  html += "<tr><td>IP address</td><td>" + WiFi.localIP().toString() + "</td></tr>";
-  html += F("</table>"
-    "<div class=field style='margin-top:1rem'><label for=ssidsel>Network</label><br>"
-    "<select id=ssidsel><option value=''>-- scan for networks --</option></select> "
-    "<button class=btn id=scanbtn type=button>Scan</button></div>"
-    "<div class=field style='margin-top:.5rem'>"
-    "<input type=password id=wifipass placeholder='WiFi password'> "
-    "<button class=btn id=setbtn type=button>Set</button></div>"
-    "<p id=wifistatus class=muted></p>"
-    "<p class=muted style='font-size:.85em'>Pick a network and enter its password to switch. If it's a "
-    "different network from the one you're on now, the hub moves to it and you may need to reconnect "
-    "from a device on that network (find it at shutter-hub.local). A wrong password reverts to the "
-    "current network.</p>"
-    "<script>(function(){"
-    "var ss=document.getElementById('ssidsel'),sb=document.getElementById('scanbtn'),"
-    "cb=document.getElementById('setbtn'),ws=document.getElementById('wifistatus'),"
-    "wp=document.getElementById('wifipass');"
-    "function w(m){ws.textContent=m;}"
-    "function scan(){w('Scanning\\u2026');sb.disabled=true;"
-    "fetch('/api/wifi/scan').then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});}).then(function(o){"
-    "if(o.s===202||(o.j&&o.j.scanning)){setTimeout(scan,1500);return;}"
-    "ss.innerHTML='<option value=\"\">-- select network --</option>';"
-    "o.j.sort(function(a,b){return b.rssi-a.rssi;}).forEach(function(n){var op=document.createElement('option');"
-    "op.value=n.ssid;op.textContent=n.ssid+(n.lock?' [locked]':'')+' ('+n.rssi+'dBm)';ss.appendChild(op);});"
-    "sb.disabled=false;w(o.j.length+' network(s) found.');"
-    "}).catch(function(e){sb.disabled=false;w('Scan failed: '+e);});}"
-    "sb.addEventListener('click',scan);"
-    "cb.addEventListener('click',function(){var s=ss.value;if(!s){w('Choose a network first.');return;}"
-    "if(!confirm('Switch the hub to \"'+s+'\"?'))return;"
-    "cb.disabled=true;w('Connecting to '+s+'\\u2026');"
-    "var fd=new FormData();fd.append('ssid',s);fd.append('pass',wp.value);"
-    "fetch('/api/wifi/connect',{method:'POST',body:fd}).then(function(r){return r.text();})"
-    ".then(function(t){w(t);cb.disabled=false;})"
-    ".catch(function(e){w('The hub may have switched networks — reconnect and open shutter-hub.local.');cb.disabled=false;});"
-    "});scan();})();"
-    "</script></body></html>");
-  return html;
+static void onWsEvent(AsyncWebSocket *s, AsyncWebSocketClient *c, AwsEventType type,
+                      void *arg, uint8_t *data, size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    c->text(Diagnostics::logHistoryJson());   // catch the client up on buffered lines
+  }
 }
 
 // ---- Public API -------------------------------------------------------------
@@ -303,34 +148,93 @@ void begin() {
     LOGW("mdns", "start failed");
   }
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *r) {
-    r->send(200, "text/html", statusPage());
+  // Live log feed: register the sink so every LOG* line streams to WS clients.
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+  Diagnostics::setLogSink(broadcastLog);
+
+  // ---- Read-only info ----
+  server.on("/api/info", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json", dashInfoJson());
   });
-  server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *r) {
-    r->send(200, "text/html", wifiPage());
+  server.on("/info", HTTP_GET, [](AsyncWebServerRequest *r) {   // legacy raw diagnostics
+    r->send(200, "application/json", Diagnostics::infoJson());
+  });
+  server.on("/api/logs", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json", Diagnostics::logHistoryJson());
   });
   server.on("/healthz", HTTP_GET, [](AsyncWebServerRequest *r) {
     r->send(200, "text/plain", "ok");
   });
-  server.on("/info", HTTP_GET, [](AsyncWebServerRequest *r) {
-    r->send(200, "application/json", Diagnostics::infoJson());
+
+  // ---- MQTT config ----
+  server.on("/api/mqtt", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json", mqttConfigJson());
   });
-  // Reset: forget WiFi and reboot into the setup portal. Deferred to loop().
-  server.on("/forget-wifi", HTTP_POST, [](AsyncWebServerRequest *r) {
-    r->send(200, "text/html",
-      "<meta http-equiv=refresh content='10;url=/'>"
-      "<p style='font-family:system-ui'>Reset — WiFi cleared. The hub is restarting as "
-      "<b>Shutter-Hub-Setup</b>; join that network to set it up again.</p>");
-    pendingForget = true;
+  server.on("/api/mqtt", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    auto p = [&](const char *k, const String &d) {
+      return r->hasParam(k, true) ? r->getParam(k, true)->value() : d;
+    };
+    bool     en   = p("enabled", "false") == "true" || p("enabled", "") == "1";
+    String   host = p("host", AppConfig::mqttHost());
+    uint16_t port = (uint16_t)p("port", String(AppConfig::mqttPort())).toInt();
+    String   cid  = p("clientId", "");
+    String   user = p("user", AppConfig::mqttUser());
+    // Blank password field => keep the stored password (we never echo it back).
+    String   pass = r->hasParam("pass", true) && r->getParam("pass", true)->value().length()
+                      ? r->getParam("pass", true)->value() : AppConfig::mqttPass();
+    String   base = p("base", AppConfig::mqttBaseTopic());
+    bool     ha   = p("haDiscovery", "true") == "true" || p("haDiscovery", "") == "1";
+    AppConfig::setMqtt(en, host, port, cid, user, pass, base, ha);
+    Mqtt::reconfigure();
+    r->send(200, "application/json", mqttConfigJson());
   });
-  server.on("/reboot", HTTP_POST, [](AsyncWebServerRequest *r) {
-    r->send(200, "text/html",
-      "<meta http-equiv=refresh content='8;url=/'>"
-      "<p style='font-family:system-ui'>Rebooting&hellip;</p>");
+
+  // ---- System quick actions (deferred so the HTTP response flushes first) ----
+  server.on("/api/system/reboot", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json", "{\"ok\":true,\"msg\":\"rebooting\"}");
     pendingReboot = true;
   });
-  // Scan for nearby networks (async so the request doesn't block). 202 = scanning.
+  server.on("/api/system/reset-wifi", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json",
+      "{\"ok\":true,\"msg\":\"WiFi cleared — restarting into Shutter-Hub-Setup\"}");
+    pendingForget = true;
+  });
+  server.on("/api/system/reset-config", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json",
+      "{\"ok\":true,\"msg\":\"settings cleared — rebooting (WiFi kept)\"}");
+    pendingFactory = true;
+  });
+
+  // ---- Security (web auth) ----
+  server.on("/api/auth", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json",
+      String("{\"enabled\":") + (AppConfig::authEnabled() ? "true" : "false") +
+      ",\"user\":\"" + jesc(AppConfig::authUser()) + "\"}");
+  });
+  server.on("/api/auth", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    bool   en   = r->hasParam("enabled", true) &&
+                  (r->getParam("enabled", true)->value() == "true" ||
+                   r->getParam("enabled", true)->value() == "1");
+    String user = r->hasParam("user", true) ? r->getParam("user", true)->value() : AppConfig::authUser();
+    String pass = r->hasParam("pass", true) && r->getParam("pass", true)->value().length()
+                    ? r->getParam("pass", true)->value() : AppConfig::authPass();
+    AppConfig::setAuth(en, user, pass);
+    r->send(200, "application/json", "{\"ok\":true}");
+  });
+
+  // ---- WiFi (feeds the System > WiFi sub-tab) ----
   server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     int n = WiFi.scanComplete();
     if (n == WIFI_SCAN_RUNNING) { r->send(202, "application/json", "{\"scanning\":true}"); return; }
     if (n == WIFI_SCAN_FAILED)  { WiFi.scanNetworks(true); r->send(202, "application/json", "{\"scanning\":true}"); return; }
@@ -344,23 +248,24 @@ void begin() {
     WiFi.scanDelete();
     r->send(200, "application/json", j);
   });
-  // Switch to a chosen network (applied in loop() — it blocks while joining).
   server.on("/api/wifi/connect", HTTP_POST, [](AsyncWebServerRequest *r) {
-    if (!r->hasParam("ssid", true)) { r->send(400, "text/plain", "missing ssid"); return; }
+    if (!guard(r)) return;
+    if (!r->hasParam("ssid", true)) { r->send(400, "application/json", "{\"error\":\"missing ssid\"}"); return; }
     connSsid = r->getParam("ssid", true)->value();
     connPass = r->hasParam("pass", true) ? r->getParam("pass", true)->value() : "";
     pendingWifiConnect = true;
-    r->send(200, "text/plain",
-      "Connecting to \"" + connSsid + "\"… If the password is right the hub moves to that "
-      "network (reconnect there, e.g. shutter-hub.local). A wrong password reverts to the current "
-      "network — refresh in ~20s.");
+    r->send(200, "application/json",
+      "{\"ok\":true,\"msg\":\"Connecting to '" + jesc(connSsid) + "' — if the password is right the hub "
+      "moves to that network (reconnect at " + AppConfig::deviceName() + ".local). A wrong password reverts.\"}");
   });
 
-  // ---- Servo test (Phase 1) — all replies are the servo status JSON ----
+  // ---- Servo / Actions (Phase 1) ----
   server.on("/api/servo", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     r->send(200, "application/json", ServoController::statusJson());
   });
   server.on("/api/servo/pin", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     if (!r->hasParam("gpio")) { r->send(400, "application/json", "{\"error\":\"missing gpio\"}"); return; }
     long g = r->getParam("gpio")->value().toInt();
     if (g < 0 || g > 39 || !ServoController::setPin((uint8_t)g)) {
@@ -369,36 +274,60 @@ void begin() {
     r->send(200, "application/json", ServoController::statusJson());
   });
   server.on("/api/servo/write", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     if (!r->hasParam("deg")) { r->send(400, "application/json", "{\"error\":\"missing deg\"}"); return; }
     ServoController::writeAngle((int)r->getParam("deg")->value().toInt());
     r->send(200, "application/json", ServoController::statusJson());
   });
+  server.on("/api/servo/speed", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("dps")) { r->send(400, "application/json", "{\"error\":\"missing dps\"}"); return; }
+    long d = r->getParam("dps")->value().toInt();
+    if (d < 0 || d > 1000) { r->send(400, "application/json", "{\"error\":\"dps out of range (0-1000)\"}"); return; }
+    ServoController::setSpeed((uint16_t)d);
+    r->send(200, "application/json", ServoController::statusJson());
+  });
   server.on("/api/servo/attach", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     ServoController::attach();
     r->send(200, "application/json", ServoController::statusJson());
   });
   server.on("/api/servo/detach", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     ServoController::detach();
     r->send(200, "application/json", ServoController::statusJson());
   });
   server.on("/api/servo/sweep", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
     if (ServoController::sweeping()) ServoController::stopSweep(); else ServoController::startSweep();
     r->send(200, "application/json", ServoController::statusJson());
   });
 
-  Ota::begin(server);   // /api/ota
+  Ota::begin(server);   // /api/ota (firmware + filesystem)
+
+  // ---- Static SPA from LittleFS, with an embedded recovery fallback ----
+  if (LittleFS.exists("/index.html")) {
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+    LOGI("http", "serving web UI from LittleFS");
+  } else {
+    LOGW("http", "no /index.html in LittleFS — serving recovery page (flash the FS image)");
+    server.onNotFound([](AsyncWebServerRequest *r) { r->send(200, "text/html", bootstrapPage()); });
+  }
+
   server.begin();
   LOGI("http", "server up — http://%s.local or the device IP", host.c_str());
 }
 
 void loop() {
   Ota::loop();
+  ws.cleanupClients();
   if (pendingWifiConnect) {
     pendingWifiConnect = false;
     WiFiSetup::connectTo(connSsid, connPass);   // blocks ~12–24s; async server keeps serving
   }
-  if (pendingForget) { delay(400); WiFiSetup::forgetAndReboot(); }
-  if (pendingReboot) { delay(400); Diagnostics::reboot(); }
+  if (pendingForget)  { delay(400); WiFiSetup::forgetAndReboot(); }
+  if (pendingFactory) { delay(400); AppConfig::factoryReset(); Diagnostics::reboot(); }
+  if (pendingReboot)  { delay(400); Diagnostics::reboot(); }
 }
 
 }  // namespace WebUI

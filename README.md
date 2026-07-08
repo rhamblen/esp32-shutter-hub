@@ -46,13 +46,16 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **Phase 1 servo bring-up** (`v0.1.0`) — on top of the skeleton (on-device
-WiFi setup with an in-browser network picker, a tabbed web UI, a custom firmware+filesystem OTA
-updater, and settings/diagnostics in NVS), a new **Servo test** tab drives one servo directly from an
-ESP32 GPIO (default GPIO13, configurable) so hardware can be exercised before the PCA9685/power chain.
+Design complete on paper; **web-UI rebuild + servo bring-up** (`v0.2.1`) — the device interface is
+now a **LittleFS single-page app** (sidebar: Info · MQTT · Actions · System · OTA · Logs) with a
+**live log stream** over WebSocket, **MQTT + Home Assistant discovery** scaffolding, web
+authentication, and a custom firmware+filesystem OTA updater. The Phase-1 **Servo test** tab drives
+one servo directly from an ESP32 GPIO (default GPIO13, configurable) with a persisted **speed
+slider** (5–120 °/s) so linkage travel can be watched slowly on the bench.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
-[release](https://github.com/rhamblen/esp32-shutter-hub/releases).
+[release](https://github.com/rhamblen/esp32-shutter-hub/releases) — from v0.2.0 that's three per
+board: full (USB), firmware (OTA), and LittleFS filesystem.
 
 ## Repo layout
 
@@ -70,6 +73,22 @@ to build/flash. Prebuilt ESP32-D bins ship on each
 | [cad/](cad/) | 3D-printer source + STL/STEP for enclosures & parts |
 | [CHANGELOG.md](CHANGELOG.md) | Change history (Keep a Changelog + SemVer) |
 
-## Licence
+## License & Legal
 
-MIT (see `LICENSE`).
+### License
+
+This project is licensed under the MIT License — see the [`LICENSE`](LICENSE) file for details.
+
+### Disclaimer
+
+This is a DIY hardware project that drives mains-adjacent mechanical shutters with servos and a
+custom power supply. **Use at your own risk** — you are responsible for the electrical safety and
+mechanical integrity of anything you build from it. It is provided "as is", without warranty of any
+kind. Apple Home integration is via the open-source [HomeSpan](https://github.com/HomeSpan/HomeSpan)
+HomeKit library; this project is **not affiliated with, endorsed by, or condoned by Apple Inc.**
+
+### Trademarks
+
+- Apple, HomeKit, and Siri are trademarks of Apple Inc.
+- ESP32 is a trademark of Espressif Systems (Shanghai) Co., Ltd.
+- Home Assistant is a trademark of the Open Home Foundation.

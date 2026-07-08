@@ -25,7 +25,9 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 | `docs/project-plan.md` | Phased roadmap + status table + open decisions |
 | `docs/architecture.md` | Principles, trade-off table, topology, gotchas |
 | `docs/inventory.md` | Shutter facts + BOM + power budget |
-| `docs/decisions/000{1..4}` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware |
+| `docs/hardware-layout.md` | Copper-breadboard build plan: placement, cuts, standoffs, cables, connectors |
+| `docs/decisions/000{1..5}` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware, MQTT command structure |
+| `firmware/data/` | LittleFS web UI (index.html, style.css, app.js) served by `WebUI` |
 | `CHANGELOG.md` | Keep-a-Changelog; update every phase |
 
 ## Locked facts
@@ -37,18 +39,26 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 - **Power:** USB-C PD → AITRIP trigger (12 V) → XL4015 @ **5.1 V** → ESP32 + PCA9685 + servo rail;
   1000–2200 µF bulk cap; common ground. XL4015 replaced LM2596.
 - **Linkage:** M2×50 mm ball-link pushrod (hole-to-hole 68–78 mm); horns 8/10/12 mm; printed arm
-  holes 15/20/25 mm; start 10 mm horn + 20 mm arm.
+  holes 15/20/25 mm; start 10 mm horn + 20 mm arm. **Under bench validation (project-plan D1):** rod
+  end appears to need ~36 mm rise + ~36 mm out over 0→90° → effective crank radius ~36 mm, not 20 mm.
 - **Pinout:** GPIO21 SDA, GPIO22 SCL, GPIO34 optional servo-rail ADC, GPIO0 boot.
-- **Firmware:** custom Arduino (not ESPHome); HomeSpan bridge + MQTT; ESPAsyncWebServer + LittleFS;
-  WiFiManager; ElegantOTA; `ServoController.moveTo()` smooth/staggered.
+- **Firmware:** custom Arduino (not ESPHome); HomeSpan bridge + MQTT (PubSubClient); ESPAsyncWebServer
+  + LittleFS SPA + `/ws/logs` WebSocket; WiFiManager; custom OTA (firmware + LittleFS);
+  `ServoController.moveTo()` smooth/staggered.
+- **MQTT/HA (ADR 0005):** browser-owned config; servos declared manually (no PWM auto-scan); each
+  shutter = one HA `cover` (position 0–100 = slat angle) on `<base>/cover/<id>/…`; favourites are two
+  named presets **Daylight**/**Privacy**; Up/Down = incremental jog. Config in NVS, web assets in LittleFS.
 - **Solar:** trip lux>60000/10min → Privacy; clear lux<30000/20min → Daylight.
 - **Manual override:** suspend automation 2 h after a manual move, per shutter.
 
 ## Build phases
 
-Phase 0 mech force test → 1 bench (1 servo) → 2 web UI+cal → 3 WiFiManager+mDNS+OTA →
-4 MQTT/HA → 5 HomeKit → 6 light/solar → 7 production (enclosures, PCB, 4 shutters, diagnostics).
-Nothing built yet — docs only.
+Done: **S** (v0.0.1–3 framework + WiFi + OTA), **1** (v0.1.0 single-servo bench test; v0.2.1 adds a
+persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N`, slewed moves),
+**S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config). Phase 3 retired (folded into S/S2).
+Remaining: **2** shutters config + per-panel calibration (v0.2.x) → **4** MQTT covers wired to servos →
+**5** HomeKit → **6** light/solar → **7** production. **0** (mechanical force test) still open.
+Firmware builds + runs on a bare ESP32; no servo/sensor hardware built yet.
 
 ## Gotchas
 

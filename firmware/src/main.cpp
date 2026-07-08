@@ -5,10 +5,10 @@
 //   Diagnostics     logging, /info, uptime, reboot               [real]
 //   WiFiSetup       WiFiManager AP + captive portal (creds->NVS) [real]
 //   WebUI           tabbed status page + routes + mDNS           [real]
-//   Ota             ElegantOTA /update                           [real]
+//   Ota             custom firmware + LittleFS update             [real]
 //   ServoController single-servo bench test (Phase 1) → PCA9685  [Phase 1 real]
-//   Mqtt            Home Assistant discovery                     [stub, Phase 4]
-//   HomeKit         HomeSpan bridge                              [stub, Phase 5]
+//   Mqtt            broker connect + HA discovery scaffold        [v0.2.0 real; covers Phase 4]
+//   HomeKit         HomeSpan bridge                               [stub, Phase 5]
 //   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
 //
 // Runs on a bare ESP32 dev board — no PCA9685, servos or power hardware needed yet.
@@ -16,6 +16,7 @@
 
 #include <Arduino.h>
 #include <time.h>
+#include <LittleFS.h>
 #include "AppConfig.h"
 #include "Diagnostics.h"
 #include "WiFiSetup.h"
@@ -37,6 +38,11 @@ void setup() {
 
   AppConfig::begin();      // load settings + bump boot count (needed before others)
   Diagnostics::begin();    // log boot reason / count
+  if (LittleFS.begin(true)) {   // format-on-fail: a blank FS mounts empty (recovery page serves)
+    LOGI("fs", "LittleFS mounted");
+  } else {
+    LOGW("fs", "LittleFS mount failed — web UI falls back to the recovery page");
+  }
   WiFiSetup::connect();    // blocks until on WiFi (or opens the setup portal)
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");  // UTC clock for last-flash timestamps
   WebUI::begin();          // mDNS + web UI + OTA
@@ -53,5 +59,6 @@ void setup() {
 void loop() {
   WebUI::loop();
   ServoController::loop();   // advances the non-blocking servo sweep, if running
+  Mqtt::loop();             // pump MQTT client + non-blocking reconnect
   delay(5);
 }

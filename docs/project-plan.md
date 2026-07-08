@@ -10,22 +10,26 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | Phase | Version | Title                          | Status |
 | ----- | ------- | ------------------------------ | ------ |
 | 0     | —       | Mechanical proving / force test| ☐      |
-| S     | v0.0.1  | Firmware framework + OTA scaffold | ☑   |
-| 1     | v0.1.0  | Bench bring-up (1 servo)       | ☐      |
-| 2     | v0.2.0  | Web UI + calibration           | ☐      |
-| 3     | v0.3.0  | WiFiManager + mDNS + OTA       | ☐      |
-| 4     | v0.4.0  | MQTT / Home Assistant covers   | ☐      |
+| S     | v0.0.1–3| Firmware framework + OTA scaffold | ☑   |
+| 1     | v0.1.0  | Bench bring-up (1 servo)       | ☑      |
+| S2    | v0.2.0  | Web UI shell (LittleFS SPA) + Logs (WS) + MQTT/HA config | ☑ |
+| 2     | v0.2.x  | Shutters config + calibration  | ◐      |
+| 4     | v0.4.0  | MQTT / Home Assistant covers   | ◐      |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
 | 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
 
-Documentation-only progress so far: master brief + architecture + ADRs written. No hardware built.
+**Sequence note (post-v0.1.0):** the polished web UI, live logs, and MQTT/HA *config* were pulled
+forward — they all run on a bare ESP32 before servo hardware exists. So the old "Phase 2 Web UI" and
+"Phase 3 WiFiManager/OTA" are effectively **done** (Phase S + S2); Phase 3 is retired (WiFi
+provisioning now lives in the System > WiFi sub-tab). What remains hardware-coupled — per-shutter
+**calibration** (Phase 2) and MQTT **cover control** (Phase 4) — waits on real servo positions.
 
-**OTA-first reordering:** the web-server + ElegantOTA stack **and** WiFiManager captive-portal
-provisioning (originally inside Phase 3) were pulled forward as a standalone **Phase S** scaffold
-(`v0.0.1`, in `firmware/`) so every later phase flashes over WiFi instead of USB, with no
-credentials compiled into the binary. Runs on a bare ESP32. (Phase 3 now only needs to fold WiFi
-provisioning into the eventual settings UI alongside the servo/HA config.)
+**OTA-first reordering:** the web-server stack **and** WiFiManager captive-portal provisioning
+(originally Phase 3) were pulled forward as **Phase S** (`v0.0.1`) so every later phase flashes over
+WiFi, no credentials in the binary. **Phase S2** (`v0.2.0`) then moved the UI into a LittleFS
+single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — see
+[decisions/0005-mqtt-command-structure.md](decisions/0005-mqtt-command-structure.md).
 
 ---
 
@@ -59,21 +63,36 @@ provisioning into the eventual settings UI alongside the servo/HA config.)
   under servo load.
 - **Exit criteria:** repeatable position control of one servo, stable power.
 
-## Phase 2 — Web UI + calibration (v0.2.0)
-- **Objective:** browser control + per-shutter calibration + persisted config.
-- **What we build:** ESPAsyncWebServer, LittleFS web files, jog/SET CLOSED/OPEN/favourites,
-  JSON config in LittleFS + Preferences.
-- **Exit criteria:** calibrate closed/open/favourites in the browser; survive reboot.
+## Phase S2 — Web UI shell + Logs + MQTT/HA config (v0.2.0) ☑
+- **Objective:** a maintainable, polished device UI + observability + MQTT groundwork, all runnable
+  on a bare ESP32 before servo hardware.
+- **What we built:** LittleFS single-page app (`data/{index.html,style.css,app.js}`, sidebar shell
+  modelled on HomeKey-ESP32) served over a JSON/REST API; **live log stream** over `/ws/logs`
+  (ring buffer + level filters); **MQTT** broker config + **Home Assistant discovery** for hub
+  diagnostic sensors (`PubSubClient`, config in NVS); **System** page with quick actions, WiFi
+  sub-tab, and web-auth. Embedded recovery page if the FS image is missing.
+- **Exit criteria:** ☑ compiles; UI served from LittleFS; logs stream live; MQTT connects and the
+  hub appears in Home Assistant.
 
-## Phase 3 — WiFiManager + mDNS + OTA (v0.3.0)
-- **Objective:** field-friendly networking and updates.
-- **What we build:** WiFiManager captive portal, `shutter-hub.local`, ElegantOTA `/update`.
-- **Exit criteria:** first-boot AP config works; firmware updates over the browser.
+## Phase 2 — Shutters config + calibration (v0.2.x)
+- **Objective:** define shutters and calibrate each per-panel, in the browser, persisted.
+- **What we build:** a **Shutters** config surface (count, friendly names, PCA9685 channels — manual,
+  no auto-scan; see ADR 0005) + jog / SET CLOSED / SET OPEN / **Daylight**/**Privacy** favourites,
+  stored in NVS so a filesystem OTA doesn't wipe calibration.
+- **Prerequisites:** Phase 1 servo control; PCA9685 multi-channel drive.
+- **Exit criteria:** calibrate closed/open + Daylight/Privacy per shutter in the browser; survive reboot.
 
-## Phase 4 — MQTT / Home Assistant (v0.4.0)
-- **Objective:** HA cover entities per shutter.
-- **What we build:** MQTT discovery, cover command/state topics, position sensors.
-- **Exit criteria:** `cover.front_room_left` etc. appear and control the servo from HA.
+## Phase 3 — WiFiManager + mDNS + OTA — RETIRED (folded into Phase S / S2)
+- Captive-portal provisioning + mDNS + custom OTA shipped in Phase S; in-place WiFi change now lives
+  in **System > WiFi**. No separate release.
+
+## Phase 4 — MQTT / Home Assistant covers (v0.4.0)
+- **Objective:** HA cover entities per shutter, driving real servos.
+- **Config done in v0.2.0** (broker connection, HA discovery, ADR-0005 command structure). This phase
+  adds the per-shutter `cover` + `button` discovery and the `<base>/cover/<id>/{set,position/set,cmd}`
+  handlers wired to `ServoController` positions.
+- **Exit criteria:** `cover.front_room_left` etc. appear and control the servo from HA; jog buttons and
+  Daylight/Privacy presets work.
 
 ## Phase 5 — HomeKit (v0.5.0)
 - **Objective:** native Apple Home control.
@@ -99,9 +118,9 @@ provisioning into the eventual settings UI alongside the servo/HA config.)
 
 | # | Decision | Notes |
 | - | -------- | ----- |
-| D1 | Final horn/arm ratio | Resolved by Phase 0 force test; start 10 mm horn + 20 mm arm. |
-| D2 | Servo connectors in hub | Grommet holes + strain relief (prototype) vs JST-XH (tidy/serviceable). |
+| D1 | Final horn/arm ratio | Resolved by Phase 0 force test; start 10 mm horn + 20 mm arm. **Assumption to bench-validate (2026-07-08):** the rod end appears to need ~36 mm of rise *and* ~36 mm of horizontal excursion over 0→90° — an effective crank radius of ~36 mm (tip travels a ~51 mm chord), not 20 mm. If confirmed, a 1:1 parallelogram linkage needs a ~36 mm servo horn, and MG90D torque at that radius (~2.2 kg·cm → ~0.6 kg force) must be rechecked against the measured slat load. Use the v0.2.1 speed slider to run 0→90° slowly and measure actual rod displacement. |
+| D2 | Servo connectors in hub | Grommet holes + strain relief (prototype) vs JST-XH (tidy/serviceable). [hardware-layout.md](hardware-layout.md) recommends grommets for the prototype, JST-XH panel breakout revisited at Phase 7. |
 | D3 | Auto-OTA vs web-OTA only | Web OTA (ElegantOTA) certain; `latest.json` auto-update optional. |
 | D4 | Spare LM2596 | Superseded by XL4015; keep as spare or drop from BOM. |
 | D5 | Voltage monitoring | Whether to populate GPIO34 servo-rail ADC for brownout telemetry. |
-| D6 | Config editing UX | Add shutters via web form vs edit JSON directly. |
+| D6 | Config editing UX | Resolved (ADR 0005): browser-owned web form, servos declared manually (no auto-scan); HA-side config is a later phase. |

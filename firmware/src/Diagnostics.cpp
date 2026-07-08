@@ -37,6 +37,20 @@ String jstr(const String &s) {
   return o;
 }
 
+// ---- Live log ring buffer (fixed-size, no heap churn) ----
+constexpr int LOG_RING = 60;
+struct LogLine { uint32_t ms; char lvl; char tag[16]; char msg[168]; bool used; };
+LogLine s_ring[LOG_RING];
+int     s_head = 0;                        // next slot to write
+Diagnostics::LogSink s_sink = nullptr;
+
+// One buffered line -> {"t":<ms>,"lvl":"I","tag":"..","msg":".."}
+String lineJson(const LogLine &l) {
+  String j = "{\"t\":" + String(l.ms) + ",\"lvl\":\"";
+  j += l.lvl; j += "\",\"tag\":" + jstr(l.tag) + ",\"msg\":" + jstr(l.msg) + "}";
+  return j;
+}
+
 }  // namespace
 
 namespace Diagnostics {
@@ -53,6 +67,30 @@ void logf(char level, const char *tag, const char *fmt, ...) {
   va_end(ap);
   unsigned long ms = millis();
   Serial.printf("[%7lu.%03lu] %c/%s: %s\n", ms / 1000UL, ms % 1000UL, level, tag, msg);
+
+  // Record into the ring buffer and push live to the web UI (if a sink is set).
+  LogLine &l = s_ring[s_head];
+  l.ms = (uint32_t)ms; l.lvl = level; l.used = true;
+  strlcpy(l.tag, tag, sizeof(l.tag));
+  strlcpy(l.msg, msg, sizeof(l.msg));
+  s_head = (s_head + 1) % LOG_RING;
+  if (s_sink) s_sink(lineJson(l));
+}
+
+void setLogSink(LogSink sink) { s_sink = sink; }
+
+String logHistoryJson() {
+  String j = "[";
+  bool first = true;
+  for (int i = 0; i < LOG_RING; i++) {
+    const LogLine &l = s_ring[(s_head + i) % LOG_RING];  // oldest -> newest
+    if (!l.used) continue;
+    if (!first) j += ",";
+    j += lineJson(l);
+    first = false;
+  }
+  j += "]";
+  return j;
 }
 
 String resetReason() { return resetReasonStr(); }
