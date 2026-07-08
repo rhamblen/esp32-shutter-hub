@@ -3,15 +3,20 @@
 #include "Diagnostics.h"
 #include <ESP32Servo.h>
 
-// Single-servo bench driver (Phase 1). Uses the ESP32Servo library (LEDC-backed).
-// It stays DETACHED at boot so nothing twitches until the user acts from the UI —
-// this also avoids the attach-time current surge on a bare/USB-powered board.
+// Single-servo driver. Position is tracked in MICROSECONDS (pulse width) — the
+// servo's native unit — so Phase-2 blind calibration can land a slat far more
+// finely than whole degrees. The Servo-test page still talks in degrees; those
+// are derived from µs on the way in/out.
+//
+// Uses the ESP32Servo library (LEDC-backed). Stays DETACHED at boot so nothing
+// twitches until the user acts — this also dodges the attach-time current surge
+// on a bare/USB-powered board.
 namespace {
 Servo    g_servo;
 uint8_t  g_pin      = 13;
-float    g_current  = 90;        // angle actually on the output right now (0..180)
-int      g_target   = 90;        // angle we're moving toward
-uint16_t g_speed    = 25;        // max slew rate in deg/s; 0 = unlimited (snap)
+float    g_curUs    = 1500;       // pulse width actually on the output right now
+int      g_tgtUs    = 1500;       // pulse width we're slewing toward
+uint16_t g_speed    = 25;         // max slew rate in deg/s; 0 = unlimited (snap)
 bool     g_sweep    = false;
 uint32_t g_lastTick = 0;
 
@@ -22,13 +27,30 @@ const int      MAX_US          = 2500;
 const uint32_t MOVE_TICK_MS    = 20;   // one 50 Hz servo frame
 const uint16_t SWEEP_DPS_UNCAP = 133;  // sweep rate used when speed is "Max"
 
-int angleToUs(int a) { return map(a, 0, 180, MIN_US, MAX_US); }
+// One degree spans this many µs across the 0–180° / MIN..MAX map — used to turn
+// the deg/s speed limit into a µs/s slew rate.
+const float US_PER_DEG = (float)(MAX_US - MIN_US) / 180.0f;
+
+int   angleToUs(int a) { return map(constrain(a, 0, 180), 0, 180, MIN_US, MAX_US); }
+int   usToAngle(int u) { return map(constrain(u, MIN_US, MAX_US), MIN_US, MAX_US, 0, 180); }
+int   clampUs(int u)   { return constrain(u, MIN_US, MAX_US); }
 
 void ensureAttached() {
   if (!g_servo.attached()) {
     g_servo.setPeriodHertz(50);            // standard analog-servo frame rate
     g_servo.attach(g_pin, MIN_US, MAX_US);
   }
+}
+
+// Point the servo at an absolute pulse width, honouring the speed limit.
+void moveToUs(int us) {
+  g_sweep = false;                         // a direct move cancels an in-progress sweep
+  g_tgtUs = clampUs(us);
+  ensureAttached();
+  if (g_speed == 0) {                      // Max speed — snap straight there
+    g_curUs = g_tgtUs;
+    g_servo.writeMicroseconds(g_tgtUs);
+  }                                        // otherwise loop() slews there at g_speed
 }
 }  // namespace
 
@@ -42,7 +64,7 @@ void begin() {
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
   ESP32PWM::allocateTimer(3);
-  LOGI("servo", "bench driver ready — signal GPIO%u, detached (idle)", g_pin);
+  LOGI("servo", "driver ready — signal GPIO%u, detached (idle)", g_pin);
 }
 
 bool isValidPin(uint8_t g) {
@@ -63,40 +85,47 @@ bool setPin(uint8_t g) {
   if (wasAttached) g_servo.detach();
   g_pin = g;
   AppConfig::setServoPin(g);
-  if (wasAttached) { ensureAttached(); g_servo.write((int)roundf(g_current)); }
+  if (wasAttached) { ensureAttached(); g_servo.writeMicroseconds((int)roundf(g_curUs)); }
   LOGI("servo", "signal pin set to GPIO%u", g_pin);
   return true;
 }
 
 bool attach() {
   ensureAttached();
-  g_target = (int)roundf(g_current);   // hold position — no surprise move on attach
-  g_servo.write(g_target);
-  LOGI("servo", "attached on GPIO%u at %d deg", g_pin, g_target);
+  g_tgtUs = (int)roundf(g_curUs);      // hold position — no surprise move on attach
+  g_servo.writeMicroseconds(g_tgtUs);
+  LOGI("servo", "attached on GPIO%u at %d µs", g_pin, g_tgtUs);
   return g_servo.attached();
 }
 
 void detach() {
-  g_sweep  = false;
-  g_target = (int)roundf(g_current);   // freeze any in-flight move where it stopped
+  g_sweep = false;
+  g_tgtUs = (int)roundf(g_curUs);      // freeze any in-flight move where it stopped
   if (g_servo.attached()) g_servo.detach();
   LOGI("servo", "detached (released)");
 }
 
 bool attached() { return g_servo.attached(); }
 
-void writeAngle(int deg) {
-  g_sweep  = false;                // a manual move cancels an in-progress sweep
-  g_target = constrain(deg, 0, 180);
-  ensureAttached();
-  if (g_speed == 0) {              // Max speed — snap straight to the target
-    g_current = g_target;
-    g_servo.write(g_target);
-  }                                // otherwise loop() slews there at g_speed
+void writeAngle(int deg) { moveToUs(angleToUs(constrain(deg, 0, 180))); }
+void writeUs(int us)     { moveToUs(us); }
+
+void jogUs(int deltaUs) {
+  // Nudge relative to the current target so repeated clicks accumulate cleanly,
+  // even if a slew is still settling from the last one.
+  moveToUs(g_tgtUs + deltaUs);
 }
 
-int angle()        { return (int)roundf(g_current); }
-int microseconds() { return angleToUs((int)roundf(g_current)); }
+void run(int dir) {
+  if      (dir > 0) moveToUs(MAX_US);          // slow-open toward the max endpoint
+  else if (dir < 0) moveToUs(MIN_US);          // slow-close toward the min endpoint
+  else { g_sweep = false; g_tgtUs = (int)roundf(g_curUs); }  // stop where we are
+}
+
+int angle()        { return usToAngle((int)roundf(g_curUs)); }
+int microseconds() { return (int)roundf(g_curUs); }
+int minUs()        { return MIN_US; }
+int maxUs()        { return MAX_US; }
 
 uint16_t speed() { return g_speed; }
 
@@ -109,14 +138,14 @@ void setSpeed(uint16_t dps) {
 
 void startSweep() {
   ensureAttached();
-  g_sweep  = true;
-  g_target = (g_current < 90) ? 180 : 0;
+  g_sweep = true;
+  g_tgtUs = (g_curUs < (MIN_US + MAX_US) / 2) ? MAX_US : MIN_US;
   LOGI("servo", "sweep started");
 }
 
 void stopSweep() {
-  g_sweep  = false;
-  g_target = (int)roundf(g_current);   // stop where we are, not at the far end
+  g_sweep = false;
+  g_tgtUs = (int)roundf(g_curUs);      // stop where we are, not at the far end
   LOGI("servo", "sweep stopped");
 }
 bool sweeping()  { return g_sweep; }
@@ -127,27 +156,30 @@ void loop() {
   float dt = (now - g_lastTick) / 1000.0f;
   g_lastTick = now;
   if (!g_servo.attached()) return;
-  if (g_sweep && fabsf(g_target - g_current) < 0.5f)
-    g_target = (g_target == 0) ? 180 : 0;          // bounce off the ends
-  if (fabsf(g_target - g_current) < 0.01f) return; // settled — nothing to do
-  // Slew toward the target. Sweeping at "Max" uses a sane fixed rate instead of teleporting.
-  float rate = g_speed ? g_speed : (g_sweep ? SWEEP_DPS_UNCAP : 0);
-  float step = rate ? rate * dt : fabsf(g_target - g_current);
-  if (fabsf(g_target - g_current) <= step) g_current = g_target;
-  else g_current += (g_target > g_current) ? step : -step;
-  g_servo.write((int)roundf(g_current));
+  if (g_sweep && fabsf(g_tgtUs - g_curUs) < 1.0f)
+    g_tgtUs = (g_tgtUs <= MIN_US) ? MAX_US : MIN_US;   // bounce off the ends
+  if (fabsf(g_tgtUs - g_curUs) < 0.5f) return;         // settled — nothing to do
+  // Slew toward the target in µs. deg/s → µs/s via US_PER_DEG. Sweeping at "Max"
+  // uses a sane fixed rate instead of teleporting.
+  float dps  = g_speed ? g_speed : (g_sweep ? SWEEP_DPS_UNCAP : 0);
+  float step = dps ? dps * US_PER_DEG * dt : fabsf(g_tgtUs - g_curUs);
+  if (fabsf(g_tgtUs - g_curUs) <= step) g_curUs = g_tgtUs;
+  else g_curUs += (g_tgtUs > g_curUs) ? step : -step;
+  g_servo.writeMicroseconds((int)roundf(g_curUs));
 }
 
 String statusJson() {
-  int cur = (int)roundf(g_current);
+  int curUs = (int)roundf(g_curUs);
+  bool moving = g_servo.attached() && abs(curUs - g_tgtUs) > 1;
   String j = "{";
   j += "\"pin\":"       + String(g_pin);
   j += ",\"attached\":" + String(g_servo.attached() ? "true" : "false");
-  j += ",\"angle\":"    + String(cur);
-  j += ",\"target\":"   + String(g_target);
-  j += ",\"moving\":"   + String((g_servo.attached() && cur != g_target) ? "true" : "false");
+  j += ",\"angle\":"    + String(usToAngle(curUs));
+  j += ",\"target\":"   + String(usToAngle(g_tgtUs));
+  j += ",\"us\":"       + String(curUs);
+  j += ",\"targetUs\":" + String(g_tgtUs);
+  j += ",\"moving\":"   + String(moving ? "true" : "false");
   j += ",\"speed\":"    + String(g_speed);
-  j += ",\"us\":"       + String(angleToUs(cur));
   j += ",\"sweeping\":" + String(g_sweep ? "true" : "false");
   j += ",\"min\":"      + String(MIN_US);
   j += ",\"max\":"      + String(MAX_US);

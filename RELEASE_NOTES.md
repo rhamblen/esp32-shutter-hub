@@ -1,40 +1,45 @@
-# v0.2.1 — LittleFS web UI, live logs, MQTT/HA config + servo speed control
+# v0.2.2 — Shutters calibration page + microsecond servo control
 
-Rolls up everything since v0.1.0: the **v0.2.0 web-UI rebuild** (never published as its own
-release) plus the **v0.2.1 servo speed control**. Still runs on a bare ESP32-D — no
-servo/PCA9685/power hardware required.
+Per-blind calibration lands (Phase 2, in progress): a dedicated **Shutters** page next to the
+existing **Servo test** bench diagnostic, driven by a microsecond-native `ServoController`.
 
-## What's new since v0.1.0
+## What's new since v0.2.1
 
-### Web UI rebuild (v0.2.0)
-- **LittleFS single-page app** — the interface moved out of embedded C++ strings into static
-  assets served from LittleFS, with a persistent sidebar: **Info · MQTT · Actions · System ·
-  OTA Update · Logs**. A tiny embedded recovery page still offers OTA if the filesystem image
-  isn't flashed, so a device can't strand itself.
-- **Live log stream** — every log line streams to the browser over WebSocket (`/ws/logs`):
-  level filter chips (E/W/I/D/V), text search, auto-scroll, export, clear.
-- **MQTT + Home Assistant** — real broker connection with configurable host/port/credentials/
-  base-topic, availability (LWT), and **HA MQTT Discovery** for diagnostic sensors (WiFi signal,
-  uptime) so the hub appears in Home Assistant. Per-shutter covers come with Phase 4.
-- **System page** — Quick Actions (Reboot · Reset WiFi · Reset config), WiFi scan/connect,
-  and an optional **web-authentication** (HTTP basic auth) toggle.
-- **OTA page** — firmware + LittleFS uploaders with an upload log and reboot control.
+### Shutters page — per-blind calibration
+- A new **Shutters** sidebar page, separate from the low-level **Servo test** diagnostic (the old
+  *Actions* tab, renamed). Define shutters (friendly name, PCA9685 channel — declared but not yet
+  wired), then calibrate each in the browser.
+- **µs scrubber** plus a video-editor-style **transport cluster** — slow-run open/close, **Stop**,
+  and frame-step **nudge** (Fine 5 µs / Coarse 25 µs) — so a slat can be landed precisely.
+- A single **Positions** panel holds all four targets — **Full open, Full close, Daylight,
+  Privacy** — each with matching **Save current** / **Go** (disabled until set) controls.
+- Slider ends are labelled **OPEN / CLOSED** with their pulse widths, and **swap when Invert is
+  on** — travel direction is always explicit and can't be reversed by accident.
+- Position shown as pulse width and derived **% of travel**. A per-shutter **Invert position
+  scale** toggle flips the readout to 0 % = open (default 0 % = closed, the Home Assistant
+  standard).
+- Calibration persists in its own NVS namespace — survives a filesystem OTA *and* a config reset.
+- UI mockup: [docs/diagrams/calibration-page.svg](docs/diagrams/calibration-page.svg).
 
-### Servo speed control (v0.2.1)
-- **Speed slider** on the Servo test tab — **5–120 °/s in steps of 5, default 25 °/s**,
-  persisted in NVS. Angle commands, presets, and Sweep now **ramp** to the target at the set
-  rate instead of snapping — slow enough to watch a real blind linkage move.
-- Status shows *moving → N°* during a slewed move; **Detach / Stop sweep freeze the move where
-  it is** — useful if a linkage binds mid-travel.
-- REST: `POST /api/servo/speed?dps=N`; `GET /api/servo` gains `target`, `moving`, `speed`.
+### Microsecond-native servo control
+- `ServoController` now tracks position in pulse width (µs) — the servo's native unit — for finer
+  calibration than whole degrees. The Servo-test page still drives in degrees (derived).
+- New REST: `POST /api/servo/{us,jog,run}` and the `/api/shutters/*` family
+  (`add`/`remove`/`rename`/`channel`/`invert`/`set-edge`/`save-fav`/`recall`).
 
-## Download (ESP32-D) — now three bins
+### Fixed
+- **Stale web UI after reflashing** — static assets are now served with `Cache-Control: no-cache`
+  so the browser always revalidates, instead of potentially caching an old `app.js`/`index.html`
+  indefinitely (LittleFS files carry an epoch `Last-Modified`). **Do one hard refresh** (Ctrl+F5)
+  after flashing this version.
+
+## Download (ESP32-D) — three bins
 
 | File | Use |
 | ---- | --- |
-| `shutter-hub-esp32d-full-v0.2.1.bin` | First flash over USB at offset `0x0` |
-| `shutter-hub-esp32d-ota-v0.2.1.bin` | OTA page → **Upload Firmware** |
-| `shutter-hub-esp32d-littlefs-v0.2.1.bin` | OTA page → **Upload LittleFS** (the web UI) |
+| `shutter-hub-esp32d-full-v0.2.2.bin` | First flash over USB at offset `0x0` |
+| `shutter-hub-esp32d-ota-v0.2.2.bin` | OTA page → **Upload Firmware** |
+| `shutter-hub-esp32d-littlefs-v0.2.2.bin` | OTA page → **Upload LittleFS** (the web UI) |
 
 _ESP32-C3 bins are deferred to a later release._
 
@@ -42,15 +47,15 @@ _ESP32-C3 bins are deferred to a later release._
 
 First time, over USB:
 ```
-esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-full-v0.2.1.bin
+esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-full-v0.2.2.bin
 ```
 Then join `Shutter-Hub-Setup`, pick your network, and open `http://shutter-hub.local/`.
 
-**Upgrading from v0.1.0 or earlier over the air: flash BOTH images** — the `-ota-` firmware
-*and* the `-littlefs-` filesystem (the web UI now lives in LittleFS). Upload the firmware first
-(auto-reboots), then LittleFS, then reboot. Until the LittleFS image is flashed the device
-serves a minimal recovery page with the two uploaders. Saved WiFi and settings live in NVS and
-survive updates.
+**Upgrading over the air: flash BOTH images** — the `-ota-` firmware (the µs servo API and
+Shutters endpoints live here) *and* the `-littlefs-` filesystem (the Shutters page lives here).
+Upload the firmware first (auto-reboots), then LittleFS, then reboot — and **hard-refresh the
+browser once** (Ctrl+F5) to pick up the new UI cleanly. Saved WiFi, shutters, and settings live in
+NVS and survive updates.
 
 ## Build from source
 

@@ -5,6 +5,7 @@
 #include "Ota.h"
 #include "Mqtt.h"
 #include "ServoController.h"
+#include "Shutters.h"
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
@@ -303,12 +304,111 @@ void begin() {
     r->send(200, "application/json", ServoController::statusJson());
   });
 
+  // Microsecond control for blind calibration (Shutters page). Absolute move,
+  // frame-step nudge, and speed-limited slow-run in a direction.
+  server.on("/api/servo/us", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("us")) { r->send(400, "application/json", "{\"error\":\"missing us\"}"); return; }
+    ServoController::writeUs((int)r->getParam("us")->value().toInt());
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/jog", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("delta")) { r->send(400, "application/json", "{\"error\":\"missing delta\"}"); return; }
+    ServoController::jogUs((int)r->getParam("delta")->value().toInt());
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  server.on("/api/servo/run", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    String d = r->hasParam("dir") ? r->getParam("dir")->value() : String("stop");
+    ServoController::run(d == "open" ? 1 : d == "close" ? -1 : 0);
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+
+  // ---- Shutters (Phase-2 config + calibration) -----------------------------
+  server.on("/api/shutters", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  server.on("/api/shutters/add", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    String name = r->hasParam("name", true) ? r->getParam("name", true)->value() : String("");
+    int ch = r->hasParam("channel", true) ? r->getParam("channel", true)->value().toInt() : Shutters::count();
+    if (!Shutters::add(name, ch)) { r->send(400, "application/json", "{\"error\":\"maximum shutters reached\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  server.on("/api/shutters/remove", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !Shutters::remove(r->getParam("id", true)->value())) {
+      r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  server.on("/api/shutters/rename", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !r->hasParam("name", true) ||
+        !Shutters::rename(r->getParam("id", true)->value(), r->getParam("name", true)->value())) {
+      r->send(400, "application/json", "{\"error\":\"rename failed\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  server.on("/api/shutters/channel", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !r->hasParam("channel", true) ||
+        !Shutters::setChannel(r->getParam("id", true)->value(), r->getParam("channel", true)->value().toInt())) {
+      r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  server.on("/api/shutters/invert", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !r->hasParam("inverted", true)) {
+      r->send(400, "application/json", "{\"error\":\"missing id/inverted\"}"); return; }
+    bool inv = r->getParam("inverted", true)->value() == "true" || r->getParam("inverted", true)->value() == "1";
+    if (!Shutters::setInverted(r->getParam("id", true)->value(), inv)) {
+      r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  // Snapshot the servo's current pulse width into an endpoint (edge=open|closed).
+  server.on("/api/shutters/set-edge", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !r->hasParam("edge", true)) {
+      r->send(400, "application/json", "{\"error\":\"missing id/edge\"}"); return; }
+    bool openEdge = r->getParam("edge", true)->value() == "open";
+    if (!Shutters::setEdge(r->getParam("id", true)->value(), openEdge, ServoController::microseconds())) {
+      r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  // Snapshot the current position into a favourite (fav=daylight|privacy).
+  server.on("/api/shutters/save-fav", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !r->hasParam("fav", true)) {
+      r->send(400, "application/json", "{\"error\":\"missing id/fav\"}"); return; }
+    bool privacy = r->getParam("fav", true)->value() == "privacy";
+    if (!Shutters::saveFav(r->getParam("id", true)->value(), privacy, ServoController::microseconds())) {
+      r->send(400, "application/json", "{\"error\":\"unknown shutter\"}"); return; }
+    r->send(200, "application/json", Shutters::listJson());
+  });
+  // Move the servo to a stored position (fav=open|closed|daylight|privacy). Returns servo status.
+  server.on("/api/shutters/recall", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("id", true) || !r->hasParam("fav", true)) {
+      r->send(400, "application/json", "{\"error\":\"missing id/fav\"}"); return; }
+    String id = r->getParam("id", true)->value(), fav = r->getParam("fav", true)->value();
+    int us = (fav == "open" || fav == "closed") ? Shutters::edgeUs(id, fav == "open")
+                                                 : Shutters::favUs(id, fav == "privacy");
+    if (us == Shutters::UNSET) { r->send(400, "application/json", "{\"error\":\"position not set yet\"}"); return; }
+    ServoController::writeUs(us);
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+
   Ota::begin(server);   // /api/ota (firmware + filesystem)
 
   // ---- Static SPA from LittleFS, with an embedded recovery fallback ----
   if (LittleFS.exists("/index.html")) {
-    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
-    LOGI("http", "serving web UI from LittleFS");
+    // no-cache (not no-store): browsers must revalidate every load instead of trusting their
+    // heuristic cache. LittleFS files report an epoch Last-Modified, so without this a browser
+    // can cache index.html/app.js/style.css indefinitely — after reflashing a new FS image the
+    // UI keeps running the OLD JS with old button wiring until a hard refresh clears it.
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html").setCacheControl("no-cache");
+    LOGI("http", "serving web UI from LittleFS (no-cache: always revalidates)");
   } else {
     LOGW("http", "no /index.html in LittleFS — serving recovery page (flash the FS image)");
     server.onNotFound([](AsyncWebServerRequest *r) { r->send(200, "text/html", bootstrapPage()); });

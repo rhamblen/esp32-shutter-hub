@@ -4,16 +4,19 @@ PlatformIO project (Arduino Core, `esp32dev`). Structural reference:
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). See
 [../docs/project-plan.md](../docs/project-plan.md) for the phased roadmap.
 
-## What this version does (v0.2.1 — LittleFS web UI + logs + MQTT/HA + servo speed)
+## What this version does (v0.2.2 — web UI + logs + MQTT/HA + servo test + blind calibration)
 
 On-device WiFi setup, advertises `shutter-hub.local` over mDNS, and serves a
-**single-page web UI from LittleFS** (sidebar: Info · MQTT · Actions · System · OTA ·
-Logs) over a JSON/REST API. A **live log stream** runs over WebSocket (`/ws/logs`);
-**MQTT** connects to a broker and publishes **Home Assistant discovery** so the hub
-appears in HA. Custom **OTA** flashes firmware and/or the LittleFS image. A Phase-1
-**servo bench test** lives on the Actions page, with a persisted **speed slider**
-(5–120 °/s, default 25) so moves can run slow enough to watch a real blind linkage.
-No servo/PCA9685/power hardware
+**single-page web UI from LittleFS** (sidebar: Info · MQTT · Servo test · Shutters ·
+System · OTA · Logs) over a JSON/REST API. A **live log stream** runs over WebSocket
+(`/ws/logs`); **MQTT** connects to a broker and publishes **Home Assistant discovery**
+so the hub appears in HA. Custom **OTA** flashes firmware and/or the LittleFS image. The
+**Servo test** page is a low-level bench diagnostic (one servo direct from a GPIO, in
+degrees) with a persisted **speed slider** (5–120 °/s, default 25). The **Shutters**
+page (Phase 2) is per-blind **calibration**: define a shutter, then use a microsecond
+scrubber + transport controls (slow-run → stop → frame-step nudge) to snapshot its
+closed/open endpoints and Daylight/Privacy favourites — all persisted in NVS (survives a
+filesystem OTA). No servo/PCA9685/power hardware
 required — it runs on a bare ESP32 dev board. This is the base every later phase
 (shutter covers, HomeKit, solar) builds on.
 
@@ -108,7 +111,8 @@ firmware/
 │  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal                 [real]
 │  ├─ WebUI.cpp                static SPA + JSON API + /ws/logs + mDNS         [real]
 │  ├─ Ota.cpp                  custom firmware + LittleFS OTA                  [real]
-│  ├─ ServoController.cpp      single-servo bench test → PCA9685      [Phase 1 real]
+│  ├─ ServoController.cpp      single-servo µs driver → PCA9685        [Phase 1 real]
+│  ├─ Shutters.cpp             per-blind definitions + calibration (NVS) [Phase 2 real]
 │  ├─ Mqtt.cpp                 broker connect + HA discovery scaffold  [v0.2.0; covers Phase 4]
 │  ├─ HomeKit.cpp              HomeSpan bridge            [stub, Phase 5]
 │  └─ LightSensor.cpp          VEML7700 solar protection  [stub, Phase 6]

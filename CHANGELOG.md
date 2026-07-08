@@ -14,6 +14,46 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   LittleFS image alongside the firmware** or the device serves the embedded recovery page. See
   [firmware/README.md](firmware/README.md).
 
+## [0.2.2] — 2026-07-08
+
+Per-blind calibration (Phase 2): a dedicated Shutters page, microsecond-native servo control, and a
+stale-web-UI cache fix.
+
+### Added
+- **Shutters page — per-blind calibration (Phase 2, in progress)** — a new **Shutters** sidebar page,
+  separate from the low-level **Servo test** diagnostic (the old *Actions* tab, renamed). Define
+  shutters (friendly name, PCA9685 channel — declared but not yet wired), then calibrate each in the
+  browser: a **µs scrubber** plus a video-editor-style **transport cluster** (slow-run → **Stop** →
+  frame-step **nudge**, Fine 5 µs / Coarse 25 µs). A single **Positions** panel holds all four targets —
+  **Full open, Full close, Daylight, Privacy** — each with the same **Save current** (snapshot the live
+  position) and **Go** (recall, disabled until set) controls, so open/close are managed exactly like the
+  favourites. The **slider ends are labelled OPEN / CLOSED** with their pulse widths, and **swap when
+  Invert is on**, so travel direction is always explicit and can't be reversed by accident. Position shown as
+  both pulse width and derived **% of travel**. A per-shutter **Invert position scale** setup toggle
+  flips the readout to **0 % = open** (default is **0 % = closed**, the Home Assistant standard). New
+  `Shutters` module persists definitions + calibration in their **own NVS namespace** (survives a
+  filesystem OTA *and* a config reset), per [ADR-0005](docs/decisions/0005-mqtt-command-structure.md).
+- **UI mockup** — [docs/diagrams/calibration-page.svg](docs/diagrams/calibration-page.svg), a
+  dark-theme wireframe of the Shutters page, linked from the Phase 2 plan.
+
+### Fixed
+- **Stale web UI after reflashing** — `serveStatic` on LittleFS sent no `Cache-Control`, and LittleFS
+  files report an epoch `Last-Modified`, so browsers could cache `index.html`/`app.js`/`style.css`
+  indefinitely. After flashing a new filesystem image the browser could keep running the *old* JS
+  (old button wiring/ids) until a hard refresh — e.g. **Go** on Full open/close appearing to jump to
+  the wrong saved position because stale JS was still bound to old element IDs. Static assets are now
+  served with `Cache-Control: no-cache`, so the browser always revalidates. **If you've hit this,**
+  do one hard refresh (Ctrl+F5 / disable cache in devtools) after flashing this version — every load
+  after that self-corrects.
+
+### Changed
+- **`ServoController` is now microsecond-native** — position is tracked in pulse width (the servo's
+  native unit) for finer calibration than whole degrees; the Servo-test page still drives in degrees
+  (derived). New API: `writeUs`, `jogUs`, `run(dir)`, `minUs`/`maxUs`; `GET /api/servo` gains `us` and
+  `targetUs`. New REST: `POST /api/servo/{us,jog,run}` and the `/api/shutters/*` family
+  (`add`/`remove`/`rename`/`channel`/`set-edge`/`save-fav`/`recall`).
+- `FW_VERSION` → **0.2.2**.
+
 ## [0.2.1] — 2026-07-08
 
 Servo-test speed control, so bench moves can run slow enough for real blind linkages.

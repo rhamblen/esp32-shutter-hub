@@ -20,7 +20,8 @@
     <nav id="nav">
       <a class="nav-item active" data-route="info"><span class="ni">ⓘ</span>Info</a>
       <a class="nav-item" data-route="mqtt"><span class="ni">((•))</span>MQTT</a>
-      <a class="nav-item" data-route="actions"><span class="ni">⚡</span>Actions</a>
+      <a class="nav-item" data-route="actions"><span class="ni">⚡</span>Servo test</a>
+      <a class="nav-item" data-route="shutters"><span class="ni">⧉</span>Shutters</a>
       <a class="nav-item" data-route="system"><span class="ni">⚙</span>System</a>
       <a class="nav-item" data-route="ota"><span class="ni">⬆</span>OTA Update</a>
       <a class="nav-item" data-route="logs"><span class="ni">▤</span>Logs</a>
@@ -95,9 +96,9 @@
       </div>
     </section>
 
-    <!-- ACTIONS (servo bench test) -->
+    <!-- SERVO TEST (low-level bench diagnostic) -->
     <section class="page hidden" id="page-actions">
-      <h1>Actions</h1><p class="sub">Phase-1 single-servo bench test — drives one servo direct from a GPIO.</p>
+      <h1>Servo test</h1><p class="sub">Low-level single-servo bench diagnostic — drives one servo direct from a GPIO, in degrees. For per-blind calibration use the <b>Shutters</b> page.</p>
       <div class="card">
         <div class="card-head"><span class="ic pink">⚡</span><div><h2>Servo test</h2><p>Default GPIO13 · power from 5 V, common ground</p></div></div>
         <div class="form2">
@@ -121,6 +122,100 @@
           <button class="btn danger" id="sv_detach">Detach</button>
         </div>
         <p class="msg" id="sv_msg"></p>
+      </div>
+    </section>
+
+    <!-- SHUTTERS (per-blind calibration) -->
+    <section class="page hidden" id="page-shutters">
+      <h1>Shutters</h1><p class="sub">Define each shutter and calibrate its travel. Changes save instantly to NVS (survives a filesystem OTA).</p>
+
+      <!-- Shutter selector -->
+      <div class="card">
+        <div class="card-head"><span class="ic teal">⧉</span><div><h2>Shutter</h2><p>Pick a shutter to calibrate, or add a new one</p></div></div>
+        <div class="form2">
+          <label>Shutter<select id="sh_sel"></select></label>
+          <div class="endbtn"><button class="btn primary" id="sh_add">+ Add shutter</button></div>
+        </div>
+        <p class="msg" id="sh_empty">No shutters yet — add one to begin.</p>
+        <div id="sh_detail" class="hidden">
+          <div class="form2">
+            <label>Friendly name<input id="sh_name" placeholder="Front room – left"></label>
+            <label>PCA9685 channel<select id="sh_ch"></select></label>
+          </div>
+          <p class="msg">Channel is saved but not wired yet — every shutter drives the one test servo until the PCA9685 lands.</p>
+          <div class="toggle-row">
+            <div><b>Invert position scale</b><p>Report 0 % = fully open. Default is 0 % = closed (the Home Assistant standard).</p></div>
+            <label class="switch"><input type="checkbox" id="sh_invert"><span class="slider"></span></label>
+          </div>
+          <div class="kv"><span>Status</span><b id="sh_status">–</b></div>
+          <div class="kv"><span>Slug (MQTT id)</span><b id="sh_slug">–</b></div>
+          <div class="actions">
+            <button class="btn ghost" id="sh_rename">Rename</button>
+            <button class="btn danger" id="sh_del">Delete</button>
+            <span class="msg" id="sh_msg"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Position & calibration -->
+      <div class="card">
+        <div class="card-head"><span class="ic pink">⧉</span><div><h2>Position &amp; calibration</h2><p>Slow-run to get close, Stop, then nudge frame-by-frame to land it</p></div></div>
+        <div class="cal-readout">
+          <div class="cal-us"><b id="cal_us">–</b><small>µs</small></div>
+          <div class="cal-pct" id="cal_pct">– %</div>
+          <div class="cal-state" id="cal_state">detached</div>
+        </div>
+        <input type="range" id="cal_scrub" class="range" min="500" max="2500" value="1500">
+        <div class="scrub-ends">
+          <span class="scrub-end"><b id="cal_endL">CLOSED</b><small id="cal_endLv">– µs</small></span>
+          <span class="scrub-end right"><b id="cal_endR">OPEN</b><small id="cal_endRv">– µs</small></span>
+        </div>
+        <div class="transport">
+          <button class="tbtn" id="cal_nudgeminus"><span>⏮</span><small>nudge −</small></button>
+          <button class="tbtn" id="cal_runclose"><span>◀◀</span><small>slow close</small></button>
+          <button class="tbtn stop" id="cal_stop"><span>⏸</span><small>stop</small></button>
+          <button class="tbtn" id="cal_runopen"><span>▶▶</span><small>slow open</small></button>
+          <button class="tbtn" id="cal_nudgeplus"><span>⏭</span><small>nudge +</small></button>
+        </div>
+        <div class="cal-row">
+          <div>
+            <label>Nudge step</label>
+            <div class="seg" id="cal_step">
+              <button class="seg-btn active" data-step="5">Fine 5µs</button>
+              <button class="seg-btn" data-step="25">Coarse 25µs</button>
+            </div>
+          </div>
+          <div class="cal-speed">
+            <label>Slow-run speed <b id="cal_speedv">25 °/s</b></label>
+            <input type="range" id="cal_speed" class="range" min="5" max="120" step="5" value="25">
+          </div>
+        </div>
+        <div class="actions"><button class="btn danger" id="cal_detach">Detach (release)</button><span class="msg" id="cal_msg"></span></div>
+      </div>
+
+      <!-- Test positions -->
+      <div class="card">
+        <div class="card-head"><span class="ic teal">★</span><div><h2>Positions</h2><p>Jog to a spot, <b>Save current</b> to store it, then <b>Go</b> to test — all four</p></div></div>
+        <div class="fav-row">
+          <span class="fav-name"><i class="fdot green"></i>Full open</span>
+          <b id="pos_open">– µs</b>
+          <span class="fav-btns"><button class="btn ghost" id="pos_open_go">Go</button><button class="btn ghost" id="pos_open_set">Save current</button></span>
+        </div>
+        <div class="fav-row">
+          <span class="fav-name"><i class="fdot slate"></i>Full close</span>
+          <b id="pos_close">– µs</b>
+          <span class="fav-btns"><button class="btn ghost" id="pos_close_go">Go</button><button class="btn ghost" id="pos_close_set">Save current</button></span>
+        </div>
+        <div class="fav-row">
+          <span class="fav-name"><i class="fdot amber"></i>Daylight</span>
+          <b id="fav_dl">– µs</b>
+          <span class="fav-btns"><button class="btn ghost" id="fav_dl_go">Go</button><button class="btn ghost" id="fav_dl_save">Save current</button></span>
+        </div>
+        <div class="fav-row">
+          <span class="fav-name"><i class="fdot blue"></i>Privacy</span>
+          <b id="fav_pv">– µs</b>
+          <span class="fav-btns"><button class="btn ghost" id="fav_pv_go">Go</button><button class="btn ghost" id="fav_pv_save">Save current</button></span>
+        </div>
       </div>
     </section>
 

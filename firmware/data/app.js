@@ -17,7 +17,7 @@ const fmtKB = b => (b / 1024).toFixed(1) + " KB";
 const rssiTxt = r => r + " dBm" + (r >= -60 ? " (good)" : r >= -75 ? " (ok)" : " (poor)");
 
 // ---- Routing ----------------------------------------------------------------
-const routes = ["info", "mqtt", "actions", "system", "ota", "logs"];
+const routes = ["info", "mqtt", "actions", "shutters", "system", "ota", "logs"];
 function go(route) {
   if (!routes.includes(route)) route = "info";
   $$(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.route === route));
@@ -26,6 +26,7 @@ function go(route) {
   if (route === "info")    loadInfo();
   if (route === "mqtt")    loadMqtt();
   if (route === "actions") svRefresh();
+  if (route === "shutters") shOnShow();
   if (route === "system")  loadSystem();
   if (route === "ota")     loadOta();
   if (route === "logs")    logsOnShow();
@@ -207,6 +208,136 @@ let svBusy = false, svTick = 0;   // poll fast while a slewed move/sweep is in f
 setInterval(() => {
   if ($("#page-actions").offsetParent === null) return;
   if (svBusy || ++svTick % 3 === 0) svRefresh();
+}, 500);
+
+// ---- Shutters (per-blind calibration) --------------------------------------
+let shList = [], shSel = "", calStep = 5, shBusy = false, shTick = 0, chFilled = false;
+
+const shCurrent = () => shList.find(s => s.id === shSel);
+const usTxt = v => (v == null || v < 0) ? "– µs" : v + " µs";
+
+function shRenderSelect() {
+  const sel = $("#sh_sel");
+  sel.innerHTML = shList.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  if (!shList.some(s => s.id === shSel)) shSel = shList.length ? shList[0].id : "";
+  sel.value = shSel;
+}
+function shRenderDetail() {
+  const s = shCurrent();
+  $("#sh_empty").classList.toggle("hidden", shList.length > 0);
+  $("#sh_detail").classList.toggle("hidden", !s);
+  if (!chFilled) {   // populate the PCA9685 channel dropdown once
+    $("#sh_ch").innerHTML = Array.from({ length: 16 }, (_, i) => `<option value="${i}">${i}</option>`).join("");
+    chFilled = true;
+  }
+  if (!s) return;
+  if (document.activeElement !== $("#sh_name")) $("#sh_name").value = s.name;
+  $("#sh_ch").value = s.channel;
+  $("#sh_invert").checked = !!s.inverted;
+  $("#sh_slug").textContent = s.id;
+  $("#sh_status").textContent = s.calibrated ? "● calibrated" : "not calibrated";
+  $("#sh_status").style.color = s.calibrated ? "var(--green)" : "var(--amber)";
+  // Slider ends: default left = CLOSED / right = OPEN; the invert option swaps them so the
+  // labelled direction always matches the position scale (and flags an accidental reversal).
+  const leftOpen = !!s.inverted;
+  $("#cal_endL").textContent = leftOpen ? "OPEN" : "CLOSED";
+  $("#cal_endR").textContent = leftOpen ? "CLOSED" : "OPEN";
+  $("#cal_endLv").textContent = usTxt(leftOpen ? s.openUs : s.closedUs);
+  $("#cal_endRv").textContent = usTxt(leftOpen ? s.closedUs : s.openUs);
+  // Test positions — values + disable Go until a position is calibrated/saved.
+  $("#pos_open").textContent = usTxt(s.openUs);
+  $("#pos_close").textContent = usTxt(s.closedUs);
+  $("#fav_dl").textContent = usTxt(s.daylightUs);
+  $("#fav_pv").textContent = usTxt(s.privacyUs);
+  $("#pos_open_go").disabled  = s.openUs   < 0;
+  $("#pos_close_go").disabled = s.closedUs < 0;
+  $("#fav_dl_go").disabled    = s.daylightUs < 0;
+  $("#fav_pv_go").disabled    = s.privacyUs  < 0;
+}
+function calRender(v) {   // v = /api/servo status
+  $("#cal_us").textContent = v.us;
+  const scrub = $("#cal_scrub");
+  scrub.min = v.min; scrub.max = v.max;
+  if (document.activeElement !== scrub) scrub.value = v.moving ? v.targetUs : v.us;
+  $("#cal_state").textContent = v.attached ? (v.moving ? "moving…" : "holding") : "detached (released)";
+  const s = shCurrent();
+  if (s && s.calibrated && s.openUs !== s.closedUs) {
+    let pct = Math.round(100 * (v.us - s.closedUs) / (s.openUs - s.closedUs));  // 0 % = closed
+    if (s.inverted) pct = 100 - pct;                                           // invert option: 0 % = open
+    $("#cal_pct").textContent = Math.max(0, Math.min(100, pct)) + " %";
+  } else $("#cal_pct").textContent = "– %";
+  if (document.activeElement !== $("#cal_speed")) {
+    $("#cal_speed").value = Math.min(v.speed || 120, 120);
+    $("#cal_speedv").textContent = (v.speed || 0) + " °/s";
+  }
+  shBusy = !!v.moving;
+}
+async function shLoad() {
+  try { shList = await apiGet("/api/shutters"); shRenderSelect(); shRenderDetail(); } catch (e) {}
+}
+async function calRefresh() { try { calRender(await apiGet("/api/servo")); } catch (e) {} }
+function shOnShow() { shLoad(); calRefresh(); }
+
+// list-returning shutter mutations
+async function shMutate(url, obj, keepSel) {
+  try {
+    shList = await apiPost(url, obj);
+    if (!keepSel) shSel = shList.length ? shList[shList.length - 1].id : "";
+    shRenderSelect(); shRenderDetail(); $("#sh_msg").textContent = "";
+  } catch (e) { $("#sh_msg").textContent = "Failed: " + e.message; }
+}
+// servo-motion (returns servo status)
+async function calPost(url) { try { calRender(await apiPost(url)); $("#cal_msg").textContent = ""; }
+  catch (e) { $("#cal_msg").textContent = "Failed: " + e.message; } }
+
+$("#sh_add").addEventListener("click", () => {
+  const name = prompt("Name this shutter (e.g. Front room – left):", "Shutter " + (shList.length + 1));
+  if (name === null) return;
+  shMutate("/api/shutters/add", { name: name.trim(), channel: shList.length });
+});
+$("#sh_sel").addEventListener("change", () => { shSel = $("#sh_sel").value; shRenderDetail(); calRefresh(); });
+const commitName = () => { const s = shCurrent(); const n = $("#sh_name").value.trim();
+  if (s && n && n !== s.name) shMutate("/api/shutters/rename", { id: s.id, name: n }, true); };
+$("#sh_name").addEventListener("change", commitName);
+$("#sh_rename").addEventListener("click", commitName);
+$("#sh_ch").addEventListener("change", () => { const s = shCurrent();
+  if (s) shMutate("/api/shutters/channel", { id: s.id, channel: $("#sh_ch").value }, true); });
+$("#sh_invert").addEventListener("change", () => { const s = shCurrent();
+  if (s) shMutate("/api/shutters/invert", { id: s.id, inverted: $("#sh_invert").checked }, true); });
+$("#sh_del").addEventListener("click", () => { const s = shCurrent();
+  if (s && confirm(`Delete "${s.name}" and its calibration?`)) shMutate("/api/shutters/remove", { id: s.id }); });
+
+// transport + scrubber
+$("#cal_runclose").addEventListener("click", () => calPost("/api/servo/run?dir=close"));
+$("#cal_runopen").addEventListener("click", () => calPost("/api/servo/run?dir=open"));
+$("#cal_stop").addEventListener("click", () => calPost("/api/servo/run?dir=stop"));
+$("#cal_nudgeminus").addEventListener("click", () => calPost("/api/servo/jog?delta=" + (-calStep)));
+$("#cal_nudgeplus").addEventListener("click", () => calPost("/api/servo/jog?delta=" + calStep));
+$("#cal_scrub").addEventListener("input", () => $("#cal_us").textContent = $("#cal_scrub").value);
+$("#cal_scrub").addEventListener("change", () => calPost("/api/servo/us?us=" + $("#cal_scrub").value));
+$("#cal_speed").addEventListener("input", () => $("#cal_speedv").textContent = +$("#cal_speed").value + " °/s");
+$("#cal_speed").addEventListener("change", () => apiPost("/api/servo/speed?dps=" + $("#cal_speed").value));
+$("#cal_detach").addEventListener("click", () => calPost("/api/servo/detach"));
+$$("#cal_step .seg-btn").forEach(b => b.addEventListener("click", () => {
+  calStep = +b.dataset.step; $$("#cal_step .seg-btn").forEach(x => x.classList.toggle("active", x === b)); }));
+
+// endpoint SET + favourites (need a selected shutter)
+function needSel() { if (!shSel) { $("#cal_msg").textContent = "Add or select a shutter first."; return false; } return true; }
+const setEdge = edge => needSel() && shMutate("/api/shutters/set-edge", { id: shSel, edge }, true);
+$("#pos_open_set").addEventListener("click", () => setEdge("open"));
+$("#pos_close_set").addEventListener("click", () => setEdge("closed"));
+$("#fav_dl_save").addEventListener("click", () => needSel() && shMutate("/api/shutters/save-fav", { id: shSel, fav: "daylight" }, true));
+$("#fav_pv_save").addEventListener("click", () => needSel() && shMutate("/api/shutters/save-fav", { id: shSel, fav: "privacy" }, true));
+const recallGo = fav => needSel() &&
+  apiPost("/api/shutters/recall", { id: shSel, fav }).then(calRender).catch(e => $("#cal_msg").textContent = e.message);
+$("#pos_open_go").addEventListener("click", () => recallGo("open"));
+$("#pos_close_go").addEventListener("click", () => recallGo("closed"));
+$("#fav_dl_go").addEventListener("click", () => recallGo("daylight"));
+$("#fav_pv_go").addEventListener("click", () => recallGo("privacy"));
+
+setInterval(() => {   // live position poll while the page is visible
+  if ($("#page-shutters").offsetParent === null) return;
+  if (shBusy || ++shTick % 3 === 0) calRefresh();
 }, 500);
 
 // ---- OTA --------------------------------------------------------------------

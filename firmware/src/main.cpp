@@ -6,7 +6,8 @@
 //   WiFiSetup       WiFiManager AP + captive portal (creds->NVS) [real]
 //   WebUI           tabbed status page + routes + mDNS           [real]
 //   Ota             custom firmware + LittleFS update             [real]
-//   ServoController single-servo bench test (Phase 1) → PCA9685  [Phase 1 real]
+//   ServoController single-servo µs driver (Phase 1) → PCA9685   [Phase 1 real]
+//   Shutters        per-blind definitions + calibration (NVS)     [Phase 2 real]
 //   Mqtt            broker connect + HA discovery scaffold        [v0.2.0 real; covers Phase 4]
 //   HomeKit         HomeSpan bridge                               [stub, Phase 5]
 //   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
@@ -22,6 +23,7 @@
 #include "WiFiSetup.h"
 #include "WebUI.h"
 #include "ServoController.h"
+#include "Shutters.h"
 #include "Mqtt.h"
 #include "HomeKit.h"
 #include "LightSensor.h"
@@ -49,6 +51,7 @@ void setup() {
 
   // Future subsystems — stubs today, filled in by their phases:
   ServoController::begin();
+  Shutters::begin();       // load per-blind definitions + calibration from NVS
   Mqtt::begin();
   HomeKit::begin();
   LightSensor::begin();

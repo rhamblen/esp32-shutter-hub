@@ -78,7 +78,11 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 - **Objective:** define shutters and calibrate each per-panel, in the browser, persisted.
 - **What we build:** a **Shutters** config surface (count, friendly names, PCA9685 channels — manual,
   no auto-scan; see ADR 0005) + jog / SET CLOSED / SET OPEN / **Daylight**/**Privacy** favourites,
-  stored in NVS so a filesystem OTA doesn't wipe calibration.
+  stored in NVS so a filesystem OTA doesn't wipe calibration. This is a **separate page** from the
+  low-level **Servo test** bench diagnostic (the old Actions tab) — different jobs, different UI.
+- **UI mockup:** [diagrams/calibration-page.svg](diagrams/calibration-page.svg) — dark-theme wireframe
+  of the Shutters page: shutter selector, µs scrubber, transport cluster (slow-run → stop → nudge),
+  endpoint SET buttons, and Daylight/Privacy favourites.
 - **Prerequisites:** Phase 1 servo control; PCA9685 multi-channel drive.
 - **Exit criteria:** calibrate closed/open + Daylight/Privacy per shutter in the browser; survive reboot.
 

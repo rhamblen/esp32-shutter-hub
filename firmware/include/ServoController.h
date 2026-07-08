@@ -22,7 +22,17 @@ bool    attached();
 
 void    writeAngle(int deg);     // 0..180; auto-attaches; cancels any sweep; slews at speed()
 int     angle();                 // angle currently on the output (mid-move it trails the target)
-int     microseconds();          // pulse width for the current angle
+int     microseconds();          // pulse width currently on the output (mid-move it trails target)
+
+// ---- Microsecond control (Phase-2 blind calibration) -----------------------
+// The Shutters page calibrates in the servo's native unit (pulse width) for finer
+// control than whole degrees. These share the one physical servo and clamp to the
+// full min..max envelope so calibration can hunt past the saved endpoints.
+void    writeUs(int us);         // move to an absolute pulse width; auto-attaches; slews at speed()
+void    jogUs(int deltaUs);      // frame-step: nudge the target by ±deltaUs, clamped to min..max
+void    run(int dir);            // slow-run: +1 toward max (open), -1 toward min (close), 0 = stop
+int     minUs();                 // servo pulse envelope, min
+int     maxUs();                 // servo pulse envelope, max
 
 uint16_t speed();                // max slew rate, deg/s; 0 = unlimited ("Max", snap)
 void     setSpeed(uint16_t dps); // clamp to 0..1000 + persist (AppConfig)
@@ -31,5 +41,5 @@ void    startSweep();            // continuous 0<->180 sweep (non-blocking, spee
 void    stopSweep();
 bool    sweeping();
 
-String  statusJson();            // {pin,attached,angle,target,moving,speed,us,sweeping,min,max}
+String  statusJson();            // {pin,attached,angle,target,us,targetUs,moving,speed,sweeping,min,max}
 }

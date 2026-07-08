@@ -46,12 +46,14 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **web-UI rebuild + servo bring-up** (`v0.2.1`) — the device interface is
-now a **LittleFS single-page app** (sidebar: Info · MQTT · Actions · System · OTA · Logs) with a
-**live log stream** over WebSocket, **MQTT + Home Assistant discovery** scaffolding, web
-authentication, and a custom firmware+filesystem OTA updater. The Phase-1 **Servo test** tab drives
-one servo directly from an ESP32 GPIO (default GPIO13, configurable) with a persisted **speed
-slider** (5–120 °/s) so linkage travel can be watched slowly on the bench.
+Design complete on paper; **web UI + servo bring-up + blind calibration** (`v0.2.2`) — the device
+interface is now a **LittleFS single-page app** (sidebar: Info · MQTT · Servo test · Shutters ·
+System · OTA · Logs) with a **live log stream** over WebSocket, **MQTT + Home Assistant discovery**
+scaffolding, web authentication, and a custom firmware+filesystem OTA updater. The **Servo test** tab
+drives one servo directly from an ESP32 GPIO (default GPIO13, configurable) with a persisted **speed
+slider** (5–120 °/s). The new **Shutters** page (Phase 2) is per-blind calibration: name a shutter,
+then use a microsecond scrubber + transport controls (slow-run → stop → frame-step nudge) to set its
+closed/open endpoints and Daylight/Privacy favourites, all persisted in NVS.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases) — from v0.2.0 that's three per
