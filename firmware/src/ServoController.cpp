@@ -32,6 +32,9 @@ int      g_tgtUs    = 1500;       // pulse width we're slewing toward
 uint16_t g_speed    = 25;         // max slew rate in deg/s; 0 = unlimited (snap)
 bool     g_sweep    = false;
 uint32_t g_lastTick = 0;
+bool     g_moving   = false;      // was the servo mid-slew last tick? (settle-edge detect)
+bool     g_posDirty = false;      // a settled position is waiting to be written to NVS
+uint32_t g_settledMs = 0;         // millis() when the last move settled (debounce persistence)
 
 // MG90-class pulse envelope. Wider than the classic 1000–2000 µs so the endpoints
 // reach the servo's real mechanical limits during calibration.
@@ -39,6 +42,12 @@ const int      MIN_US          = 500;
 const int      MAX_US          = 2500;
 const uint32_t MOVE_TICK_MS    = 20;   // one 50 Hz servo frame
 const uint16_t SWEEP_DPS_UNCAP = 133;  // sweep rate used when speed is "Max"
+const uint32_t POS_PERSIST_MS  = 3000; // idle hold-off before writing a settled position (flash wear)
+
+// Assembly "home": where an un-driven slot is assumed to rest after a factory-fresh boot,
+// so the very first move slews from a real reference instead of snapping. Fit the servo horn
+// / linkage with the arm parked HERE (slat closed) during the build. See ADR 0009.
+const int HOME_US = MIN_US;
 
 // One degree spans this many µs across the 0–180° / MIN..MAX map — used to turn
 // the deg/s speed limit into a µs/s slew rate.
@@ -65,7 +74,8 @@ uint8_t g_sda      = 21, g_scl = 22;   // I2C bus pins
 bool    g_attached = false;            // PCA9685 has no attach() — track it ourselves
 // Last commanded pulse width per channel. Selecting a channel restores its own
 // position (never the previous channel's), so switching focus moves nothing — a
-// safety must when each channel is a different blind. Default mid-travel until first driven.
+// safety must when each channel is a different blind. Seeded from NVS at boot (or HOME
+// if never driven) so a warm reboot/OTA restores each channel's real position.
 float   g_chPos[16];
 
 void hwInit() {
@@ -81,6 +91,7 @@ void hwDetach() {
   g_pwm.setPWM(g_ch, 0, 4096);   // full-OFF — releases the servo (no holding torque)
   g_attached = false;
 }
+int  curSlot() { return g_ch; }  // NVS position slot = the active channel
 #else
 Servo   g_servo;
 uint8_t g_pin = 13;               // signal GPIO
@@ -101,7 +112,23 @@ void hwEnsureAttached(){
   }
 }
 void hwDetach() { if (g_servo.attached()) g_servo.detach(); }
+int  curSlot() { return 0; }     // one servo — always NVS position slot 0
 #endif
+
+// Record where the servo just settled so a warm reboot restores it (and the first move
+// slews from that reference instead of a guess). RAM first; the NVS write is debounced
+// in loop() to spare the flash during calibration jogging.
+void rememberPos() {
+#if USE_PCA9685
+  g_chPos[g_ch] = g_curUs;
+#endif
+  g_posDirty  = true;
+  g_settledMs = millis();
+}
+void persistPos() {
+  AppConfig::setServoPos(curSlot(), (int)roundf(g_curUs));
+  g_posDirty = false;
+}
 
 // Point the servo at an absolute pulse width, honouring the speed limit.
 void moveToUs(int us) {
@@ -111,6 +138,7 @@ void moveToUs(int us) {
   if (g_speed == 0) {                      // Max speed — snap straight there
     g_curUs = g_tgtUs;
     hwWriteUs(g_tgtUs);
+    rememberPos();                         // slewed moves are remembered on settle in loop()
   }                                        // otherwise loop() slews there at g_speed
 }
 }  // namespace
@@ -123,14 +151,21 @@ void begin() {
   g_sda = AppConfig::i2cSda();
   g_scl = AppConfig::i2cScl();
   g_ch  = AppConfig::servoChannel();
-  for (float &p : g_chPos) p = g_curUs;   // assume mid-travel per channel until first driven
+  // Restore each channel's last-known position (or HOME if never driven) so the first
+  // move after a warm reboot / OTA slews from where the servo actually is.
+  for (int i = 0; i < 16; i++) { int p = AppConfig::servoPos(i); g_chPos[i] = (p < 0) ? HOME_US : p; }
+  g_curUs = g_chPos[g_ch];
+  g_tgtUs = (int)roundf(g_curUs);
   hwInit();
-  LOGI("servo", "driver ready — PCA9685 @0x40, SDA GPIO%u/SCL GPIO%u, channel %u, detached (idle)",
-       g_sda, g_scl, g_ch);
+  LOGI("servo", "driver ready — PCA9685 @0x40, SDA GPIO%u/SCL GPIO%u, channel %u @ %d µs, detached (idle)",
+       g_sda, g_scl, g_ch, (int)roundf(g_curUs));
 #else
   g_pin = AppConfig::servoPin();
+  int p = AppConfig::servoPos(0);           // restore last-known position (or HOME if never driven)
+  g_curUs = (p < 0) ? HOME_US : p;
+  g_tgtUs = (int)roundf(g_curUs);
   hwInit();
-  LOGI("servo", "driver ready — direct GPIO%u, detached (idle)", g_pin);
+  LOGI("servo", "driver ready — direct GPIO%u @ %d µs, detached (idle)", g_pin, (int)roundf(g_curUs));
 #endif
 }
 
@@ -151,6 +186,7 @@ bool setChannel(uint8_t ch) {
   // Just move the control focus — never drive or release a channel on selection.
   // Each channel keeps holding its own last value; the next move slews from there.
   g_chPos[g_ch] = g_curUs;                   // remember where we left the current channel
+  if (g_posDirty) persistPos();              // commit its position to NVS before leaving it
   g_sweep = false;
   g_ch = ch;
   AppConfig::setServoChannel(ch);
@@ -213,7 +249,8 @@ void detach() {
   g_sweep = false;
   g_tgtUs = (int)roundf(g_curUs);      // freeze any in-flight move where it stopped
   hwDetach();
-  LOGI("servo", "detached (released)");
+  rememberPos(); persistPos();         // a deliberate stop — save the frozen position now
+  LOGI("servo", "detached (released) at %d µs", (int)roundf(g_curUs));
 }
 
 bool attached() { return hwAttached(); }
@@ -266,10 +303,16 @@ void loop() {
   if (now - g_lastTick < MOVE_TICK_MS) return;
   float dt = (now - g_lastTick) / 1000.0f;
   g_lastTick = now;
+  // Debounced write of the last settled position (runs even while detached).
+  if (g_posDirty && (now - g_settledMs) > POS_PERSIST_MS) persistPos();
   if (!hwAttached()) return;
   if (g_sweep && fabsf(g_tgtUs - g_curUs) < 1.0f)
     g_tgtUs = (g_tgtUs <= MIN_US) ? MAX_US : MIN_US;   // bounce off the ends
-  if (fabsf(g_tgtUs - g_curUs) < 0.5f) return;         // settled — nothing to do
+  if (fabsf(g_tgtUs - g_curUs) < 0.5f) {               // settled — nothing to do
+    if (g_moving) { g_moving = false; rememberPos(); } // just arrived — remember where
+    return;
+  }
+  g_moving = true;
   // Slew toward the target in µs. deg/s → µs/s via US_PER_DEG. Sweeping at "Max"
   // uses a sane fixed rate instead of teleporting.
   float dps  = g_speed ? g_speed : (g_sweep ? SWEEP_DPS_UNCAP : 0);

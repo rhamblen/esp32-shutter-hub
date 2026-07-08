@@ -102,6 +102,18 @@ void setServoChannel(uint8_t ch) {
   prefs.putUChar("servoCh", ch);
 }
 
+int servoPos(uint8_t slot) {
+  if (slot > 15) return -1;
+  char k[8]; snprintf(k, sizeof k, "svp%u", slot);
+  return prefs.getInt(k, -1);                    // -1 => never stored (assume home)
+}
+
+void setServoPos(uint8_t slot, int us) {
+  if (slot > 15) return;
+  char k[8]; snprintf(k, sizeof k, "svp%u", slot);
+  prefs.putInt(k, us);
+}
+
 String   lastFlashType()  { return g_lfType; }
 bool     lastFlashOk()    { return g_lfOk; }
 uint32_t lastFlashEpoch() { return g_lfEpoch; }

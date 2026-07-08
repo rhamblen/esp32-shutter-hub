@@ -29,6 +29,12 @@ void     setI2cPins(uint8_t sda, uint8_t scl);
 uint8_t  servoChannel();                        // PCA9685 test channel, default 0
 void     setServoChannel(uint8_t ch);
 
+// Last-known servo position per drive slot, in µs, so a warm reboot/OTA restores where
+// each servo was (the first move then slews from there instead of snapping). Direct build
+// uses slot 0; PCA9685 build uses slot = channel (0–15). Returns -1 if never stored.
+int      servoPos(uint8_t slot);
+void     setServoPos(uint8_t slot, int us);
+
 // Last OTA flash record (what + when + result), persisted across reboots/OTA.
 String   lastFlashType();                       // "firmware" | "filesystem" | "none"
 bool     lastFlashOk();

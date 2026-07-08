@@ -49,6 +49,17 @@ identified everywhere so an OTA bin is never ambiguous.
   per version (the UI adapts at runtime, so the FS bin is variant-independent).
 - `FW_VERSION` → **0.3.0**.
 
+### Added
+- **Servo position memory + "home" convention** ([ADR-0009](docs/decisions/0009-servo-position-memory.md)) —
+  tackles the open-loop first-move jump (an unfed servo has no position, so its first pulse snaps the
+  arm at full speed). `ServoController` now persists each drive slot's last position to NVS
+  (`AppConfig::servoPos`/`setServoPos`, keys `svp0..svp15`; direct = slot 0, PCA9685 = channel) and
+  restores it on boot, so a **warm reboot / OTA** (servos still powered) restores where the arm is and
+  the first move slews from there — no snap. Writes are **debounced** (~3 s after a move settles, plus
+  on detach and channel switch) to spare the flash. A never-driven channel defaults to **`HOME_US`**
+  (the minimum-µs "closed" endpoint); fit the horn parked there at assembly (see
+  [hardware-layout.md](docs/hardware-layout.md)) so a factory-fresh first boot also matches reality.
+
 ### Fixed
 - **Channel switch no longer jolts the servo** — on a PCA9685 build, selecting a channel used to
   drive the *new* channel to the *previous* channel's pulse width at full speed (and release the old

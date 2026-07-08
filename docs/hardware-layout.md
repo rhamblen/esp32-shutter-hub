@@ -152,3 +152,8 @@ unpolarised Dupont pairs for anything permanent — one reversed 3V3/GND on the 
 5. Power up with **no servos**: check 5.1 V at J1 and PCA9685 V+, 3V3 rail at J2/J3, then
    `i2cdetect`-style scan expects **0x40** (PCA9685) and **0x10** (VEML7700).
 6. Add one MG90D on CH0 and re-run the Phase 1 bench test; watch for resets under load.
+7. **Fit each servo horn / linkage with the arm parked at HOME (slat closed).** The firmware assumes
+   an un-driven channel rests at its minimum-µs "home" endpoint (see
+   [decisions/0009-servo-position-memory.md](decisions/0009-servo-position-memory.md)), so assembling
+   at HOME means the first move after a factory-fresh boot slews from where the arm actually is instead
+   of snapping. (After that, position is remembered across reboots/OTA in NVS.)
