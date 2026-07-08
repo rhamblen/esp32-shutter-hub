@@ -7,12 +7,47 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 ## [Unreleased]
 
 ### Release checklist / notes
-- **Three bins per board from v0.2.0 on** (the web UI now lives in LittleFS): `full` (USB flash),
-  `ota` (firmware), and **`littlefs`** (filesystem image). Build the filesystem image with
-  `pio run -e <env> -t buildfs` (→ `.pio/build/<env>/littlefs.bin`) and attach it as
-  `shutter-hub-<board>-littlefs-vX.Y.Z.bin`. v0.0.1–v0.1.0 shipped only `full` + `ota`. **Flash the
-  LittleFS image alongside the firmware** or the device serves the embedded recovery page. See
-  [firmware/README.md](firmware/README.md).
+- **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`
+  (firmware) bin **per variant** — `shutter-hub-<variant>-{full,ota}-vX.Y.Z.bin` — plus a **single
+  shared `littlefs`** image per version (`shutter-hub-esp32d-littlefs-vX.Y.Z.bin`; the web UI adapts
+  to the backend at runtime, so it's identical across variants). Build firmware with
+  `pio run -e <variant>` and the FS with `pio run -e <variant> -t buildfs`. Only the active ESP32-D
+  variants (`esp32d-direct`, `esp32d-pca9685`) are shipped day-to-day; the C3 variants are deferred.
+  **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
+  page. See [firmware/README.md](firmware/README.md).
+
+## [0.3.0] — 2026-07-08
+
+Build variants and a real PCA9685 servo backend. The servo hardware is now a compile-time choice,
+identified everywhere so an OTA bin is never ambiguous.
+
+### Added
+- **Build variants — board × servo backend** — the servo driver is a compile-time choice,
+  `-D USE_PCA9685=0|1`: **direct GPIO** (ESP32Servo, one bench actuator) or **PCA9685** (Adafruit PWM
+  driver, I2C multi-channel — the production topology from [ADR-0003](docs/decisions/0003-power-chain-xl4015-pca9685.md)).
+  Four PlatformIO envs — `esp32d-` / `esp32c3-` × `-direct` / `-pca9685` — each carrying an
+  `FW_VARIANT` id; only the ESP32-D pair is active, **`esp32d-pca9685` is the default**, and the C3
+  envs stay deferred. New [ADR-0008](docs/decisions/0008-build-variants.md).
+- **Variant identity on-device** — `GET /api/info` gains `variant` (e.g. `esp32d-pca9685`) and
+  `backend` (`gpio`|`pca9685`); both show on the **Dashboard** Device card and the **OTA** page, and
+  name the release artifacts `shutter-hub-<variant>-{full,ota,littlefs}-vX.Y.Z.bin`.
+- **PCA9685 servo backend** — on a `-pca9685` build, `ServoController` drives the servo through a
+  PCA9685 at `0x40` over I2C (Adafruit PWM Servo Driver, 50 Hz, `writeMicroseconds`), releasing the
+  channel (full-OFF) on detach. The µs position core (slew/speed/sweep) is shared with the direct
+  build — only the hardware primitives switch.
+- **Adaptive Servo-test page** — the one page renders the right controls for the running backend
+  (from `/api/info`): the **direct** build keeps the signal-GPIO selector; the **PCA9685** build gets
+  **I2C SDA/SCL pin selectors** and a **servo-channel (0–15) selector**. New config in `AppConfig`
+  (`i2cSda`/`i2cScl` default 21/22, `servoChannel` default 0) and REST `POST /api/servo/channel`,
+  `POST /api/servo/i2c`.
+
+### Changed
+- **`platformio.ini` restructured** into the four variant envs with backend mixins;
+  `default_envs = esp32d-pca9685`. Added `adafruit/Adafruit PWM Servo Driver Library` to `lib_deps`
+  (only linked on `-pca9685` builds).
+- **Releases ship per-variant firmware** (`full` + `ota`) plus a **single shared LittleFS** image
+  per version (the UI adapts at runtime, so the FS bin is variant-independent).
+- `FW_VERSION` → **0.3.0**.
 
 ## [0.2.2] — 2026-07-08
 

@@ -20,6 +20,15 @@ void     setServoPin(uint8_t gpio);
 uint16_t servoSpeedDps();
 void     setServoSpeedDps(uint16_t dps);
 
+// PCA9685 build variant only (USE_PCA9685=1) — the I2C bus pins the PCA9685 (and
+// later the VEML7700) sit on, and which channel the Servo-test page drives. Ignored
+// by the direct-GPIO build, but stored unconditionally so a variant swap keeps them.
+uint8_t  i2cSda();                              // default 21 (ESP32-D SDA)
+uint8_t  i2cScl();                              // default 22 (ESP32-D SCL)
+void     setI2cPins(uint8_t sda, uint8_t scl);
+uint8_t  servoChannel();                        // PCA9685 test channel, default 0
+void     setServoChannel(uint8_t ch);
+
 // Last OTA flash record (what + when + result), persisted across reboots/OTA.
 String   lastFlashType();                       // "firmware" | "filesystem" | "none"
 bool     lastFlashOk();

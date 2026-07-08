@@ -54,6 +54,7 @@ async function loadInfo() {
     $("#brandState").textContent = d.wifi.connected ? "Online" : "Offline";
     $("#brandDot").classList.toggle("off", !d.wifi.connected);
     $("#i_fw").textContent = "v" + d.fw;
+    $("#i_variant").textContent = d.variant || "—";
     $("#i_dev").textContent = d.device;
     $("#i_host").textContent = d.host;
     $("#i_chip").textContent = d.chip;
@@ -170,10 +171,31 @@ $("#se_save").addEventListener("click", async () => {
 });
 
 // ---- Actions (servo bench test) --------------------------------------------
+// The backend is a build-time choice (direct GPIO vs PCA9685); the status JSON
+// carries `usesPca`, so this one page renders the right addressing controls.
 const STRAP = [0, 2, 12, 15];
 const svSpeedLabel = v => v + " °/s";
 function svRender(s) {
-  $("#sv_pinv").textContent = "GPIO" + s.pin;
+  const pca = !!s.usesPca;
+  $("#sv_gpio_block").classList.toggle("hidden", pca);
+  $("#sv_pca_block").classList.toggle("hidden", !pca);
+  $("#sv_bus_row").classList.toggle("hidden", !pca);
+  if (pca) {
+    $("#sv_headnote").textContent = "PCA9685 @0x40 · power servos from 5 V, common ground";
+    $("#sv_addr_label").textContent = "PCA9685 channel";
+    $("#sv_pinv").textContent = "CH" + s.channel;
+    $("#sv_busv").textContent = "SDA GPIO" + s.sda + " · SCL GPIO" + s.scl;
+    if ($("#sv_ch").value === "")  $("#sv_ch").value = s.channel;
+    if ($("#sv_sda").value === "") $("#sv_sda").value = s.sda;
+    if ($("#sv_scl").value === "") $("#sv_scl").value = s.scl;
+  } else {
+    $("#sv_headnote").textContent = "Default GPIO13 · power from 5 V, common ground";
+    $("#sv_addr_label").textContent = "Signal GPIO";
+    $("#sv_pinv").textContent = "GPIO" + s.pin;
+    if ($("#sv_pin").value === "") $("#sv_pin").value = s.pin;
+    $("#sv_pinwarn").textContent = STRAP.includes(s.pin)
+      ? `Note: GPIO${s.pin} is a strapping/boot pin — fine for a quick test, avoid for the final build.` : "";
+  }
   $("#sv_state").textContent = s.attached
     ? (s.sweeping ? "sweeping…" : (s.moving ? `moving → ${s.target}°` : "attached"))
     : "detached (released)";
@@ -182,11 +204,8 @@ function svRender(s) {
   $("#sv_speedv").textContent = s.speed === 0 ? "Max (instant)" : s.speed + " °/s";
   if (document.activeElement !== $("#sv_slider")) $("#sv_slider").value = s.moving ? s.target : s.angle;
   if (document.activeElement !== $("#sv_speed")) $("#sv_speed").value = Math.min(s.speed || 120, 120);
-  if ($("#sv_pin").value === "") $("#sv_pin").value = s.pin;
   svBusy = !!(s.moving || s.sweeping);
   $("#sv_sweep").textContent = s.sweeping ? "Stop sweep" : "Sweep";
-  $("#sv_pinwarn").textContent = STRAP.includes(s.pin)
-    ? `Note: GPIO${s.pin} is a strapping/boot pin — fine for a quick test, avoid for the final build.` : "";
 }
 async function svRefresh() { try { svRender(await apiGet("/api/servo")); } catch (e) {} }
 async function svPost(u) { try { const j = await apiPost(u); svRender(j); $("#sv_msg").textContent = ""; }
@@ -194,6 +213,15 @@ async function svPost(u) { try { const j = await apiPost(u); svRender(j); $("#sv
 $("#sv_setpin").addEventListener("click", () => {
   const g = $("#sv_pin").value; if (g === "") { $("#sv_msg").textContent = "Enter a GPIO first."; return; }
   svPost("/api/servo/pin?gpio=" + g);
+});
+$("#sv_setch").addEventListener("click", () => {
+  const c = $("#sv_ch").value; if (c === "") { $("#sv_msg").textContent = "Enter a channel (0–15) first."; return; }
+  svPost("/api/servo/channel?ch=" + c);
+});
+$("#sv_seti2c").addEventListener("click", () => {
+  const sda = $("#sv_sda").value, scl = $("#sv_scl").value;
+  if (sda === "" || scl === "") { $("#sv_msg").textContent = "Enter both SDA and SCL GPIOs first."; return; }
+  svPost("/api/servo/i2c?sda=" + sda + "&scl=" + scl);
 });
 $("#sv_slider").addEventListener("input", () => $("#sv_angle").textContent = $("#sv_slider").value + "°");
 $("#sv_slider").addEventListener("change", () => svPost("/api/servo/write?deg=" + $("#sv_slider").value));
@@ -345,6 +373,7 @@ async function loadOta() {
   try {
     const d = await apiGet("/api/info");
     $("#o_fw").textContent = "v" + d.fw; $("#o_chip").textContent = d.chip;
+    $("#o_variant").textContent = d.variant || "—";
     $("#o_heap").textContent = fmtKB(d.free_heap);
     const lf = d.last_flash;
     $("#o_last").textContent = lf.type === "none" ? "none yet" : `${lf.type} — ${lf.ok ? "OK" : "FAILED"}`;

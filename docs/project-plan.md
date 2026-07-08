@@ -13,8 +13,9 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | S     | v0.0.1–3| Firmware framework + OTA scaffold | ☑   |
 | 1     | v0.1.0  | Bench bring-up (1 servo)       | ☑      |
 | S2    | v0.2.0  | Web UI shell (LittleFS SPA) + Logs (WS) + MQTT/HA config | ☑ |
-| 2     | v0.2.x  | Shutters config + calibration  | ◐      |
+| 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ◐ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ◐      |
+| 4b    | v0.4.x  | HA Lovelace card (control + calibration) | ☐ |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
 | 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
@@ -24,6 +25,13 @@ forward — they all run on a bare ESP32 before servo hardware exists. So the ol
 "Phase 3 WiFiManager/OTA" are effectively **done** (Phase S + S2); Phase 3 is retired (WiFi
 provisioning now lives in the System > WiFi sub-tab). What remains hardware-coupled — per-shutter
 **calibration** (Phase 2) and MQTT **cover control** (Phase 4) — waits on real servo positions.
+
+**Build variants (v0.3.0):** the servo backend is now a compile-time choice — **direct GPIO** (one
+bench actuator) or **PCA9685** (I2C multi-channel) — with a `FW_VARIANT` id surfaced on the
+info/OTA screens and in the artifact names. Four envs (`esp32d-` / `esp32c3-` × `-direct` /
+`-pca9685`); only the ESP32-D pair is active, `esp32d-pca9685` is the default. See
+[decisions/0008-build-variants.md](decisions/0008-build-variants.md). Servo drive is still one active
+servo/channel at a time; parallel 4-channel drive stays in Phase 4/7.
 
 **OTA-first reordering:** the web-server stack **and** WiFiManager captive-portal provisioning
 (originally Phase 3) were pulled forward as **Phase S** (`v0.0.1`) so every later phase flashes over
@@ -98,6 +106,24 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 - **Exit criteria:** `cover.front_room_left` etc. appear and control the servo from HA; jog buttons and
   Daylight/Privacy presets work.
 
+## Phase 4b — Home Assistant Lovelace card (v0.4.x)
+- **Objective:** a purpose-built dashboard tile for the shutters, plus a hidden calibration tile.
+- **What we build:** a custom Lovelace **frontend** card bundle (Lit/TS → `dist/*.js`, registered as
+  a Lovelace resource — **not** a HACS integration, see ADR-0007):
+  - `shutter-hub-card` — 1–6 named shutters side by side with a live slat glyph; **group mode**
+    (one Open/Close/Daylight/Privacy bar for all) that flips to **individual mode** (slider + buttons
+    scoped to a selected shutter); visual editor with add/delete/reorder (1–6).
+  - `shutter-hub-calibration-card` — setup-only tile mirroring the web calibration: µs scrubber,
+    exact-µs entry, and four save slots (Full open/close, Daylight, Privacy). **Set-and-go:** every
+    position change drives the servo to that position so the real angle is visible before saving.
+- **Spec:** [ha-lovelace-card.md](ha-lovelace-card.md) — entity model, config schema, both card
+  layouts, and the firmware additions the calibration card needs.
+- **Prerequisites:** Phase 4 cover/button discovery for the **control** card. The **calibration**
+  card additionally needs a firmware *go-to-µs* command + raw-µs readback (see spec §4), and
+  `Shutters::MAX` raised from 4 → 6.
+- **Exit criteria:** control card drives all/one shutter and follows the HA theme; calibration card
+  does set-and-go and saves to the four slots (survives a FS OTA).
+
 ## Phase 5 — HomeKit (v0.5.0)
 - **Objective:** native Apple Home control.
 - **What we build:** HomeSpan bridge exposing one Window Covering per shutter; Siri.
@@ -128,3 +154,5 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 | D4 | Spare LM2596 | Superseded by XL4015; keep as spare or drop from BOM. |
 | D5 | Voltage monitoring | Whether to populate GPIO34 servo-rail ADC for brownout telemetry. |
 | D6 | Config editing UX | Resolved (ADR 0005): browser-owned web form, servos declared manually (no auto-scan); HA-side config is a later phase. |
+| D7 | HA integration form | Resolved (ADR 0006): MQTT Discovery only — no published `custom_components`/HACS integration. Broker-free HTTP-native integration deferred as an optional path, not planned work. |
+| D8 | HA card home | Resolved (ADR 0007): custom Lovelace **frontend** card (control + calibration), not stacked built-in cards. **Open sub-choice:** ship from a top-level `ha-card/` in this repo vs a companion `esp32-shutter-hub-card` repo for a clean HACS frontend listing — pick per how HACS should index it. |

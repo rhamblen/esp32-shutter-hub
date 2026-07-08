@@ -20,6 +20,9 @@
 #ifndef FW_VERSION
 #define FW_VERSION "0.0.0"
 #endif
+#ifndef FW_VARIANT
+#define FW_VARIANT "unknown"
+#endif
 
 static AsyncWebServer server(80);
 static AsyncWebSocket ws("/ws/logs");
@@ -55,6 +58,8 @@ static bool guard(AsyncWebServerRequest *r) {
 static String dashInfoJson() {
   String j = "{";
   j += "\"fw\":\"" FW_VERSION "\",";
+  j += "\"variant\":\"" FW_VARIANT "\",";
+  j += "\"backend\":\"" + String(ServoController::backend()) + "\",";
   j += "\"chip\":\"" + String(ESP.getChipModel()) + "\",";
   j += "\"device\":\"" + jesc(AppConfig::deviceName()) + "\",";
   j += "\"host\":\"" + jesc(AppConfig::deviceName()) + ".local\",";
@@ -271,6 +276,29 @@ void begin() {
     long g = r->getParam("gpio")->value().toInt();
     if (g < 0 || g > 39 || !ServoController::setPin((uint8_t)g)) {
       r->send(400, "application/json", "{\"error\":\"GPIO not usable for servo output\"}"); return;
+    }
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  // PCA9685 build only — pick which channel the bench test drives (0–15).
+  server.on("/api/servo/channel", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("ch")) { r->send(400, "application/json", "{\"error\":\"missing ch\"}"); return; }
+    long ch = r->getParam("ch")->value().toInt();
+    if (ch < 0 || ch > 15 || !ServoController::setChannel((uint8_t)ch)) {
+      r->send(400, "application/json", "{\"error\":\"channel out of range (0-15) or not a PCA9685 build\"}"); return;
+    }
+    r->send(200, "application/json", ServoController::statusJson());
+  });
+  // PCA9685 build only — set the I2C bus pins the PCA9685 sits on (SDA/SCL).
+  server.on("/api/servo/i2c", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (!r->hasParam("sda") || !r->hasParam("scl")) {
+      r->send(400, "application/json", "{\"error\":\"missing sda/scl\"}"); return; }
+    long sda = r->getParam("sda")->value().toInt();
+    long scl = r->getParam("scl")->value().toInt();
+    if (sda < 0 || sda > 39 || scl < 0 || scl > 39 ||
+        !ServoController::setI2cPins((uint8_t)sda, (uint8_t)scl)) {
+      r->send(400, "application/json", "{\"error\":\"I2C pins invalid or not a PCA9685 build\"}"); return;
     }
     r->send(200, "application/json", ServoController::statusJson());
   });

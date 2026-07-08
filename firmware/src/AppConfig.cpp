@@ -12,6 +12,9 @@ bool     g_lfOk       = false;
 uint32_t g_lfEpoch    = 0;
 uint8_t  g_servoPin   = 13;
 uint16_t g_servoSpd   = 25;       // deg/s; 0 = unlimited
+uint8_t  g_i2cSda     = 21;       // PCA9685 build: I2C SDA (ESP32-D default)
+uint8_t  g_i2cScl     = 22;       // PCA9685 build: I2C SCL (ESP32-D default)
+uint8_t  g_servoCh    = 0;        // PCA9685 build: channel driven by the Servo-test page
 
 // MQTT / Home Assistant
 bool     g_mqEn       = false;
@@ -39,6 +42,9 @@ void begin() {
   g_lfEpoch    = prefs.getUInt("lfEpoch", 0);
   g_servoPin   = prefs.getUChar("servoPin", 13);
   g_servoSpd   = prefs.getUShort("servoSpd", 25);
+  g_i2cSda     = prefs.getUChar("i2cSda", 21);
+  g_i2cScl     = prefs.getUChar("i2cScl", 22);
+  g_servoCh    = prefs.getUChar("servoCh", 0);
 
   g_mqEn       = prefs.getBool("mqEn", false);
   g_mqHost     = prefs.getString("mqHost", "");
@@ -78,6 +84,22 @@ uint16_t servoSpeedDps() { return g_servoSpd; }
 void setServoSpeedDps(uint16_t dps) {
   g_servoSpd = dps;
   prefs.putUShort("servoSpd", dps);
+}
+
+uint8_t i2cSda() { return g_i2cSda; }
+uint8_t i2cScl() { return g_i2cScl; }
+
+void setI2cPins(uint8_t sda, uint8_t scl) {
+  g_i2cSda = sda; g_i2cScl = scl;
+  prefs.putUChar("i2cSda", sda);
+  prefs.putUChar("i2cScl", scl);
+}
+
+uint8_t servoChannel() { return g_servoCh; }
+
+void setServoChannel(uint8_t ch) {
+  g_servoCh = ch;
+  prefs.putUChar("servoCh", ch);
 }
 
 String   lastFlashType()  { return g_lfType; }

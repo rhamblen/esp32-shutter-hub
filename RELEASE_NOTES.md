@@ -1,64 +1,64 @@
-# v0.2.2 — Shutters calibration page + microsecond servo control
+# v0.3.0 — Build variants + PCA9685 servo backend
 
-Per-blind calibration lands (Phase 2, in progress): a dedicated **Shutters** page next to the
-existing **Servo test** bench diagnostic, driven by a microsecond-native `ServoController`.
+The servo hardware is now a **build-time variant** — direct GPIO (one bench actuator) or **PCA9685**
+(I2C multi-channel) — and every build says which it is, on-device and in the file name, so an OTA
+image is never flashed onto the wrong topology. This release also carries the **Shutters calibration
+page** from the 0.2.x dev cycle (see below) for anyone coming from v0.2.1.
 
 ## What's new since v0.2.1
 
-### Shutters page — per-blind calibration
-- A new **Shutters** sidebar page, separate from the low-level **Servo test** diagnostic (the old
-  *Actions* tab, renamed). Define shutters (friendly name, PCA9685 channel — declared but not yet
-  wired), then calibrate each in the browser.
-- **µs scrubber** plus a video-editor-style **transport cluster** — slow-run open/close, **Stop**,
-  and frame-step **nudge** (Fine 5 µs / Coarse 25 µs) — so a slat can be landed precisely.
-- A single **Positions** panel holds all four targets — **Full open, Full close, Daylight,
-  Privacy** — each with matching **Save current** / **Go** (disabled until set) controls.
-- Slider ends are labelled **OPEN / CLOSED** with their pulse widths, and **swap when Invert is
-  on** — travel direction is always explicit and can't be reversed by accident.
-- Position shown as pulse width and derived **% of travel**. A per-shutter **Invert position
-  scale** toggle flips the readout to 0 % = open (default 0 % = closed, the Home Assistant
-  standard).
-- Calibration persists in its own NVS namespace — survives a filesystem OTA *and* a config reset.
-- UI mockup: [docs/diagrams/calibration-page.svg](docs/diagrams/calibration-page.svg).
+### Build variants (board × servo backend)
+- Servo driver chosen at compile time: **`-direct`** (ESP32Servo, one servo off a GPIO) or
+  **`-pca9685`** (Adafruit PWM driver, PCA9685 over I2C — the production topology).
+- Four PlatformIO envs — `esp32d-` / `esp32c3-` × `-direct` / `-pca9685`. Only the ESP32-D pair is
+  active; **`esp32d-pca9685` is the default**. C3 variants are defined but deferred.
+- Each build carries an **`FW_VARIANT`** id shown on the **Dashboard** and **OTA** screens
+  (`GET /api/info` → `variant` + `backend`) and baked into the artifact names.
+- New [ADR-0008](docs/decisions/0008-build-variants.md).
 
-### Microsecond-native servo control
-- `ServoController` now tracks position in pulse width (µs) — the servo's native unit — for finer
-  calibration than whole degrees. The Servo-test page still drives in degrees (derived).
-- New REST: `POST /api/servo/{us,jog,run}` and the `/api/shutters/*` family
-  (`add`/`remove`/`rename`/`channel`/`invert`/`set-edge`/`save-fav`/`recall`).
+### PCA9685 servo backend + adaptive Servo-test page
+- On a `-pca9685` build the servo runs through a PCA9685 at `0x40` (50 Hz, µs pulse widths); detach
+  releases the channel. The µs position core (slew/speed/sweep) is shared with the direct build.
+- The **Servo test** page adapts to the running backend: the direct build keeps its signal-GPIO
+  selector; the PCA9685 build gets **I2C SDA/SCL pin selectors** and a **servo-channel (0–15)**
+  selector. New REST: `POST /api/servo/channel`, `POST /api/servo/i2c`.
 
-### Fixed
-- **Stale web UI after reflashing** — static assets are now served with `Cache-Control: no-cache`
-  so the browser always revalidates, instead of potentially caching an old `app.js`/`index.html`
-  indefinitely (LittleFS files carry an epoch `Last-Modified`). **Do one hard refresh** (Ctrl+F5)
-  after flashing this version.
+### Also included — Shutters calibration page (from the 0.2.x cycle)
+- A dedicated **Shutters** page for per-blind calibration next to the Servo-test diagnostic:
+  µs scrubber, transport cluster (slow-run → Stop → frame-step nudge), OPEN/CLOSED endpoints and
+  Daylight/Privacy favourites, all persisted in NVS (survives a filesystem OTA). Full detail in
+  [CHANGELOG.md](CHANGELOG.md) under 0.2.2.
 
-## Download (ESP32-D) — three bins
+## Download (ESP32-D)
+
+Per-variant firmware, plus one shared filesystem image (the web UI adapts to the backend at runtime):
 
 | File | Use |
 | ---- | --- |
-| `shutter-hub-esp32d-full-v0.2.2.bin` | First flash over USB at offset `0x0` |
-| `shutter-hub-esp32d-ota-v0.2.2.bin` | OTA page → **Upload Firmware** |
-| `shutter-hub-esp32d-littlefs-v0.2.2.bin` | OTA page → **Upload LittleFS** (the web UI) |
+| `shutter-hub-esp32d-pca9685-full-v0.3.0.bin` | First USB flash (PCA9685 build) at offset `0x0` |
+| `shutter-hub-esp32d-pca9685-ota-v0.3.0.bin` | OTA → **Upload Firmware** (PCA9685 build) |
+| `shutter-hub-esp32d-direct-full-v0.3.0.bin` | First USB flash (direct-GPIO build) at offset `0x0` |
+| `shutter-hub-esp32d-direct-ota-v0.3.0.bin` | OTA → **Upload Firmware** (direct-GPIO build) |
+| `shutter-hub-esp32d-littlefs-v0.3.0.bin` | OTA → **Upload LittleFS** (shared by both variants) |
 
 _ESP32-C3 bins are deferred to a later release._
 
 ## Flash it
 
-First time, over USB:
+First time, over USB (PCA9685 build shown):
 ```
-esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-full-v0.2.2.bin
+esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-pca9685-full-v0.3.0.bin
 ```
 Then join `Shutter-Hub-Setup`, pick your network, and open `http://shutter-hub.local/`.
 
-**Upgrading over the air: flash BOTH images** — the `-ota-` firmware (the µs servo API and
-Shutters endpoints live here) *and* the `-littlefs-` filesystem (the Shutters page lives here).
-Upload the firmware first (auto-reboots), then LittleFS, then reboot — and **hard-refresh the
-browser once** (Ctrl+F5) to pick up the new UI cleanly. Saved WiFi, shutters, and settings live in
-NVS and survive updates.
+**Upgrading over the air: flash BOTH images** — the `-ota-` firmware **for your variant** *and* the
+shared `-littlefs-` filesystem. Upload the firmware first (auto-reboots), then LittleFS, then reboot,
+and **hard-refresh the browser once** (Ctrl+F5) to pick up the new UI cleanly. Confirm the
+**Variant** shown on the Dashboard matches the bin you flashed. Saved WiFi, shutters, and settings
+live in NVS and survive updates.
 
 ## Build from source
 
-PlatformIO project in [`firmware/`](firmware/) — `pio run` builds the ESP32-D target and
-`pio run -t buildfs` builds the filesystem image. See [`firmware/README.md`](firmware/README.md).
-Full history in [CHANGELOG.md](CHANGELOG.md).
+PlatformIO project in [`firmware/`](firmware/) — `pio run` builds the default `esp32d-pca9685`,
+`pio run -e esp32d-direct` the direct build, and `pio run -e <variant> -t buildfs` the filesystem
+image. See [`firmware/README.md`](firmware/README.md). Full history in [CHANGELOG.md](CHANGELOG.md).

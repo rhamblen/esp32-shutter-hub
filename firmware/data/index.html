@@ -38,6 +38,7 @@
         <div class="card">
           <div class="card-head"><span class="ic pink">▤</span><div><h2>Device</h2><p>Firmware & identity</p></div></div>
           <div class="kv"><span>Firmware</span><b id="i_fw">–</b></div>
+          <div class="kv"><span>Variant</span><b id="i_variant">–</b></div>
           <div class="kv"><span>Device name</span><b id="i_dev">–</b></div>
           <div class="kv"><span>Hostname</span><b id="i_host">–</b></div>
           <div class="kv"><span>Chip</span><b id="i_chip">–</b></div>
@@ -98,15 +99,35 @@
 
     <!-- SERVO TEST (low-level bench diagnostic) -->
     <section class="page hidden" id="page-actions">
-      <h1>Servo test</h1><p class="sub">Low-level single-servo bench diagnostic — drives one servo direct from a GPIO, in degrees. For per-blind calibration use the <b>Shutters</b> page.</p>
+      <h1>Servo test</h1><p class="sub" id="sv_sub">Low-level single-servo bench diagnostic, in degrees. For per-blind calibration use the <b>Shutters</b> page.</p>
       <div class="card">
-        <div class="card-head"><span class="ic pink">⚡</span><div><h2>Servo test</h2><p>Default GPIO13 · power from 5 V, common ground</p></div></div>
-        <div class="form2">
-          <label>Signal GPIO<input id="sv_pin" type="number" min="0" max="33"></label>
-          <div class="endbtn"><button class="btn ghost" id="sv_setpin">Set pin</button></div>
+        <div class="card-head"><span class="ic pink">⚡</span><div><h2>Servo test</h2><p id="sv_headnote">power from 5 V, common ground</p></div></div>
+
+        <!-- Direct-GPIO build: pick the servo signal GPIO -->
+        <div id="sv_gpio_block">
+          <div class="form2">
+            <label>Signal GPIO<input id="sv_pin" type="number" min="0" max="33"></label>
+            <div class="endbtn"><button class="btn ghost" id="sv_setpin">Set pin</button></div>
+          </div>
+          <p class="msg" id="sv_pinwarn"></p>
         </div>
-        <p class="msg" id="sv_pinwarn"></p>
-        <div class="kv"><span>Signal GPIO</span><b id="sv_pinv">–</b></div>
+
+        <!-- PCA9685 build: pick the I2C bus pins + which channel to drive -->
+        <div id="sv_pca_block" class="hidden">
+          <div class="form2">
+            <label>I2C SDA GPIO<input id="sv_sda" type="number" min="0" max="33"></label>
+            <label>I2C SCL GPIO<input id="sv_scl" type="number" min="0" max="33"></label>
+          </div>
+          <div class="endbtn"><button class="btn ghost" id="sv_seti2c">Set I2C pins</button></div>
+          <div class="form2">
+            <label>Servo channel<input id="sv_ch" type="number" min="0" max="15"></label>
+            <div class="endbtn"><button class="btn ghost" id="sv_setch">Set channel</button></div>
+          </div>
+          <p class="msg" id="sv_i2cwarn"></p>
+        </div>
+
+        <div class="kv"><span id="sv_addr_label">Signal GPIO</span><b id="sv_pinv">–</b></div>
+        <div class="kv hidden" id="sv_bus_row"><span>I2C bus</span><b id="sv_busv">–</b></div>
         <div class="kv"><span>State</span><b id="sv_state">–</b></div>
         <div class="kv"><span>Angle</span><b id="sv_angle">–</b></div>
         <div class="kv"><span>Pulse width</span><b id="sv_us">–</b></div>
@@ -142,7 +163,7 @@
             <label>Friendly name<input id="sh_name" placeholder="Front room – left"></label>
             <label>PCA9685 channel<select id="sh_ch"></select></label>
           </div>
-          <p class="msg">Channel is saved but not wired yet — every shutter drives the one test servo until the PCA9685 lands.</p>
+          <p class="msg">Channel is saved for later routing. On a PCA9685 build, calibration drives the one active test channel (set on the <b>Servo test</b> page); per-shutter channel routing arrives with the cover-control phase.</p>
           <div class="toggle-row">
             <div><b>Invert position scale</b><p>Report 0 % = fully open. Default is 0 % = closed (the Home Assistant standard).</p></div>
             <label class="switch"><input type="checkbox" id="sh_invert"><span class="slider"></span></label>
@@ -285,6 +306,7 @@
         <div class="card-head"><span class="ic teal">▣</span><div><h2>Device Information</h2><p>Current firmware and flash status</p></div></div>
         <div class="strip">
           <div><small>Current Version</small><b id="o_fw">–</b></div>
+          <div><small>Variant</small><b id="o_variant">–</b></div>
           <div><small>Chip Model</small><b id="o_chip">–</b></div>
           <div><small>Free Heap</small><b id="o_heap">–</b></div>
           <div><small>Last Flash</small><b id="o_last">–</b></div>

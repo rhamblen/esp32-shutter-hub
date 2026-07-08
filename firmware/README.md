@@ -4,7 +4,7 @@ PlatformIO project (Arduino Core, `esp32dev`). Structural reference:
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). See
 [../docs/project-plan.md](../docs/project-plan.md) for the phased roadmap.
 
-## What this version does (v0.2.2 — web UI + logs + MQTT/HA + servo test + blind calibration)
+## What this version does (v0.3.0 — web UI + logs + MQTT/HA + servo test + blind calibration + build variants)
 
 On-device WiFi setup, advertises `shutter-hub.local` over mDNS, and serves a
 **single-page web UI from LittleFS** (sidebar: Info · MQTT · Servo test · Shutters ·
@@ -16,9 +16,10 @@ degrees) with a persisted **speed slider** (5–120 °/s, default 25). The **Shu
 page (Phase 2) is per-blind **calibration**: define a shutter, then use a microsecond
 scrubber + transport controls (slow-run → stop → frame-step nudge) to snapshot its
 closed/open endpoints and Daylight/Privacy favourites — all persisted in NVS (survives a
-filesystem OTA). No servo/PCA9685/power hardware
-required — it runs on a bare ESP32 dev board. This is the base every later phase
-(shutter covers, HomeKit, solar) builds on.
+filesystem OTA). The servo backend is a **build variant** — the `-direct` builds run on a bare
+ESP32 (one servo off a GPIO, no extra hardware), while the `-pca9685` builds drive servos through a
+PCA9685 over I2C; the Servo-test page adapts to whichever it's running. This is the base every later
+phase (shutter covers, HomeKit, solar) builds on.
 
 ## WiFi setup (on-device — no credentials in the binary)
 
@@ -41,27 +42,39 @@ page's Quick Actions reboots back into this setup portal.
 
 ## Build
 
-`esp32dev` (ESP32-D) is the only build target right now. An `esp32-c3-devkitm-1`
-(ESP32-C3) env is defined but **deferred** — excluded from `pio run` until it's
-brought into a later release.
+From **v0.3.0** the firmware ships as **variants** = *board × servo backend* (see
+[../docs/decisions/0008-build-variants.md](../docs/decisions/0008-build-variants.md)).
+Each variant is a PlatformIO env carrying a `FW_VARIANT` id that shows on the
+Dashboard/OTA screens and names the artifacts:
+
+| Env | Board | Servo backend | Status |
+| --- | ----- | ------------- | ------ |
+| `esp32d-direct` | ESP32-D | direct GPIO (ESP32Servo) | active |
+| `esp32d-pca9685` | ESP32-D | PCA9685 I2C (Adafruit PWM) | **active, default** |
+| `esp32c3-direct` | ESP32-C3 | direct GPIO | deferred |
+| `esp32c3-pca9685` | ESP32-C3 | PCA9685 I2C | deferred |
 
 ```
-pio run                            # builds ESP32-D only (default_envs)
-pio run -e esp32-c3-devkitm-1      # ESP32-C3 (deferred; build explicitly if needed)
+pio run                            # builds the default env (esp32d-pca9685)
+pio run -e esp32d-direct           # ESP32-D, direct-GPIO servo
+pio run -e esp32d-pca9685          # ESP32-D, PCA9685
+pio run -e esp32c3-pca9685         # ESP32-C3 (deferred; build explicitly if needed)
 ```
 
 Prebuilt bins are collected in [`dist/`](dist/). From **v0.2.0** a release ships
-**three bins per board** (the web UI now lives in `data/`):
+**three bins per variant** (the web UI now lives in `data/`):
 
-| Per board | File | Use | Since |
-| --------- | ---- | --- | ----- |
-| Full image | `shutter-hub-<board>-full-vX.Y.Z.bin` | first USB flash, merged at `0x0` | now |
-| Firmware  | `shutter-hub-<board>-ota-vX.Y.Z.bin` | OTA page → **Upload Firmware** | now |
-| Filesystem | `shutter-hub-<board>-littlefs-vX.Y.Z.bin` | OTA page → **Upload LittleFS** | **v0.2.0** |
+| Per variant | File | Use | Since |
+| ----------- | ---- | --- | ----- |
+| Full image | `shutter-hub-<variant>-full-vX.Y.Z.bin` | first USB flash, merged at `0x0` | now |
+| Firmware  | `shutter-hub-<variant>-ota-vX.Y.Z.bin` | OTA page → **Upload Firmware** | now |
+| Filesystem | `shutter-hub-<variant>-littlefs-vX.Y.Z.bin` | OTA page → **Upload LittleFS** | **v0.2.0** |
 
-Build the filesystem image with `pio run -e esp32dev -t buildfs` →
-`.pio/build/esp32dev/littlefs.bin`. **Flash it alongside the firmware** — without it
-the device serves an embedded recovery page (OTA upload only).
+Build the filesystem image with `pio run -e <variant> -t buildfs` →
+`.pio/build/<variant>/littlefs.bin`. **Flash it alongside the firmware** — without it
+the device serves an embedded recovery page (OTA upload only). The LittleFS image is
+**identical across variants** (the Servo-test page adapts at runtime), so one filesystem
+bin per version is enough — only the firmware differs per variant.
 
 _ESP32-C3 bins are not built or released yet._
 
@@ -71,13 +84,13 @@ After this, every update goes over WiFi (see OTA below).
 
 **Option A — PlatformIO, board on USB:**
 ```
-pio run -e esp32dev -t upload      # auto-detects the port; monitor with:  pio device monitor
+pio run -e esp32d-pca9685 -t upload   # auto-detects the port; monitor with:  pio device monitor
 ```
 
 **Option B — single merged image (NodeMCU-PyFlasher / esptool):**
-Flash the `-full-` image at offset `0x0`:
+Flash the `-full-` image for your variant at offset `0x0`:
 ```
-esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-full-v0.0.2.bin
+esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.3.0.bin
 ```
 In NodeMCU-PyFlasher: select the `...-full-...bin`, address `0x0`, flash.
 
@@ -111,7 +124,7 @@ firmware/
 │  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal                 [real]
 │  ├─ WebUI.cpp                static SPA + JSON API + /ws/logs + mDNS         [real]
 │  ├─ Ota.cpp                  custom firmware + LittleFS OTA                  [real]
-│  ├─ ServoController.cpp      single-servo µs driver → PCA9685        [Phase 1 real]
+│  ├─ ServoController.cpp      single-servo µs driver, backend = GPIO | PCA9685  [real]
 │  ├─ Shutters.cpp             per-blind definitions + calibration (NVS) [Phase 2 real]
 │  ├─ Mqtt.cpp                 broker connect + HA discovery scaffold  [v0.2.0; covers Phase 4]
 │  ├─ HomeKit.cpp              HomeSpan bridge            [stub, Phase 5]

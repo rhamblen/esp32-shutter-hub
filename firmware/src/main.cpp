@@ -6,13 +6,14 @@
 //   WiFiSetup       WiFiManager AP + captive portal (creds->NVS) [real]
 //   WebUI           tabbed status page + routes + mDNS           [real]
 //   Ota             custom firmware + LittleFS update             [real]
-//   ServoController single-servo µs driver (Phase 1) → PCA9685   [Phase 1 real]
+//   ServoController single-servo µs driver, backend = GPIO | PCA9685  [real]
 //   Shutters        per-blind definitions + calibration (NVS)     [Phase 2 real]
 //   Mqtt            broker connect + HA discovery scaffold        [v0.2.0 real; covers Phase 4]
 //   HomeKit         HomeSpan bridge                               [stub, Phase 5]
 //   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
 //
-// Runs on a bare ESP32 dev board — no PCA9685, servos or power hardware needed yet.
+// The `-direct` variants run on a bare ESP32 dev board; the `-pca9685` variants
+// expect a PCA9685 on I2C (see platformio.ini / ADR 0008). No servos required to boot.
 // -----------------------------------------------------------------------------
 
 #include <Arduino.h>
