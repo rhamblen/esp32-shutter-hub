@@ -13,7 +13,7 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | S     | v0.0.1–3| Firmware framework + OTA scaffold | ☑   |
 | 1     | v0.1.0  | Bench bring-up (1 servo)       | ☑      |
 | S2    | v0.2.0  | Web UI shell (LittleFS SPA) + Logs (WS) + MQTT/HA config | ☑ |
-| 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ◐ |
+| 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ◐      |
 | 4b    | v0.4.x  | HA Lovelace card (control + calibration) | ☐ |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
@@ -23,15 +23,18 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 **Sequence note (post-v0.1.0):** the polished web UI, live logs, and MQTT/HA *config* were pulled
 forward — they all run on a bare ESP32 before servo hardware exists. So the old "Phase 2 Web UI" and
 "Phase 3 WiFiManager/OTA" are effectively **done** (Phase S + S2); Phase 3 is retired (WiFi
-provisioning now lives in the System > WiFi sub-tab). What remains hardware-coupled — per-shutter
-**calibration** (Phase 2) and MQTT **cover control** (Phase 4) — waits on real servo positions.
+provisioning now lives in the System > WiFi sub-tab). Per-shutter **calibration** (Phase 2) is now
+**done** on real PCA9685 hardware (v0.3.0); what remains hardware-coupled is MQTT **cover control**
+(Phase 4).
 
 **Build variants (v0.3.0):** the servo backend is now a compile-time choice — **direct GPIO** (one
 bench actuator) or **PCA9685** (I2C multi-channel) — with a `FW_VARIANT` id surfaced on the
 info/OTA screens and in the artifact names. Four envs (`esp32d-` / `esp32c3-` × `-direct` /
 `-pca9685`); only the ESP32-D pair is active, `esp32d-pca9685` is the default. See
-[decisions/0008-build-variants.md](decisions/0008-build-variants.md). Servo drive is still one active
-servo/channel at a time; parallel 4-channel drive stays in Phase 4/7.
+[decisions/0008-build-variants.md](decisions/0008-build-variants.md). Servo positions are remembered
+across reboots/OTA (NVS) with an assembly "home" default, so the first move slews rather than snaps
+([decisions/0009-servo-position-memory.md](decisions/0009-servo-position-memory.md)). Servo drive is
+still one active servo/channel at a time; parallel 4-channel drive stays in Phase 4/7.
 
 **OTA-first reordering:** the web-server stack **and** WiFiManager captive-portal provisioning
 (originally Phase 3) were pulled forward as **Phase S** (`v0.0.1`) so every later phase flashes over
@@ -82,17 +85,23 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 - **Exit criteria:** ☑ compiles; UI served from LittleFS; logs stream live; MQTT connects and the
   hub appears in Home Assistant.
 
-## Phase 2 — Shutters config + calibration (v0.2.x)
-- **Objective:** define shutters and calibrate each per-panel, in the browser, persisted.
-- **What we build:** a **Shutters** config surface (count, friendly names, PCA9685 channels — manual,
+## Phase 2 — Shutters config + calibration; PCA9685 backend + build variants (v0.2.x–v0.3.0) ☑
+- **Objective:** define shutters and calibrate each per-panel, in the browser, persisted — on real
+  PCA9685 hardware.
+- **What we built:** a **Shutters** config surface (count, friendly names, PCA9685 channels — manual,
   no auto-scan; see ADR 0005) + jog / SET CLOSED / SET OPEN / **Daylight**/**Privacy** favourites,
-  stored in NVS so a filesystem OTA doesn't wipe calibration. This is a **separate page** from the
-  low-level **Servo test** bench diagnostic (the old Actions tab) — different jobs, different UI.
+  stored in NVS so a filesystem OTA doesn't wipe calibration — a **separate page** from the low-level
+  **Servo test** bench diagnostic (the old Actions tab). Then (v0.3.0) the **PCA9685 servo backend**
+  went live as a **build variant** (`USE_PCA9685`, [ADR 0008](decisions/0008-build-variants.md)) with
+  a runtime-adaptive Servo-test page (I2C-pin + channel selectors); selecting a shutter routes drive
+  to its channel, channel-switching causes no motion, and **servo positions persist in NVS**
+  ([ADR 0009](decisions/0009-servo-position-memory.md)) so the first move slews from where the arm is.
 - **UI mockup:** [diagrams/calibration-page.svg](diagrams/calibration-page.svg) — dark-theme wireframe
   of the Shutters page: shutter selector, µs scrubber, transport cluster (slow-run → stop → nudge),
   endpoint SET buttons, and Daylight/Privacy favourites.
-- **Prerequisites:** Phase 1 servo control; PCA9685 multi-channel drive.
-- **Exit criteria:** calibrate closed/open + Daylight/Privacy per shutter in the browser; survive reboot.
+- **Prerequisites:** Phase 1 servo control; PCA9685 on I2C.
+- **Exit criteria:** ☑ calibrate closed/open + Daylight/Privacy per shutter in the browser; drive the
+  real per-channel servo; survive reboot. (Parallel 4-channel drive deferred to Phase 4/7.)
 
 ## Phase 3 — WiFiManager + mDNS + OTA — RETIRED (folded into Phase S / S2)
 - Captive-portal provisioning + mDNS + custom OTA shipped in Phase S; in-place WiFi change now lives
@@ -156,3 +165,4 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 | D6 | Config editing UX | Resolved (ADR 0005): browser-owned web form, servos declared manually (no auto-scan); HA-side config is a later phase. |
 | D7 | HA integration form | Resolved (ADR 0006): MQTT Discovery only — no published `custom_components`/HACS integration. Broker-free HTTP-native integration deferred as an optional path, not planned work. |
 | D8 | HA card home | Resolved (ADR 0007): custom Lovelace **frontend** card (control + calibration), not stacked built-in cards. **Open sub-choice:** ship from a top-level `ha-card/` in this repo vs a companion `esp32-shutter-hub-card` repo for a clean HACS frontend listing — pick per how HACS should index it. |
+| D9 | Servo position feedback | v0.3.0 handles the open-loop first-move jump in software (NVS position memory + assembly "home", [ADR 0009](decisions/0009-servo-position-memory.md)). **Open:** whether to ever add true feedback — tap the servo pots into an **ADS1115** (0x48) on the shared I2C bus, or move to feedback/serial-bus servos — to also kill the jump after a slat is moved by hand while unpowered. Deferred; revisit at Phase 7 if the residual proves annoying. |
