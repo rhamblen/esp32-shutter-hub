@@ -12,8 +12,11 @@ standoffs, where the track cuts/bridges go, and which connectors to use. Compani
 - **ESP32:** DevKit on **female pin-socket headers** (its "standoffs") so the module plugs in and
   can be swapped. Column counts below are for the 38-pin DevKitC (19 pins/side); a 30-pin DevKit
   V1 is 15 pins/side — same plan, 4 columns shorter.
-- **Modules with mounting holes** (PCA9685, XL4015, PD trigger, VEML7700) are **raised on nylon
-  standoffs**, not soldered flat — serviceable, and the XL4015 needs the airflow.
+- **The breadboard is the chassis.** The XL4015 and PCA9685 bolt **to the breadboard on tall nylon
+  standoff pillars** (raised above the ESP32 and rails, overhanging the long edges) so the whole hub
+  lifts out as one rigid assembly; the XL4015 overhang also keeps its heatsink in the airflow. The
+  **VEML7700 is the exception** — it fixes to the **case lid** so it can see daylight, on a
+  detachable J3 lead. The PD trigger also stands on the board, USB-C at the wall cutout.
 
 ## The one rule that shapes everything
 
@@ -26,33 +29,9 @@ standoffs, where the track cuts/bridges go, and which connectors to use. Compani
 
 ## Diagram 1 — system overview: on-board vs raised
 
-```
- MAINS ══ USB-C PD charger (30 W+)
-              │ USB-C cable
-              ▼
- ┌─ raised on standoffs (power chain — never on the breadboard) ─────────────────┐
- │                                                                               │
- │  AITRIP PD trigger ──12 V──▶ XL4015 buck (set 5.1 V FIRST)                    │
- │   (enclosure wall,           (hot: vented, clear air above)                   │
- │    M2.5 standoffs)                │            │                              │
- │                        5.1 V ────┤            └──── 5.1 V ──┐  18 AWG        │
- │                        18 AWG    │                          ▼                 │
- │                                  │            PCA9685 V+ screw term           │
- │                                  │            + 1000–2200 µF bulk cap         │
- │                                  │            (M2.5 standoffs)                │
- │                                  │                 │ CH0–CH3 0.1" headers     │
- │                                  │                 ▼                          │
- │                                  │            MG90D ×4 (servo loom)           │
- └──────────────────────────────────┼─────────────────────────────────────────── ┘
-                                    │ 5.1 V logic spur (screw terminal J1)
-                                    ▼
- ┌─ ON the copper breadboard ─────────────────────────────────────────────────┐
- │  ESP32 DevKit (socketed) · rail jumpers · GPIO34 divider (optional)        │
- │  J2 → PCA9685 logic (3V3 / GND / SDA / SCL / OE)                           │
- │  J3 → VEML7700 remote cable (3V3 / GND / SDA / SCL)                        │
- └────────────────────────────────────────────────────────────────────────────┘
- Common ground: single point at the XL4015 OUT− terminal.
-```
+![Hub build overview — raised modules vs breadboard](diagrams/hub-build-overview.svg)
+
+Common ground is single-point, at the XL4015 OUT− terminal.
 
 ---
 
@@ -61,25 +40,7 @@ standoffs, where the track cuts/bridges go, and which connectors to use. Compani
 Columns numbered 1–30 left to right. ESP32 USB port faces right (programming access); the
 **antenna end overhangs the left board edge** — never sit the antenna over copper.
 
-```
-          1   2   3   4   5 … … … … … … … … 20  21  22  23  24  25  26  27  28  29  30
-        ┌───────────────────────────────────────────────────────────────────────────────┐
- 5.1 V  │ + ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◀━┓        │
- GND    │ − ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◀━┓ ┃        │
-        │                                                                    ┏┻━┻┓      │
-        │      a ○ ○ ○ ○ … breakout wires from strips b–e … ○ ○      ○ ○ ○  ┃ J1 ┃      │
-    ◀━━━┿━━┓  ┌────────────────────────────────────────┐                    ┃scrw┃      │
- antenna│  ┃  │      ESP32 DevKit  (socketed on        │    R1┌──┐          ┗━━━━┛      │
- hangs  │  ┗━━│      female headers, cols 2–20)   [USB]│═▶    │  │100k   ┌─────┐┌─────┐ │
- off the│      │  pins → rows a & j; strips b–e/f–i    │    R2│  │100k   │ J2  ││ J3  │ │
- edge   │      │  are the fan-out under the module     │      └──┘+100n  │XH-5 ││XH-4 │ │
-        │      └────────────────────────────────────────┘   GPIO34 div.  │PCA  ││VEML │ │
-        │      f ○ ○ ○ ○ … ○ ○                             (cols 22–24)  └─────┘└─────┘ │
-        │                                                                (cols 25–30)   │
- 3V3    │ + ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
- GND    │ − ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-        └───────────────────────────────────────────────────────────────────────────────┘
-```
+![Hub baseboard plan view](diagrams/breadboard-plan.svg)
 
 | Ref | Part | Position | Notes |
 | --- | ---- | -------- | ----- |
@@ -87,7 +48,7 @@ Columns numbered 1–30 left to right. ESP32 USB port faces right (programming a
 | J1 | 2-pin 5.08 mm screw terminal | cols 28–30, top edge | 5.1 V logic spur in from XL4015 |
 | J2 | JST-XH 5-pin | cols 25–27, row f–j side | PCA9685 logic: 3V3 · GND · SDA · SCL · OE |
 | J3 | JST-XH 4-pin | cols 28–30, row f–j side | VEML7700 cable: 3V3 · GND · SDA · SCL |
-| R1 R2 + C | 2 × 100 kΩ + 100 nF | cols 22–24 | optional GPIO34 servo-rail divider (plan D5) |
+| R1 R2 + C2 | 2 × 100 kΩ + 100 nF | cols 22–24 | optional GPIO34 servo-rail divider (plan D5) |
 | C1 | 470 µF + 100 nF | at J1, across 5.1 V/GND rails | local decoupling (bulk cap lives at PCA9685) |
 
 **Wiring the strips under the ESP32:** because a DevKit is wide, its pins land in rows **a** and
@@ -112,21 +73,19 @@ Jumpers to fit (short solid-core on top, or bus wire underneath):
 ## Diagram 3 — rail plan, cuts and bridges
 
 The two rail pairs get **different voltages** — that's the point of having both:
+**top = 5.1 V / GND** (from J1, feeds ESP32 VIN only), **bottom = 3V3 / GND** (from the ESP32
+3V3 pin, feeds the I2C devices).
 
-```
- TOP    red  ━━━━━━━━━━━━━━━━━━━━━━━━━━  5.1 V   (from J1; feeds ESP32 VIN only)
- TOP    blue ━━━━━━━━━━━━━━━━━━━━━━━━━━  GND
-        ~~~~~~~~~~~~ component field ~~~~~~~~~~~~
- BOTTOM red  ━━━━━━━━━━━━━━━━━━━━━━━━━━  3V3     (from ESP32 3V3 pin; feeds I2C devices)
- BOTTOM blue ━━━━━━━━━━━━━━━━━━━━━━━━━━  GND     (jumper to top GND rail once, near J1)
+![Rail plan — cuts and bridges](diagrams/rail-cuts-bridges.svg)
 
- CHECK before soldering (meter on continuity):
- ✂ CUT  — if your board ties top and bottom red rails together at either end
-           (some copper breadboards do), cut that link: top is 5.1 V, bottom is 3V3.
- ⌒ BRIDGE — if the rails are split at the mid-point (many boards copy the solderless
-           break at column 15), solder-bridge all four splits — we want full-length rails.
- ✂ (none) — no cuts are needed in the a–e / f–j field: each ESP32 pin owns its column strip.
-```
+Check with the meter **before** soldering:
+
+- **✂ Cut** — if your board ties top and bottom red rails together at either end (some copper
+  breadboards do), cut that link: top is 5.1 V, bottom is 3V3.
+- **⌒ Bridge** — if the rails are split at the mid-point (many boards copy the solderless break
+  at column 15), solder-bridge all four splits — we want full-length rails.
+- **No cuts** are needed in the a–e / f–j field: each ESP32 pin owns its column strip.
+- Add **one GND tie** between the top and bottom GND rails, near J1.
 
 Running the PCA9685's logic (`VCC`) and the VEML7700 from the **3V3 rail** keeps the I2C bus at
 3.3 V — no level shifting, and the VEML7700 is 3.3 V-only anyway. Servo power enters the PCA9685
@@ -136,57 +95,35 @@ separately at its V+ screw terminal.
 
 ## Diagram 4 — raised modules: standoffs and drill plan
 
-```
-   baseplate / enclosure floor  (side view)
-   ═══════════════════════════════════════════════════════════════════
-    ▲ M3×10 nylon    ▲ M2.5×12 nylon      ▲ M3×10 nylon    ▲ M2.5×10
-   ┌┴────────────┐  ┌┴─────────────┐     ┌┴───────────┐   ┌┴─────────┐
-   │ copper      │  │ PCA9685      │     │ XL4015     │   │ PD       │
-   │ breadboard  │  │ + bulk cap   │     │ (leave     │   │ trigger  │
-   │ ┌─────────┐ │  │ on V+ term   │     │  ≥20 mm    │   │ (USB-C   │
-   │ │ ESP32 on│ │  │ servo hdrs → │     │  air above,│   │  faces   │
-   │ │ socket  │ │  │ face servos  │     │  vent slot)│   │  wall    │
-   │ └─────────┘ │  └──────────────┘     └────────────┘   │  cutout) │
-   └─────────────┘                                        └──────────┘
-```
+![Standoff mounting — side elevation](diagrams/standoff-mounting.svg)
 
-| Module | Holes | Standoff | Placement |
-| ------ | ----- | -------- | --------- |
-| Copper breadboard | M3 corner holes (most copper boards have them) | M3 × 10 nylon | anywhere; ESP32 USB reachable |
-| PCA9685 | 4 × M2.5 | M2.5 × 12 nylon | servo headers facing the loom exit; bulk cap at V+ |
-| XL4015 | 2 × M3 | M3 × 10 nylon | ≥ 20 mm clearance above heatsink; under the enclosure vent |
-| AITRIP PD trigger | 2 × M2.5 (varies) | M2.5 × 10 nylon | USB-C at the enclosure wall cutout |
-| VEML7700 | 2 × M2.5 | M2.5 × 6 nylon | behind the enclosure light window, on the J3 cable |
+| Module | Holes | Standoff | Fixed to | Notes |
+| ------ | ----- | -------- | -------- | ----- |
+| Copper breadboard | M3 corner holes (most copper boards have them) | M3 × 10 nylon feet | case floor | the chassis; everything else hangs off it; ESP32 USB reachable |
+| PCA9685 | 4 × M2.5 | M2.5 × 15+ nylon pillars | **breadboard** | raised above the rails; servo headers face the loom exit; bulk cap at V+ |
+| XL4015 | 2 × M3 | M3 × 15+ nylon pillars | **breadboard** (overhanging edge) | heatsink in open air under the lid vent; ≥ 20 mm clearance |
+| AITRIP PD trigger | 2 × M2.5 (varies) | M2.5 × 12 nylon | breadboard edge | USB-C aligned to the wall cutout |
+| VEML7700 | 2 × M2 | M2 × 6 nylon | **case lid** | behind the light window; detachable J3 lead + service loop |
 
-**Mounting options** — either works, pick per module:
+**Fixing the modules to the board.** The XL4015 and PCA9685 mounting holes aren't on 0.1" pitch, so
+**drill the breadboard** at each hole — in the overhang margin where no wanted strip runs — deburr
+both faces, and use **nylon screws + standoffs only** (the strips are live copper; metal hardware
+would short adjacent strips). Meter-check that no strip you need was severed by a hole. Tall pillars
+(~15–20 mm) let both modules sit above the ESP32 and rails and overhang the long edges; the XL4015
+overhang keeps its heatsink in the airflow under the lid vent.
 
-1. **Beside the board (preferred):** standoffs screw into holes drilled in the baseplate /
-   enclosure floor. Everything stays serviceable and the breadboard stays untouched.
-2. **On the board:** a copper breadboard *can* be drilled for a standoff — use an unused column
-   region (e.g. cols 21–30 row f–j if J2/J3 move), drill M3 through, deburr both faces, and use
-   **nylon screws + standoffs only** (the strips are live copper; metal hardware would short
-   adjacent strips). Confirm with the meter that no wanted strip was cut by the hole.
+**Light sensor on the lid.** The VEML7700 fixes to the **case lid** (2 × M2 nylon) behind a small
+window, so it reads true ambient light instead of sitting behind a board→standoff→lid tolerance
+stack-up. Keep it on a **detachable J3 lead with a service loop** so the lid lifts clear of the
+board-chassis. Use a **thin clear window** (or an open aperture) — not frosted or tinted; any window
+costs a few % of light, so plan a firmware calibration multiplier rather than trusting raw lux
+against the 60000 / 30000 solar thresholds.
 
 ---
 
 ## Diagram 5 — cable loom and connectors
 
-```
-                          ┌────────────┐  4-core, ~0.3–0.5 m
-  breadboard J3 (XH-4) ───┤ 3V3 GND    ├────────────────────▶ VEML7700 @ light window
-                          │ SDA SCL    │
-                          └────────────┘
-                          ┌────────────┐  5-core, short (~0.15 m)
-  breadboard J2 (XH-5) ───┤ 3V3 GND    ├────────────────────▶ PCA9685 logic pins
-                          │ SDA SCL OE │
-                          └────────────┘
-  XL4015 OUT+ / OUT− ══ 18 AWG pair ══▶ PCA9685 V+ / GND screw terminals (+ bulk cap)
-  XL4015 OUT+ / OUT− ── 22 AWG pair ──▶ breadboard J1 (logic spur)
-  PD trigger 12 V     ══ 18 AWG pair ══▶ XL4015 IN+ / IN−
-
-  PCA9685 CH0–CH3 ──▶ servo's own 3-pin 0.1" plug ──▶ extension lead ──▶ grommet ──▶ MG90D
-                       (orange=PWM · red=V+ · brown=GND — brown towards the board edge)
-```
+![Cable loom — connectors and pinouts](diagrams/cable-loom.svg)
 
 ### Connector recommendations (from "the different connectors I can use")
 

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 670" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="680" height="670" fill="#ffffff"/>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="context-stroke"/></marker>
+  </defs>
+  <style>
+    .t{fill:#1c2430;font-size:13px}.ts{fill:#4a5568;font-size:12px}.tb{fill:#1c2430;font-size:14px;font-weight:bold}.title{fill:#1c2430;font-size:17px;font-weight:bold}
+    .pwr{fill:#fff3e8;stroke:#c07a2a;stroke-width:2}.mcu{fill:#eaf1ff;stroke:#1f4e9c;stroke-width:2}.box{fill:#f4f6fb;stroke:#3a5a8c;stroke-width:2}.srv{fill:#eef7ee;stroke:#3f8a3f;stroke-width:2}
+    .zone{fill:none;stroke:#9aa3ad;stroke-width:1.5;stroke-dasharray:6 4}.zl{fill:#5a6470;font-size:12px;font-weight:bold}
+    .w12{stroke:#e08a1e;stroke-width:3;fill:none}.w5{stroke:#d63b3b;stroke-width:4;fill:none}.w5t{stroke:#d63b3b;stroke-width:2;fill:none}.wi2c{stroke:#1f6fd6;stroke-width:2;fill:none}.wpwm{stroke:#3f8a3f;stroke-width:2.5;fill:none}
+  </style>
+
+  <text x="340" y="28" text-anchor="middle" class="title">Hub build overview — power path and breadboard</text>
+
+  <rect class="pwr" x="40" y="50" width="150" height="46" rx="5"/>
+  <text x="115" y="70" text-anchor="middle" class="t">USB-C PD charger</text>
+  <text x="115" y="86" text-anchor="middle" class="ts">30 W+ · mains</text>
+
+  <rect class="zone" x="30" y="130" width="620" height="230" rx="8"/>
+  <text x="42" y="150" class="zl">high-current power path — point-to-point 18 AWG (mounting: see elevation)</text>
+
+  <rect class="pwr" x="50" y="170" width="140" height="50" rx="5"/>
+  <text x="120" y="190" text-anchor="middle" class="t">AITRIP PD trigger</text>
+  <text x="120" y="207" text-anchor="middle" class="ts">set to 12 V</text>
+
+  <rect class="pwr" x="240" y="170" width="140" height="50" rx="5"/>
+  <text x="310" y="190" text-anchor="middle" class="t">XL4015 buck</text>
+  <text x="310" y="207" text-anchor="middle" class="ts">5.1 V first · vented</text>
+
+  <rect class="box" x="440" y="160" width="180" height="85" rx="5"/>
+  <text x="530" y="181" text-anchor="middle" class="tb">PCA9685</text>
+  <text x="530" y="199" text-anchor="middle" class="ts">V+ screw terminal</text>
+  <text x="530" y="215" text-anchor="middle" class="ts">+ 1000–2200 µF bulk cap</text>
+  <text x="530" y="231" text-anchor="middle" class="ts">I2C 0x40</text>
+
+  <rect class="box" x="50" y="285" width="170" height="50" rx="5"/>
+  <text x="135" y="305" text-anchor="middle" class="tb">VEML7700</text>
+  <text x="135" y="322" text-anchor="middle" class="ts">on the case lid · via J3</text>
+
+  <rect class="srv" x="500" y="470" width="150" height="50" rx="5"/>
+  <text x="575" y="490" text-anchor="middle" class="tb">MG90D ×4</text>
+  <text x="575" y="507" text-anchor="middle" class="ts">at the shutters</text>
+
+  <rect class="zone" x="30" y="440" width="430" height="170" rx="8"/>
+  <text x="42" y="462" class="zl">copper breadboard — logic only (~300 mA)</text>
+
+  <rect class="mcu" x="50" y="478" width="160" height="80" rx="5"/>
+  <text x="130" y="502" text-anchor="middle" class="tb">ESP32 DevKit</text>
+  <text x="130" y="520" text-anchor="middle" class="ts">socketed on headers</text>
+  <text x="130" y="536" text-anchor="middle" class="ts">I2C on GPIO21/22</text>
+
+  <rect class="box" x="260" y="478" width="180" height="34" rx="5"/>
+  <text x="350" y="499" text-anchor="middle" class="t">J1 — 5.1 V in (screw)</text>
+  <rect class="box" x="260" y="522" width="180" height="34" rx="5"/>
+  <text x="350" y="543" text-anchor="middle" class="t">J2 — XH-5 to PCA9685</text>
+  <rect class="box" x="260" y="566" width="180" height="34" rx="5"/>
+  <text x="350" y="587" text-anchor="middle" class="t">J3 — XH-4 to VEML7700</text>
+
+  <path class="w12" d="M115,96 L115,167" marker-end="url(#ah)"/>
+  <text x="123" y="135" class="ts" fill="#c07a2a">USB-C</text>
+  <path class="w12" d="M190,195 L237,195" marker-end="url(#ah)"/>
+  <text x="214" y="188" text-anchor="middle" class="ts" fill="#c07a2a">12 V</text>
+  <path class="w5" d="M380,195 L437,195" marker-end="url(#ah)"/>
+  <text x="409" y="150" text-anchor="middle" class="ts" fill="#d63b3b">5.1 V · 18 AWG</text>
+
+  <path class="w5t" d="M310,220 L310,456 L350,456 L350,475" marker-end="url(#ah)"/>
+  <text x="318" y="400" class="ts" fill="#d63b3b">5.1 V logic spur · 22 AWG</text>
+
+  <path class="wi2c" d="M440,539 L480,539 L480,248" marker-end="url(#ah)"/>
+  <text x="472" y="430" text-anchor="end" class="ts" fill="#1f6fd6">I2C + 3V3</text>
+
+  <path class="wpwm" d="M530,245 L530,467" marker-end="url(#ah)"/>
+  <text x="538" y="430" class="ts" fill="#3f8a3f">CH0–3</text>
+
+  <path class="wi2c" d="M260,583 L235,583 L235,320 L224,320" marker-end="url(#ah)"/>
+
+  <text x="340" y="634" text-anchor="middle" class="ts">common ground — single point at the XL4015 OUT− terminal</text>
+  <text x="340" y="654" text-anchor="middle" class="ts" fill="#b02a2a">rule: servo current (2–3 A peaks) runs point-to-point in 18 AWG — never through breadboard strips</text>
+</svg>

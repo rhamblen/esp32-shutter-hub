@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 430" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="680" height="430" fill="#ffffff"/>
+  <style>
+    .t{fill:#1c2430;font-size:13px}.ts{fill:#4a5568;font-size:12px}.title{fill:#1c2430;font-size:17px;font-weight:bold}
+    .rl{stroke-width:4;fill:none}.ld{stroke:#9aa3ad;stroke-width:1;stroke-dasharray:3 3}
+  </style>
+
+  <text x="340" y="28" text-anchor="middle" class="title">Rail plan — cuts and bridges to check before soldering</text>
+
+  <text x="640" y="52" text-anchor="end" class="ts" fill="#b02a2a">cut any factory link joining the red rails</text>
+  <line x1="628" y1="58" x2="628" y2="100" class="ld"/>
+
+  <rect x="40" y="70" width="600" height="280" rx="6" fill="#f7f4ee" stroke="#ccc" stroke-width="1.5"/>
+
+  <text x="64" y="96" class="ts" fill="#d63b3b">5.1 V — fed from J1 (XL4015 logic spur)</text>
+  <line x1="60" y1="105" x2="332" y2="105" class="rl" stroke="#d63b3b"/>
+  <line x1="348" y1="105" x2="620" y2="105" class="rl" stroke="#d63b3b"/>
+  <line x1="60" y1="130" x2="332" y2="130" class="rl" stroke="#22303c"/>
+  <line x1="348" y1="130" x2="620" y2="130" class="rl" stroke="#22303c"/>
+  <text x="616" y="122" text-anchor="end" class="ts" fill="#22303c">GND</text>
+
+  <rect x="60" y="160" width="560" height="105" fill="#eee7da"/>
+  <text x="340" y="198" text-anchor="middle" class="t">component field — each ESP32 pin owns its own column strip</text>
+  <text x="340" y="220" text-anchor="middle" class="ts">no cuts needed here</text>
+
+  <text x="64" y="281" class="ts" fill="#8a3fd6">3V3 — fed from the ESP32 3V3 pin</text>
+  <line x1="60" y1="290" x2="332" y2="290" class="rl" stroke="#8a3fd6"/>
+  <line x1="348" y1="290" x2="620" y2="290" class="rl" stroke="#8a3fd6"/>
+  <line x1="60" y1="315" x2="332" y2="315" class="rl" stroke="#22303c"/>
+  <line x1="348" y1="315" x2="620" y2="315" class="rl" stroke="#22303c"/>
+  <text x="616" y="307" text-anchor="end" class="ts" fill="#22303c">GND</text>
+
+  <path d="M332,105 Q340,93 348,105" stroke="#3f8a3f" stroke-width="4" fill="none"/>
+  <path d="M332,130 Q340,118 348,130" stroke="#3f8a3f" stroke-width="4" fill="none"/>
+  <path d="M332,290 Q340,278 348,290" stroke="#3f8a3f" stroke-width="4" fill="none"/>
+  <path d="M332,315 Q340,303 348,315" stroke="#3f8a3f" stroke-width="4" fill="none"/>
+
+  <path d="M590,130 C612,180 612,265 590,315" stroke="#22303c" stroke-width="2.5" fill="none"/>
+  <text x="575" y="243" text-anchor="end" class="ts">one GND tie, near J1</text>
+
+  <line x1="628" y1="105" x2="628" y2="185" stroke="#e08a1e" stroke-width="2.5" stroke-dasharray="5 4"/>
+  <line x1="628" y1="210" x2="628" y2="290" stroke="#e08a1e" stroke-width="2.5" stroke-dasharray="5 4"/>
+  <line x1="620" y1="189" x2="636" y2="205" stroke="#d63b3b" stroke-width="3"/>
+  <line x1="636" y1="189" x2="620" y2="205" stroke="#d63b3b" stroke-width="3"/>
+
+  <line x1="340" y1="322" x2="340" y2="358" class="ld"/>
+  <text x="340" y="374" text-anchor="middle" class="ts" fill="#2e6b2e">if the rails split mid-board, solder-bridge all four</text>
+
+  <text x="340" y="412" text-anchor="middle" class="ts">before soldering: continuity-check every rail, and isolation between the two red rails</text>
+</svg>
