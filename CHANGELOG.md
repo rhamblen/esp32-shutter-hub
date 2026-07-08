@@ -49,6 +49,17 @@ identified everywhere so an OTA bin is never ambiguous.
   per version (the UI adapts at runtime, so the FS bin is variant-independent).
 - `FW_VERSION` → **0.3.0**.
 
+### Fixed
+- **Channel switch no longer jolts the servo** — on a PCA9685 build, selecting a channel used to
+  drive the *new* channel to the *previous* channel's pulse width at full speed (and release the old
+  channel). Each channel now keeps its own remembered position, and switching focus **moves and
+  releases nothing** — essential once a channel is a live blind. Actual moves still slew at the set
+  speed.
+- **Shutter calibration now drives the selected shutter's channel** — it was driving whichever
+  channel the Servo-test page last left active, so every shutter appeared to move the one servo.
+  Selecting a shutter (or reassigning its channel) now points the driver at that shutter's PCA9685
+  channel first.
+
 ## [0.2.2] — 2026-07-08
 
 Per-blind calibration (Phase 2): a dedicated Shutters page, microsecond-native servo control, and a

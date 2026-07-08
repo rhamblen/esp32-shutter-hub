@@ -240,6 +240,7 @@ setInterval(() => {
 
 // ---- Shutters (per-blind calibration) --------------------------------------
 let shList = [], shSel = "", calStep = 5, shBusy = false, shTick = 0, chFilled = false;
+let svPca = false;   // learned from /api/servo — on a PCA9685 build, drive the selected shutter's channel
 
 const shCurrent = () => shList.find(s => s.id === shSel);
 const usTxt = v => (v == null || v < 0) ? "– µs" : v + " µs";
@@ -283,6 +284,7 @@ function shRenderDetail() {
   $("#fav_pv_go").disabled    = s.privacyUs  < 0;
 }
 function calRender(v) {   // v = /api/servo status
+  svPca = !!v.usesPca;
   $("#cal_us").textContent = v.us;
   const scrub = $("#cal_scrub");
   scrub.min = v.min; scrub.max = v.max;
@@ -304,7 +306,18 @@ async function shLoad() {
   try { shList = await apiGet("/api/shutters"); shRenderSelect(); shRenderDetail(); } catch (e) {}
 }
 async function calRefresh() { try { calRender(await apiGet("/api/servo")); } catch (e) {} }
-function shOnShow() { shLoad(); calRefresh(); }
+// Point the servo driver at the selected shutter's channel (PCA9685 builds only), so
+// calibration/recall drive THAT blind — not whatever channel the Servo-test page left active.
+// Switching channels moves nothing (each channel holds its own position); the returned status
+// updates the calibration readout. On a direct-GPIO build there's one servo — just refresh.
+async function shSyncChannel() {
+  const s = shCurrent();
+  if (svPca && s && s.channel >= 0) {
+    try { calRender(await apiPost("/api/servo/channel?ch=" + s.channel)); return; } catch (e) {}
+  }
+  calRefresh();
+}
+async function shOnShow() { shLoad(); await calRefresh(); shSyncChannel(); }
 
 // list-returning shutter mutations
 async function shMutate(url, obj, keepSel) {
@@ -323,13 +336,13 @@ $("#sh_add").addEventListener("click", () => {
   if (name === null) return;
   shMutate("/api/shutters/add", { name: name.trim(), channel: shList.length });
 });
-$("#sh_sel").addEventListener("change", () => { shSel = $("#sh_sel").value; shRenderDetail(); calRefresh(); });
+$("#sh_sel").addEventListener("change", () => { shSel = $("#sh_sel").value; shRenderDetail(); shSyncChannel(); });
 const commitName = () => { const s = shCurrent(); const n = $("#sh_name").value.trim();
   if (s && n && n !== s.name) shMutate("/api/shutters/rename", { id: s.id, name: n }, true); };
 $("#sh_name").addEventListener("change", commitName);
 $("#sh_rename").addEventListener("click", commitName);
-$("#sh_ch").addEventListener("change", () => { const s = shCurrent();
-  if (s) shMutate("/api/shutters/channel", { id: s.id, channel: $("#sh_ch").value }, true); });
+$("#sh_ch").addEventListener("change", async () => { const s = shCurrent();
+  if (s) { await shMutate("/api/shutters/channel", { id: s.id, channel: $("#sh_ch").value }, true); shSyncChannel(); } });
 $("#sh_invert").addEventListener("change", () => { const s = shCurrent();
   if (s) shMutate("/api/shutters/invert", { id: s.id, inverted: $("#sh_invert").checked }, true); });
 $("#sh_del").addEventListener("click", () => { const s = shCurrent();

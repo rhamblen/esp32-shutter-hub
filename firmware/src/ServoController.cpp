@@ -63,6 +63,10 @@ Adafruit_PWMServoDriver g_pwm(0x40);   // default I2C address (ADR 0003)
 uint8_t g_ch       = 0;                // active test channel 0–15
 uint8_t g_sda      = 21, g_scl = 22;   // I2C bus pins
 bool    g_attached = false;            // PCA9685 has no attach() — track it ourselves
+// Last commanded pulse width per channel. Selecting a channel restores its own
+// position (never the previous channel's), so switching focus moves nothing — a
+// safety must when each channel is a different blind. Default mid-travel until first driven.
+float   g_chPos[16];
 
 void hwInit() {
   Wire.begin(g_sda, g_scl);
@@ -119,6 +123,7 @@ void begin() {
   g_sda = AppConfig::i2cSda();
   g_scl = AppConfig::i2cScl();
   g_ch  = AppConfig::servoChannel();
+  for (float &p : g_chPos) p = g_curUs;   // assume mid-travel per channel until first driven
   hwInit();
   LOGI("servo", "driver ready — PCA9685 @0x40, SDA GPIO%u/SCL GPIO%u, channel %u, detached (idle)",
        g_sda, g_scl, g_ch);
@@ -142,12 +147,16 @@ uint8_t channel() { return g_ch; }
 
 bool setChannel(uint8_t ch) {
   if (ch > 15) { LOGW("servo", "rejected channel %u (0–15 only)", ch); return false; }
-  bool wasAttached = g_attached;
-  if (wasAttached) hwDetach();              // release the old channel before moving drive
+  if (ch == g_ch) return true;
+  // Just move the control focus — never drive or release a channel on selection.
+  // Each channel keeps holding its own last value; the next move slews from there.
+  g_chPos[g_ch] = g_curUs;                   // remember where we left the current channel
+  g_sweep = false;
   g_ch = ch;
   AppConfig::setServoChannel(ch);
-  if (wasAttached) { hwEnsureAttached(); hwWriteUs((int)roundf(g_curUs)); }
-  LOGI("servo", "test channel set to %u", g_ch);
+  g_curUs = g_chPos[ch];                     // restore this channel's last commanded position
+  g_tgtUs = (int)roundf(g_curUs);            // settled → loop() makes no move
+  LOGI("servo", "test channel set to %u (holding %d µs)", g_ch, g_tgtUs);
   return true;
 }
 
