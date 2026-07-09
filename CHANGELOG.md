@@ -16,6 +16,19 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.5.2] — 2026-07-09
+
+**HomeKit discovery fix.** On hardware the bridge ran and logged the right pairing code, but the
+iPhone never found it in *Add Accessory* — so pairing (QR or manual) had nothing to attach to.
+
+### Fixed
+- **`_hap._tcp` mDNS service was never announced** because the web UI had already called
+  `MDNS.begin()`; HomeSpan's own `MDNS.begin()` then no-ops on the already-running responder and the
+  HAP service came out unannounced. `HomeKit::begin()` now calls `MDNS.end()` right before
+  `homeSpan.begin()` so HomeSpan gets a clean mDNS init and advertises `_hap._tcp` properly; the web
+  UI's `_http` service is re-added immediately after (so `<name>.local` keeps working). This is the
+  fix for "iPhone finds nothing to pair with".
+
 ## [0.5.1] — 2026-07-09
 
 **Reliable reboot.** Field-testing v0.5.0 exposed that the device often wouldn't restart on command

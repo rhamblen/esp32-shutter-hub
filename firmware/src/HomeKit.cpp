@@ -149,6 +149,13 @@ void begin() {
   homeSpan.setPairCallback(onPair);
   homeSpan.setControllerCallback(onController);
 
+  // WebUI::begin() already ran MDNS.begin() for the web UI's _http service. HomeSpan wants to
+  // initialise mDNS itself to advertise _hap._tcp, but a second MDNS.begin() on an already-
+  // running responder no-ops, and the HAP service then never gets announced — the accessory
+  // never appears in the Home app (exactly the "iPhone finds nothing" symptom). Tear the
+  // responder down so HomeSpan gets a clean init; we re-add the _http service right after.
+  MDNS.end();
+
   homeSpan.begin(Category::Bridges, g_bridgeName.c_str(), g_host.c_str(), "ESP32 Shutter Hub");
 
   // After begin() the NVS handles are open: safe to set the code (progCall=false so a
