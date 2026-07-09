@@ -6,11 +6,6 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
-### Changed
-- **`shutter-hub-card` button order** is now **Close · Privacy · Daylight · Open** (was
-  Open · Close · Daylight · Privacy) — a closed→open progression. Card-only change; the deployed
-  inline resource on *My Home › Shutters* was updated in place (hard-refresh to pick it up).
-
 ### Release checklist / notes
 - **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`
   (firmware) bin **per variant** — `shutter-hub-<variant>-{full,ota}-vX.Y.Z.bin` — plus a **single
@@ -20,6 +15,15 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   variants (`esp32d-direct`, `esp32d-pca9685`) are shipped day-to-day; the C3 variants are deferred.
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
+
+## [0.4.3] — 2026-07-09
+
+Card-only patch. Frontend only — **no firmware change**, so no new firmware/filesystem bins.
+
+### Changed
+- **`shutter-hub-card` button order** is now **Close · Privacy · Daylight · Open** (was
+  Open · Close · Daylight · Privacy) — a closed→open progression. The deployed inline resource on
+  *My Home › Shutters* was updated in place (hard-refresh to pick it up).
 
 ## [0.4.2] — 2026-07-09
 

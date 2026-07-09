@@ -1,43 +1,19 @@
-# v0.4.2 — Home Assistant operating card
+# v0.4.3 — Card button reorder
 
-A custom **Lovelace card** for the shutters. Frontend only — **no firmware change**, so this
-release ships **no new firmware/filesystem bins** (keep running v0.4.1 firmware).
+A small card-only patch on top of v0.4.2. **No firmware change** — no new firmware/filesystem bins.
 
-## What's new
+## Changed
 
-**`shutter-hub-card`** — a single tile that shows 1–6 named shutters side by side, each with a
-slat glyph that tracks its position. It gives the four blind states — **Open · Close · Daylight ·
-Privacy** — plus a **manual position slider** (any 0–100 %) and a **Stop**, and you can drive
-**all shutters at once** or **tap one tile** to control just that shutter (*Select all* returns to
-the group).
+- **`shutter-hub-card` state buttons** are now ordered **Close · Privacy · Daylight · Open** (was
+  Open · Close · Daylight · Privacy) — a natural closed→open progression left to right.
 
-- Binds to the existing MQTT-discovery entities — `cover.<hub>_<id>` and
-  `button.<hub>_<id>_daylight` / `_privacy` (button ids auto-derived from the cover).
-- Plain custom element, no build step; themes off Home Assistant's own CSS variables.
-- Deployed to the **My Home › Shutters** dashboard as an inline module resource.
+The deployed inline resource on the **My Home › Shutters** dashboard was updated in place; hard-refresh
+(Ctrl+F5) to pick it up.
 
-New [ADR-0007](docs/decisions/0007-ha-lovelace-card.md) and build spec
-[docs/ha-lovelace-card.md](docs/ha-lovelace-card.md).
+## Note
 
-## Deferred (future phase)
-
-The **calibration / config card** is intentionally not included — raw-µs set-and-go, the
-full-open/close travel endpoints, and *saving* into the four preset slots need firmware commands
-that don't exist yet (`goto_us`, raw-µs readback, `save:open` / `save:close`). It's specified in
-[docs/ha-lovelace-card.md](docs/ha-lovelace-card.md) §4 for a later build. Until then, calibrate in
-the hub's web UI; this card operates the shutters Home Assistant already knows how to drive.
-
-## Install
-
-Register `ha-card/shutter-hub-card.js` as a Lovelace resource (type *JavaScript Module*), then add
-the card to a dashboard:
-
-```yaml
-type: custom:shutter-hub-card
-title: Shutters
-shutters:
-  - entity: cover.shutter_hub_shutter_1
-  - entity: cover.shutter_hub_shutter_2
-```
+Nothing else changed. Shutter presets that appear to "do nothing" are a calibration-data issue, not a
+card bug: make sure each saved **Daylight**/**Privacy** position sits *between* that shutter's closed
+and open endpoints (check `http://shutter-hub.local/api/shutters`).
 
 Full history in [CHANGELOG.md](CHANGELOG.md).
