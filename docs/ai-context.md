@@ -50,7 +50,7 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
   six `button`s (jog_open/jog_close on `cmd`, `recall:`/`save:` `daylight`/`privacy`); state topics
   `position` + `state` retained; hub-wide LWT `<base>/status`. Jog = 25 µs/press, clamped to
   calibration. Uncalibrated ⇒ reports 0/closed, OPEN/CLOSE/position ignored (logged). Discovery
-  re-publishes on shutter config change. Phase-4b cmds (`goto_us`, `save:open/close`) deferred.
+  re-publishes on shutter config change. Phase-8 calibration cmds (`goto_us`, `save:open/close`) deferred.
   Config in NVS, web assets in LittleFS.
 - **Servo drive (ADR 0010, v0.4.0):** per-slot slew state — all channels move concurrently at the
   shared speed; bench API acts on the active test channel; slot API (`moveSlotUs` …) for MQTT.
@@ -64,8 +64,8 @@ persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N
 **S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config), **2** (v0.2.2–v0.3.0 Shutters
 page + calibration; PCA9685 backend + build variants + position memory). Phase 3 retired (folded
 into S/S2), **4** (v0.4.0 MQTT/HA covers + buttons + discovery + concurrent drive; verified on
-hardware). Remaining: **4b** Lovelace card → **5** HomeKit → **6** light/solar → **7** production.
-**0** (mechanical force test) still open.
+hardware), **4b** (v0.4.2 Lovelace operating card). Remaining: **5** HomeKit → **6** light/solar →
+**7** production → **8** HA calibration card (optional). **0** (mechanical force test) still open.
 
 ## Gotchas
 

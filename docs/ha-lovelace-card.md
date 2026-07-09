@@ -6,15 +6,15 @@ card) and [decisions/0005-mqtt-command-structure.md](decisions/0005-mqtt-command
 (the entities/topics it binds to). Everything here is implementable as written; items
 that need firmware are called out under **Firmware dependencies**.
 
-Two cards are specified here. **Status:** the operating card
-([`ha-card/shutter-hub-card.js`](../ha-card/shutter-hub-card.js)) **shipped in v0.4.2**;
-the calibration card is **deferred** to a future phase because it needs firmware that
-does not exist yet (see §4 and the plan).
+Two cards are specified here, built in **separate phases**. **Status:** the operating card
+([`ha-card/shutter-hub-card.js`](../ha-card/shutter-hub-card.js)) **shipped in v0.4.2**
+(Phase 4b, done); the calibration card is a separate **optional Phase 8** because it needs
+firmware that does not exist yet (see §4 and the plan).
 
 | Card | Type | Status | Depends on |
 | ---- | ---- | ------ | ---------- |
-| `shutter-hub-card` | Everyday control | **Shipped v0.4.2** | Phase 4 covers/buttons only |
-| `shutter-hub-calibration-card` | Setup / calibration | **Deferred** | Phase 4 **+** calibration transport (§4) |
+| `shutter-hub-card` | Everyday control | **Shipped v0.4.2** (Phase 4b) | Phase 4 covers/buttons only |
+| `shutter-hub-calibration-card` | Setup / calibration | **Phase 8 — optional** | Phase 4 **+** calibration transport (§4) |
 
 ---
 
@@ -218,16 +218,18 @@ ha-card/
 
 ## 6. Exit criteria
 
-**Default card (buildable now against planned Phase 4 entities):**
+**Default card (shipped v0.4.2, Phase 4b):**
 
-- ☐ add the card, pick 1–6 covers in the visual editor, reorder them;
-- ☐ tiles render side by side with slat angle tracking position;
-- ☐ group bar Open/Close/Daylight/Privacy drives all shutters;
-- ☐ selecting a tile scopes the slider + buttons to that shutter; Back to all restores
+- ☐ add the card, pick 1–6 covers in the visual editor, reorder them — *not shipped:
+  the card is YAML-configured (with `getStubConfig` auto-fill); no `getConfigElement`
+  editor yet*;
+- ☑ tiles render side by side with slat angle tracking position;
+- ☑ group bar Open/Close/Daylight/Privacy drives all shutters;
+- ☑ selecting a tile scopes the slider + buttons to that shutter; Back to all restores
   group mode;
-- ☐ follows the active HA theme; degrades gracefully if a shutter is `unavailable`.
+- ☑ follows the active HA theme; degrades gracefully if a shutter is `unavailable`.
 
-**Calibration card (gated on the §4 firmware additions):**
+**Calibration card (Phase 8 — optional; gated on the §4 firmware additions):**
 
 - ☐ select a shutter, scrub µs, or type an exact value → **servo moves (set-and-go)**;
 - ☐ readout shows µs + derived % and reflects device-reported µs;

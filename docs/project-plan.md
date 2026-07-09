@@ -15,10 +15,11 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | S2    | v0.2.0  | Web UI shell (LittleFS SPA) + Logs (WS) + MQTT/HA config | ☑ |
 | 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
-| 4b    | v0.4.x  | HA Lovelace card (control + calibration) | ◐ |
+| 4b    | v0.4.x  | HA Lovelace operating card     | ☑      |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
 | 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
+| 8     | —       | HA calibration card (optional) | ☐      |
 
 **Sequence note (post-v0.1.0):** the polished web UI, live logs, and MQTT/HA *config* were pulled
 forward — they all run on a bare ESP32 before servo hardware exists. So the old "Phase 2 Web UI" and
@@ -117,33 +118,26 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
   endpoints/favourites on its own channel; retained `position`/`state` publishing that also tracks
   web-UI moves; **concurrent per-channel drive** ([ADR 0010](decisions/0010-concurrent-servo-drive.md))
   so scenes move all shutters simultaneously; a live per-shutter **Topics** map on the MQTT page.
-  Phase-4b calibration-card commands (`goto_us`, `save:open`/`save:close`, raw-µs readback) stay
-  deferred to 4b.
+  Calibration-card commands (`goto_us`, `save:open`/`save:close`, raw-µs readback) stay
+  deferred to Phase 8.
 - **Exit criteria:** ☑ verified on hardware (2026-07-09, MQTT Explorer + HA) — covers appear and
   control the servo, jog buttons and Daylight/Privacy presets work, state/position topics track
   as expected.
 
-## Phase 4b — Home Assistant Lovelace card (v0.4.x)
-- **Objective:** a purpose-built dashboard tile for the shutters, plus a hidden calibration tile.
-- **What we build:** a custom Lovelace **frontend** card bundle (Lit/TS → `dist/*.js`, registered as
-  a Lovelace resource — **not** a HACS integration, see ADR-0007):
-  - `shutter-hub-card` — 1–6 named shutters side by side with a live slat glyph; **group mode**
-    (one Open/Close/Daylight/Privacy bar for all) that flips to **individual mode** (slider + buttons
-    scoped to a selected shutter); visual editor with add/delete/reorder (1–6).
-  - `shutter-hub-calibration-card` — setup-only tile mirroring the web calibration: µs scrubber,
-    exact-µs entry, and four save slots (Full open/close, Daylight, Privacy). **Set-and-go:** every
-    position change drives the servo to that position so the real angle is visible before saving.
-- **Spec:** [ha-lovelace-card.md](ha-lovelace-card.md) — entity model, config schema, both card
-  layouts, and the firmware additions the calibration card needs.
-- **Prerequisites:** Phase 4 cover/button discovery for the **control** card. The **calibration**
-  card additionally needs a firmware *go-to-µs* command + raw-µs readback (see spec §4), and
-  `Shutters::MAX` raised from 4 → 6.
-- **Status (v0.4.2):** the **control card shipped** — [`ha-card/shutter-hub-card.js`](../ha-card/shutter-hub-card.js),
+## Phase 4b — Home Assistant Lovelace operating card (v0.4.x) ☑
+- **Objective:** a purpose-built everyday dashboard tile for the shutters.
+- **What we built:** `shutter-hub-card` — a custom Lovelace **frontend** card (plain custom
+  element, registered as a Lovelace resource — **not** a HACS integration, see ADR-0007): 1–6 named
+  shutters side by side with a live slat glyph; **group mode** (one Open/Close/Daylight/Privacy bar
+  for all) that flips to **individual mode** (slider + buttons scoped to a selected shutter).
+- **Spec:** [ha-lovelace-card.md](ha-lovelace-card.md) — entity model, config schema, card layout.
+- **Prerequisites:** Phase 4 cover/button discovery.
+- **Status (v0.4.2):** shipped — [`ha-card/shutter-hub-card.js`](../ha-card/shutter-hub-card.js),
   deployed to the *My Home › Shutters* dashboard as an inline Lovelace resource: group + per-shutter
-  Open/Close/Daylight/Privacy and a manual position slider. The **calibration card is deferred** to a
-  later build together with its firmware commands (`goto_us`, raw-µs readback, `save:open`/`save:close`).
-- **Exit criteria:** control card drives all/one shutter and follows the HA theme ☑; calibration card
-  does set-and-go and saves to the four slots (survives a FS OTA) ☐.
+  Open/Close/Daylight/Privacy and a manual position slider.
+- **Exit criteria:** ☑ control card drives all/one shutter and follows the HA theme.
+- The **calibration card** originally bundled in this phase is split out to **Phase 8 (optional)**
+  together with the firmware commands it needs.
 
 ## Phase 5 — HomeKit (v0.5.0)
 - **Objective:** native Apple Home control.
@@ -162,6 +156,21 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
   enclosures, PCB/wiring loom, all 4 channels, watchdog/servo-timeout/brownout diagnostics.
 - **Exit criteria:** four shutters running reliably behind the wall, OTA-updatable, "build once and
   leave running".
+
+## Phase 8 — HA calibration card (optional)
+- **Objective:** a setup-only calibration tile for a hidden/admin dashboard, so a shutter can be
+  calibrated from HA without opening the hub web UI. **Optional** — the web UI Shutters page already
+  covers calibration in full; build only if the convenience proves worth it.
+- **What we build:** `shutter-hub-calibration-card` — shutter selector, µs scrub slider,
+  exact-µs entry, and four save slots (Full open/close, Daylight, Privacy). **Set-and-go:** every
+  position change drives the servo to that position so the real slat angle is visible before saving.
+- **Spec:** [ha-lovelace-card.md](ha-lovelace-card.md) §4 — layout, interactions, and the firmware
+  additions it needs.
+- **Prerequisites:** firmware calibration transport (spec §4) — a `goto_us:<µs>` command, retained
+  raw-µs readback, `save:open` / `save:close`, surfaced via MQTT discovery; plus `Shutters::MAX`
+  raised from 4 → 6.
+- **Exit criteria:** select a shutter, scrub or type µs → servo moves (set-and-go); save into the
+  four slots persists to NVS (survives a FS OTA); never appears on the everyday dashboard.
 
 ---
 

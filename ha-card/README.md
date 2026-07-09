@@ -59,10 +59,11 @@ shutters:                       # 1–6 entries, order = display order
     name: Right
 ```
 
-## Not included (future phase)
+## Not included (Phase 8, optional)
 
 **Calibration / config card** — setting raw-µs positions, the full-open/close travel
-endpoints, and *saving* into the four slots — is **not** in this card. It needs firmware
+endpoints, and *saving* into the four slots — is deliberately a **separate card**, planned
+as **optional Phase 8** in [the project plan](../docs/project-plan.md). It needs firmware
 commands that don't exist yet (an absolute *go-to-µs*, raw-µs readback, and `save:open` /
 `save:close`), documented in [../docs/ha-lovelace-card.md](../docs/ha-lovelace-card.md) §4.
 Until then, calibrate in the hub's web UI; this card operates the shutters HA already
