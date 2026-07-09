@@ -196,12 +196,22 @@ void begin() {
   // HomeSpan re-ran MDNS.begin(hostName); re-add the web UI's http service under it.
   MDNS.addService("http", "tcp", 80);
 
+  // Run HomeSpan on its OWN FreeRTOS task instead of calling poll() from the Arduino loop().
+  // HAP handling — and especially the SRP pairing crypto — can hold the CPU for long stretches,
+  // and sharing the single main loop starved servo slewing and MQTT command handling: with the
+  // bridge enabled, servos stopped moving and HA control stopped (confirmed by A/B test — both
+  // work with HomeKit off). On core 0 (alongside WiFi/AsyncTCP), the main loop on core 1
+  // (ServoController::loop + Mqtt::loop) keeps ticking no matter what HAP is doing. 16 KB stack
+  // gives the SRP big-number math headroom during pairing.
+  homeSpan.autoPoll(16384, 1, 0);        // stackSize, priority, cpu core
+
   g_started = true;
 }
 
 void loop() {
+  // homeSpan.poll() now runs on its own task (autoPoll, see begin()) — the main loop must NOT
+  // call it too. This only services the deferred pairing reset.
   if (!g_started) return;
-  homeSpan.poll();
   if (g_resetPending && millis() >= g_resetAt) {
     g_resetPending = false;
     LOGW("homekit", "erasing HomeKit pairing data and restarting");

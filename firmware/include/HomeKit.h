@@ -11,13 +11,16 @@
 //     checkConnect() sees WL_CONNECTED and never calls WiFi.begin() itself (no startup blip).
 //     It's given the live creds only so it can reconnect on its own if the link later drops.
 //   - QR setup ID is "SHUT" — must match the web UI's X-HM:// payload.
+//   - HomeSpan runs on its OWN task (homeSpan.autoPoll in begin()) — HAP/pairing crypto would
+//     otherwise monopolise the shared Arduino loop() and stall servo slewing + MQTT (it did:
+//     servos/HA froze whenever the bridge was enabled). Do NOT call homeSpan.poll() from loop().
 // Enabling/disabling or changing shutters takes effect on the next reboot (the accessory
 // tree is built once at begin(), like a normal HomeSpan sketch).
 #pragma once
 
 namespace HomeKit {
 void begin();          // start the bridge if AppConfig::hkEnabled(); no-op otherwise
-void loop();           // pump homeSpan.poll() + deferred pairing reset; call every main loop
+void loop();           // services only the deferred pairing reset (poll runs on its own task)
 bool running();        // true once the bridge is up (enabled + begun)
 bool paired();         // any HomeKit controller currently paired?
 int  controllers();    // number of paired controllers

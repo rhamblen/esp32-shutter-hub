@@ -16,6 +16,27 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.5.3] — 2026-07-09
+
+**HomeKit no longer freezes the servos.** With the bridge enabled, servo control (both the Servo-test
+page and Home Assistant/MQTT) stopped working; disabling HomeKit restored it — confirmed by A/B test
+against v0.4.1 and against v0.5.1 with HomeKit off.
+
+### Fixed
+- **`homeSpan.poll()` was starving the main loop.** It was called from the Arduino `loop()`, sharing
+  the single cooperative loop with `ServoController::loop()` (which writes each slewed servo frame to
+  the PCA9685) and `Mqtt::loop()`. HAP handling — especially the SRP pairing crypto — holds the CPU
+  long enough that servo frames and MQTT commands were never serviced, so shutters didn't move and HA
+  control went dead while the bridge ran. HomeSpan now runs on its **own FreeRTOS task**
+  (`homeSpan.autoPoll(16384, 1, 0)` — 16 KB stack for the SRP math, core 0 alongside WiFi/AsyncTCP),
+  leaving the main loop (core 1) free to slew servos and pump MQTT regardless of HAP activity.
+  `HomeKit::loop()` no longer calls `poll()` — it only services the deferred pairing reset.
+
+### Notes
+- This is independent of the HomeKit **pairing/discovery** issue (that's network/mDNS — the iPhone
+  must be on the same L2 network as the hub). v0.5.3 makes the hub *usable* with HomeKit enabled;
+  discovery still requires the phone and hub to share a network segment.
+
 ## [0.5.2] — 2026-07-09
 
 **HomeKit discovery fix.** On hardware the bridge ran and logged the right pairing code, but the
