@@ -64,8 +64,13 @@ persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N
 **S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config), **2** (v0.2.2–v0.3.0 Shutters
 page + calibration; PCA9685 backend + build variants + position memory). Phase 3 retired (folded
 into S/S2), **4** (v0.4.0 MQTT/HA covers + buttons + discovery + concurrent drive; verified on
-hardware), **4b** (v0.4.2 Lovelace operating card). Remaining: **5** HomeKit → **6** light/solar →
-**7** production → **8** HA calibration card (optional). **0** (mechanical force test) still open.
+hardware), **4b** (v0.4.2 Lovelace operating card). **5 groundwork** shipped in v0.4.4: System ▸
+HomeKit config tab (`/api/homekit`, NVS `hk*` keys, default setup code **748-88-377** = "SHUTTERS"
+on a keypad, client-side `X-HM://` pairing QR). The HomeSpan bridge itself is the remaining Phase 5
+work — contract in `firmware/include/HomeKit.h`: QR setup ID **`SHUT`** (`homeSpan.setQRID`), HAP
+off port 80 (`homeSpan.setPort(1201)`), WiFi stays with WiFiManager. Remaining: **5** HomeKit →
+**6** light/solar → **7** production → **8** HA calibration card (optional). **0** (mechanical
+force test) still open.
 
 ## Gotchas
 

@@ -254,10 +254,18 @@
         </div>
       </div>
       <div class="tabs" data-tabs="sys">
-        <button class="tab active" data-tab="device">Device</button>
-        <button class="tab" data-tab="wifi">WiFi</button>
-        <button class="tab" data-tab="homekit">HomeKit</button>
-        <button class="tab" data-tab="security">Security</button>
+        <button class="tab active" data-tab="device">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Device</span></button>
+        <button class="tab" data-tab="wifi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          <span>WiFi</span></button>
+        <button class="tab" data-tab="homekit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>HomeKit</span></button>
+        <button class="tab" data-tab="security">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Security</span></button>
       </div>
       <div class="card tabpane" data-pane="device">
         <div class="kv"><span>Device name</span><b id="sy_dev">–</b></div>
@@ -280,7 +288,26 @@
         <p class="msg" id="wf_msg"></p>
       </div>
       <div class="card tabpane hidden" data-pane="homekit">
-        <p class="sub">Apple Home (HomeKit) bridge arrives in Phase 5 — nothing to configure yet.</p>
+        <div class="toggle-row">
+          <div><b>Enable HomeKit bridge</b><p>Expose each shutter as a Window Covering in Apple Home. The bridge itself arrives with the v0.5.0 firmware — settings saved here apply then.</p></div>
+          <label class="switch"><input type="checkbox" id="hk_en"><span class="slider"></span></label>
+        </div>
+        <div class="form2">
+          <label>Bridge name<input id="hk_name" maxlength="32" placeholder="shutter-hub"></label>
+          <label>Setup code<input id="hk_code" inputmode="numeric" maxlength="10" placeholder="748-88-377"></label>
+        </div>
+        <div class="kv"><span>Bridge status</span><b id="hk_run">–</b></div>
+        <div class="kv"><span>Pairing</span><b id="hk_pair">–</b></div>
+        <div class="qrbox hidden" id="hk_qrbox">
+          <div id="hk_qr"></div>
+          <p id="hk_qrcap">Scan with the iPhone camera or the Home app to pair<br><b id="hk_codefmt"></b></p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="hk_save">Save &amp; Apply changes</button>
+          <button class="btn ghost" id="hk_rand">⟳ Random code</button>
+          <button class="btn danger" id="hk_reset" disabled>Reset pairings</button>
+          <span class="msg" id="hk_msg"></span>
+        </div>
       </div>
       <div class="card tabpane hidden" data-pane="security">
         <div class="toggle-row">
@@ -370,6 +397,7 @@
     </section>
   </main>
 </div>
+<script src="/qrcode.min.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

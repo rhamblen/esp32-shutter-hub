@@ -55,13 +55,22 @@ bool     mqttHaDiscovery();
 void     setMqtt(bool enabled, const String &host, uint16_t port, const String &clientId,
                  const String &user, const String &pass, const String &baseTopic, bool haDiscovery);
 
+// ---- HomeKit / Apple Home (Phase 5 config; System > HomeKit tab from v0.4.4) ----
+// Bridge name defaults to the device name. Setup code is 8 digits; the default is
+// 748-88-377 — "SHUTTERS" on a phone keypad (HomeSpan's own default 466-37-726 is
+// "HOMESPAN" by the same trick, so ours is deliberately distinct).
+bool     hkEnabled();
+String   hkBridgeName();                        // resolved (never blank)
+String   hkSetupCode();                         // digits only, e.g. "74888377"
+void     setHomeKit(bool enabled, const String &name, const String &code);
+
 // ---- Web interface authentication (Security tab) ----
 bool     authEnabled();
 String   authUser();
 String   authPass();
 void     setAuth(bool enabled, const String &user, const String &pass);
 
-// Clear all app settings (device name, servo pin, MQTT, auth) back to defaults.
+// Clear all app settings (device name, servo pin, MQTT, HomeKit, auth) back to defaults.
 // Does NOT touch WiFi credentials (WiFiManager's own NVS namespace). Caller reboots.
 void     factoryReset();
 }

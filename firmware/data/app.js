@@ -141,6 +141,7 @@ async function loadSystem() {
     const a = await apiGet("/api/auth");
     $("#se_en").checked = a.enabled; $("#se_user").value = a.user;
   } catch (e) {}
+  loadHomekit();
 }
 function qa(id, url, confirmMsg) {
   $(id).addEventListener("click", async () => {
@@ -154,7 +155,7 @@ qa("#qa_reboot", "/api/system/reboot", "Reboot the hub now?");
 qa("#qa_wifi", "/api/system/reset-wifi",
    "RESET WIFI: forget the saved network and restart into Shutter-Hub-Setup? You'll reconnect the hub afterwards.");
 qa("#qa_cfg", "/api/system/reset-config",
-   "RESET CONFIG: clear device name, servo pin, MQTT and web-auth settings (WiFi is kept) and reboot?");
+   "RESET CONFIG: clear device name, servo pin, MQTT, HomeKit and web-auth settings (WiFi is kept) and reboot?");
 
 $("#wf_scan").addEventListener("click", scanWifi);
 async function scanWifi() {
@@ -188,6 +189,78 @@ $("#se_save").addEventListener("click", async () => {
     $("#se_pass").value = "";
     $("#se_msg").textContent = "Saved. If enabled, the browser will ask for login on the next request.";
   } catch (e) { $("#se_msg").textContent = "Failed: " + e.message; }
+});
+
+// ---- HomeKit (System > HomeKit sub-tab) --------------------------------------
+// Config is stored now; the HomeSpan bridge itself lands with the v0.5.0 firmware
+// (the API reports `running:false` until then, which drives the status text below).
+let hkStat = { running: false, paired: false };
+const hkDigits = v => v.replace(/\D/g, "").slice(0, 8);
+const hkFmt = c => c.length === 8 ? `${c.slice(0, 3)}-${c.slice(3, 5)}-${c.slice(5)}` : c;
+// Apple X-HM:// pairing payload: category 2 (bridge) + IP flag + the code, base-36,
+// then the 4-char setup ID. "SHUT" must match homeSpan.setQRID() when Phase 5 lands.
+function hkQrUri(code) {
+  const v = 2 * 2 ** 31 + 2 * 2 ** 27 + parseInt(code, 10);
+  return "X-HM://" + v.toString(36).toUpperCase().padStart(9, "0") + "SHUT";
+}
+let hkLastUri = "";
+function hkRenderQr() {
+  const code = hkDigits($("#hk_code").value);
+  const show = $("#hk_en").checked && !hkStat.paired && code.length === 8 && typeof QRCode !== "undefined";
+  $("#hk_qrbox").classList.toggle("hidden", !show);
+  if (!show) { hkLastUri = ""; return; }
+  const uri = hkQrUri(code);
+  $("#hk_qrcap").innerHTML = (hkStat.running
+    ? "Scan with the iPhone camera or the Home app to pair"
+    : "Pairing QR preview — scannable once the v0.5.0 bridge is running")
+    + `<br><b>${hkFmt(code)}</b>`;
+  if (uri === hkLastUri) return;
+  hkLastUri = uri;
+  $("#hk_qr").innerHTML = "";
+  new QRCode($("#hk_qr"), { text: uri, width: 148, height: 148,
+    colorDark: "#0b0d13", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.Q });
+}
+async function loadHomekit() {
+  try {
+    const d = await apiGet("/api/homekit");
+    hkStat = d;
+    $("#hk_en").checked = d.enabled;
+    $("#hk_name").value = d.name;
+    $("#hk_code").value = hkFmt(d.code);
+    $("#hk_run").textContent = d.running ? "Running" : "Not in this firmware yet — arrives with v0.5.0";
+    $("#hk_pair").textContent = d.running
+      ? (d.paired ? `Paired — ${d.controllers} controller(s)` : "Not paired") : "—";
+    $("#hk_reset").disabled = !d.running;
+    hkRenderQr();
+  } catch (e) { $("#hk_msg").textContent = "Load failed: " + e.message; }
+}
+$("#hk_code").addEventListener("input", () => {
+  $("#hk_code").value = hkFmt(hkDigits($("#hk_code").value)); hkRenderQr(); });
+$("#hk_en").addEventListener("change", hkRenderQr);
+$("#hk_rand").addEventListener("click", () => {
+  let c;
+  do { c = String(Math.floor(Math.random() * 1e8)).padStart(8, "0"); }
+  while (/^(\d)\1{7}$/.test(c) || c === "12345678" || c === "87654321");
+  $("#hk_code").value = hkFmt(c); hkRenderQr();
+});
+$("#hk_save").addEventListener("click", async () => {
+  const code = hkDigits($("#hk_code").value);
+  if (code.length !== 8) { $("#hk_msg").textContent = "Setup code must be 8 digits."; return; }
+  $("#hk_msg").textContent = "Saving…";
+  try {
+    const d = await apiPost("/api/homekit",
+      { enabled: $("#hk_en").checked, name: $("#hk_name").value.trim(), code });
+    hkStat = d;
+    $("#hk_msg").textContent = d.running
+      ? "Saved — reboot to apply." : "Saved — applies when the v0.5.0 bridge firmware is flashed.";
+    hkRenderQr();
+  } catch (e) { $("#hk_msg").textContent = "Failed: " + e.message; }
+});
+$("#hk_reset").addEventListener("click", async () => {
+  if (!confirm("Reset HomeKit pairings? Every paired iPhone / Home hub will have to re-pair.")) return;
+  try { const j = await apiPost("/api/homekit/reset-pairings");
+    $("#hk_msg").textContent = j.msg || "OK"; loadHomekit(); }
+  catch (e) { $("#hk_msg").textContent = "Failed: " + e.message; }
 });
 
 // ---- Actions (servo bench test) --------------------------------------------

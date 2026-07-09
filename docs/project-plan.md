@@ -142,6 +142,10 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 ## Phase 5 — HomeKit (v0.5.0)
 - **Objective:** native Apple Home control.
 - **What we build:** HomeSpan bridge exposing one Window Covering per shutter; Siri.
+- **Status (v0.4.4):** groundwork shipped — System ▸ HomeKit config tab (bridge name, setup code
+  with default **748-88-377**, pairing QR, `/api/homekit`), stub `HomeKit` module with the bridge
+  contract documented in [HomeKit.h](../firmware/include/HomeKit.h) (QR ID `SHUT`, HAP port 1201,
+  WiFi stays with WiFiManager). Remaining: wire HomeSpan itself into `HomeKit::begin()`.
 - **Exit criteria:** shutters controllable from the Home app and Siri, alongside HA.
 
 ## Phase 6 — Light sensor + solar logic (v0.6.0)

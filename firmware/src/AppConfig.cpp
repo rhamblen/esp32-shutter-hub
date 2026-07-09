@@ -26,6 +26,11 @@ String   g_mqPass     = "";
 String   g_mqBase     = "shutter-hub";
 bool     g_mqHaDisc   = true;
 
+// HomeKit / Apple Home
+bool     g_hkEn       = false;
+String   g_hkName     = "";       // blank => fall back to the device name
+String   g_hkCode     = "74888377";
+
 // Web auth
 bool     g_authEn     = false;
 String   g_authUser   = "admin";
@@ -54,6 +59,10 @@ void begin() {
   g_mqPass     = prefs.getString("mqPass", "");
   g_mqBase     = prefs.getString("mqBase", "shutter-hub");
   g_mqHaDisc   = prefs.getBool("mqHaDisc", true);
+
+  g_hkEn       = prefs.getBool("hkEn", false);
+  g_hkName     = prefs.getString("hkName", "");
+  g_hkCode     = prefs.getString("hkCode", "74888377");
 
   g_authEn     = prefs.getBool("authEn", false);
   g_authUser   = prefs.getString("authUser", "admin");
@@ -156,6 +165,19 @@ void setMqtt(bool enabled, const String &host, uint16_t port, const String &clie
   prefs.putString("mqPass", g_mqPass);
   prefs.putString("mqBase", g_mqBase);
   prefs.putBool("mqHaDisc", g_mqHaDisc);
+}
+
+// ---- HomeKit / Apple Home ----
+
+bool   hkEnabled()    { return g_hkEn; }
+String hkBridgeName() { return g_hkName.length() ? g_hkName : deviceName(); }
+String hkSetupCode()  { return g_hkCode.length() == 8 ? g_hkCode : String("74888377"); }
+
+void setHomeKit(bool enabled, const String &name, const String &code) {
+  g_hkEn = enabled; g_hkName = name; g_hkCode = code;
+  prefs.putBool("hkEn", g_hkEn);
+  prefs.putString("hkName", g_hkName);
+  prefs.putString("hkCode", g_hkCode);
 }
 
 // ---- Web interface authentication ----

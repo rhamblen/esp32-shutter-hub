@@ -16,6 +16,33 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.4.4] — 2026-07-09
+
+HomeKit **configuration tab** (Phase 5 groundwork) — the System ▸ HomeKit sub-tab now stores the
+bridge settings, ahead of the HomeSpan bridge itself (v0.5.0). Same pattern as the MQTT tab, which
+shipped its config before the Phase 4 integration. New firmware **and** filesystem bins.
+
+### Added
+- **System ▸ HomeKit sub-tab** — enable toggle, **bridge name** (defaults to the device name) and
+  **setup code** (8 digits, shown as `XXX-XX-XXX`, with a *Random code* generator), bridge/pairing
+  status rows, a disabled *Reset pairings* button (live once the bridge runs), and a **pairing QR
+  code** (`X-HM://` payload, category *bridge*, setup ID `SHUT`) rendered client-side via
+  `qrcode.min.js` (qrcodejs 1.0.0, MIT, added to the LittleFS bundle).
+- **Default setup code `748-88-377`** — "SHUTTERS" on a phone keypad; deliberately distinct from
+  HomeSpan's own default `466-37-726` ("HOMESPAN" by the same trick).
+- **`/api/homekit` GET/POST + `/api/homekit/reset-pairings`** — config persisted to NVS
+  (`AppConfig::hkEnabled/hkBridgeName/hkSetupCode`); the setup code is validated device-side
+  against Apple's banned trivial codes (all-same digits, `12345678`, `87654321`). Reset-pairings
+  returns 409 until the bridge exists.
+- **[HomeKit.h](firmware/include/HomeKit.h) stub API** — `running()/paired()/controllers()/resetPairings()`,
+  so Phase 5 only swaps the module's internals. Contract noted there: QR setup ID `SHUT`
+  (`homeSpan.setQRID`), HAP off port 80 (`homeSpan.setPort(1201)`), WiFi stays with WiFiManager.
+- **Icons on the System sub-tabs** — inline `currentColor` SVGs: cog (Device), wifi arcs (WiFi),
+  house (HomeKit), shield (Security). On phones the icon'd tabs collapse to icon-only.
+
+### Changed
+- Factory reset (`Reset config`) now also clears the HomeKit settings; confirm text updated.
+
 ## [0.4.3] — 2026-07-09
 
 Card-only patch. Frontend only — **no firmware change**, so no new firmware/filesystem bins.
