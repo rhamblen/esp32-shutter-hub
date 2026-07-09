@@ -230,6 +230,10 @@ class ShutterHubCard extends HTMLElement {
   }
 }
 
+// Version tracks the project release tag (single SemVer stream — see docs/ai-context.md).
+// HA caches card JS hard, so this console banner is how you tell which card is actually loaded.
+const CARD_VERSION = "0.5.4";
+
 customElements.define("shutter-hub-card", ShutterHubCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -237,3 +241,8 @@ window.customCards.push({
   name: "Shutter Hub Card",
   description: "Group + per-shutter control (Open/Close/Daylight/Privacy + position) for the ESP32 Shutter Hub",
 });
+console.info(
+  `%c shutter-hub-card %c v${CARD_VERSION} `,
+  "color:#fff;background:#ec4899;font-weight:700;border-radius:3px 0 0 3px;padding:2px 6px",
+  "color:#ec4899;background:#171a24;font-weight:700;border-radius:0 3px 3px 0;padding:2px 6px",
+);
