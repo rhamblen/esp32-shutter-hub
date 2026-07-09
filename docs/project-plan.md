@@ -15,7 +15,7 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | S2    | v0.2.0  | Web UI shell (LittleFS SPA) + Logs (WS) + MQTT/HA config | ☑ |
 | 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
-| 4b    | v0.4.x  | HA Lovelace card (control + calibration) | ☐ |
+| 4b    | v0.4.x  | HA Lovelace card (control + calibration) | ◐ |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
 | 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
@@ -138,8 +138,12 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 - **Prerequisites:** Phase 4 cover/button discovery for the **control** card. The **calibration**
   card additionally needs a firmware *go-to-µs* command + raw-µs readback (see spec §4), and
   `Shutters::MAX` raised from 4 → 6.
-- **Exit criteria:** control card drives all/one shutter and follows the HA theme; calibration card
-  does set-and-go and saves to the four slots (survives a FS OTA).
+- **Status (v0.4.2):** the **control card shipped** — [`ha-card/shutter-hub-card.js`](../ha-card/shutter-hub-card.js),
+  deployed to the *My Home › Shutters* dashboard as an inline Lovelace resource: group + per-shutter
+  Open/Close/Daylight/Privacy and a manual position slider. The **calibration card is deferred** to a
+  later build together with its firmware commands (`goto_us`, raw-µs readback, `save:open`/`save:close`).
+- **Exit criteria:** control card drives all/one shutter and follows the HA theme ☑; calibration card
+  does set-and-go and saves to the four slots (survives a FS OTA) ☐.
 
 ## Phase 5 — HomeKit (v0.5.0)
 - **Objective:** native Apple Home control.

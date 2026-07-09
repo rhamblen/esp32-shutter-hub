@@ -46,7 +46,8 @@ of shutters is configuration, not code.
 
 ## Status
 
-Design complete on paper; **Home Assistant cover control over MQTT** (`v0.4.0`). Every shutter
+Design complete on paper; **Home Assistant cover control over MQTT** plus a **custom Lovelace
+operating card** (`v0.4.2`). Every shutter
 defined in the web UI appears in HA as a native **`cover`** (open/close/stop + position 0–100) plus
 six **`button`** entities (jog open/close, Daylight/Privacy recall + save) via MQTT discovery —
 commands drive each shutter's own PCA9685 channel, **several simultaneously**, and retained
@@ -59,7 +60,8 @@ the Info/OTA screens and in the artifact names, with a persisted **speed slider*
 **Shutters** page is per-blind calibration: a microsecond scrubber + transport controls (slow-run →
 stop → frame-step nudge) set each blind's closed/open endpoints and Daylight/Privacy favourites,
 all persisted in NVS. Servo positions are remembered across reboots/OTA so the first move slews
-instead of snapping.
+instead of snapping. A **Home Assistant Lovelace card** ([ha-card/](ha-card/)) gives a single tile
+with group + per-shutter Open/Close/Daylight/Privacy and a manual position slider.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases) — per variant: full (USB) and
@@ -77,6 +79,7 @@ firmware (OTA), plus one shared LittleFS filesystem image.
 | [docs/decisions/](docs/decisions/) | Architecture Decision Records |
 | [docs/diagrams/](docs/diagrams/) | Architecture, wiring, and linkage SVGs |
 | [firmware/](firmware/) | ESP32 firmware (PlatformIO, Arduino Core) — build/flash/OTA |
+| [ha-card/](ha-card/) | Home Assistant Lovelace operating card (custom element) |
 | [hardware/](hardware/) | KiCad schematic / PCB + fabrication outputs |
 | [cad/](cad/) | 3D-printer source + STL/STEP for enclosures & parts |
 | [CHANGELOG.md](CHANGELOG.md) | Change history (Keep a Changelog + SemVer) |

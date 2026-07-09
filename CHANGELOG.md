@@ -16,6 +16,31 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.4.2] — 2026-07-09
+
+Home Assistant **operating card** (Phase 4b, first cut) — a custom Lovelace card for the shutters.
+Frontend only: **no firmware change**, so no new firmware/filesystem bins ship with this release.
+
+### Added
+- **`shutter-hub-card` — Lovelace operating tile** ([ha-card/shutter-hub-card.js](ha-card/shutter-hub-card.js)):
+  1–6 named shutters side by side, each with a slat glyph that tracks position. The four blind states —
+  **Open · Close · Daylight · Privacy** — plus a **manual position slider** (arbitrary 0–100 %) and a
+  **Stop**, applied to **all shutters at once** or to **one selected shutter** (tap a tile to scope,
+  *Select all* to return). Binds to the ADR-0005 discovery entities (`cover.<hub>_<id>` +
+  `button.<hub>_<id>_daylight`/`_privacy`, the button ids auto-derived from the cover id). Plain custom
+  element, no build step; themes off HA CSS variables. New [ADR-0007](docs/decisions/0007-ha-lovelace-card.md)
+  and build spec [docs/ha-lovelace-card.md](docs/ha-lovelace-card.md).
+- **Deployed to Home Assistant** — registered as an inline `module` dashboard resource and added as a
+  new **Shutters** view on the **My Home** dashboard (both currently-configured shutters). Movable later.
+
+### Notes
+- **Calibration / config card is deferred**, on purpose: raw-µs set-and-go, the full-open/close travel
+  endpoints, and *saving* into the four slots need firmware commands that don't exist yet (`goto_us`,
+  raw-µs readback, `save:open`/`save:close`). Specified for a future phase in
+  [docs/ha-lovelace-card.md](docs/ha-lovelace-card.md) §4; until then, calibrate in the hub web UI.
+- The card caps at 6 shutters; the firmware still defines `Shutters::MAX = 4` — raising it to 6 is
+  part of the deferred calibration-phase work.
+
 ## [0.4.1] — 2026-07-09
 
 ### Changed

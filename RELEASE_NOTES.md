@@ -1,64 +1,43 @@
-# v0.3.0 — Build variants + PCA9685 servo backend
+# v0.4.2 — Home Assistant operating card
 
-The servo hardware is now a **build-time variant** — direct GPIO (one bench actuator) or **PCA9685**
-(I2C multi-channel) — and every build says which it is, on-device and in the file name, so an OTA
-image is never flashed onto the wrong topology. This release also carries the **Shutters calibration
-page** from the 0.2.x dev cycle (see below) for anyone coming from v0.2.1.
+A custom **Lovelace card** for the shutters. Frontend only — **no firmware change**, so this
+release ships **no new firmware/filesystem bins** (keep running v0.4.1 firmware).
 
-## What's new since v0.2.1
+## What's new
 
-### Build variants (board × servo backend)
-- Servo driver chosen at compile time: **`-direct`** (ESP32Servo, one servo off a GPIO) or
-  **`-pca9685`** (Adafruit PWM driver, PCA9685 over I2C — the production topology).
-- Four PlatformIO envs — `esp32d-` / `esp32c3-` × `-direct` / `-pca9685`. Only the ESP32-D pair is
-  active; **`esp32d-pca9685` is the default**. C3 variants are defined but deferred.
-- Each build carries an **`FW_VARIANT`** id shown on the **Dashboard** and **OTA** screens
-  (`GET /api/info` → `variant` + `backend`) and baked into the artifact names.
-- New [ADR-0008](docs/decisions/0008-build-variants.md).
+**`shutter-hub-card`** — a single tile that shows 1–6 named shutters side by side, each with a
+slat glyph that tracks its position. It gives the four blind states — **Open · Close · Daylight ·
+Privacy** — plus a **manual position slider** (any 0–100 %) and a **Stop**, and you can drive
+**all shutters at once** or **tap one tile** to control just that shutter (*Select all* returns to
+the group).
 
-### PCA9685 servo backend + adaptive Servo-test page
-- On a `-pca9685` build the servo runs through a PCA9685 at `0x40` (50 Hz, µs pulse widths); detach
-  releases the channel. The µs position core (slew/speed/sweep) is shared with the direct build.
-- The **Servo test** page adapts to the running backend: the direct build keeps its signal-GPIO
-  selector; the PCA9685 build gets **I2C SDA/SCL pin selectors** and a **servo-channel (0–15)**
-  selector. New REST: `POST /api/servo/channel`, `POST /api/servo/i2c`.
+- Binds to the existing MQTT-discovery entities — `cover.<hub>_<id>` and
+  `button.<hub>_<id>_daylight` / `_privacy` (button ids auto-derived from the cover).
+- Plain custom element, no build step; themes off Home Assistant's own CSS variables.
+- Deployed to the **My Home › Shutters** dashboard as an inline module resource.
 
-### Also included — Shutters calibration page (from the 0.2.x cycle)
-- A dedicated **Shutters** page for per-blind calibration next to the Servo-test diagnostic:
-  µs scrubber, transport cluster (slow-run → Stop → frame-step nudge), OPEN/CLOSED endpoints and
-  Daylight/Privacy favourites, all persisted in NVS (survives a filesystem OTA). Full detail in
-  [CHANGELOG.md](CHANGELOG.md) under 0.2.2.
+New [ADR-0007](docs/decisions/0007-ha-lovelace-card.md) and build spec
+[docs/ha-lovelace-card.md](docs/ha-lovelace-card.md).
 
-## Download (ESP32-D)
+## Deferred (future phase)
 
-Per-variant firmware, plus one shared filesystem image (the web UI adapts to the backend at runtime):
+The **calibration / config card** is intentionally not included — raw-µs set-and-go, the
+full-open/close travel endpoints, and *saving* into the four preset slots need firmware commands
+that don't exist yet (`goto_us`, raw-µs readback, `save:open` / `save:close`). It's specified in
+[docs/ha-lovelace-card.md](docs/ha-lovelace-card.md) §4 for a later build. Until then, calibrate in
+the hub's web UI; this card operates the shutters Home Assistant already knows how to drive.
 
-| File | Use |
-| ---- | --- |
-| `shutter-hub-esp32d-pca9685-full-v0.3.0.bin` | First USB flash (PCA9685 build) at offset `0x0` |
-| `shutter-hub-esp32d-pca9685-ota-v0.3.0.bin` | OTA → **Upload Firmware** (PCA9685 build) |
-| `shutter-hub-esp32d-direct-full-v0.3.0.bin` | First USB flash (direct-GPIO build) at offset `0x0` |
-| `shutter-hub-esp32d-direct-ota-v0.3.0.bin` | OTA → **Upload Firmware** (direct-GPIO build) |
-| `shutter-hub-esp32d-littlefs-v0.3.0.bin` | OTA → **Upload LittleFS** (shared by both variants) |
+## Install
 
-_ESP32-C3 bins are deferred to a later release._
+Register `ha-card/shutter-hub-card.js` as a Lovelace resource (type *JavaScript Module*), then add
+the card to a dashboard:
 
-## Flash it
-
-First time, over USB (PCA9685 build shown):
+```yaml
+type: custom:shutter-hub-card
+title: Shutters
+shutters:
+  - entity: cover.shutter_hub_shutter_1
+  - entity: cover.shutter_hub_shutter_2
 ```
-esptool --chip esp32 write_flash 0x0 shutter-hub-esp32d-pca9685-full-v0.3.0.bin
-```
-Then join `Shutter-Hub-Setup`, pick your network, and open `http://shutter-hub.local/`.
 
-**Upgrading over the air: flash BOTH images** — the `-ota-` firmware **for your variant** *and* the
-shared `-littlefs-` filesystem. Upload the firmware first (auto-reboots), then LittleFS, then reboot,
-and **hard-refresh the browser once** (Ctrl+F5) to pick up the new UI cleanly. Confirm the
-**Variant** shown on the Dashboard matches the bin you flashed. Saved WiFi, shutters, and settings
-live in NVS and survive updates.
-
-## Build from source
-
-PlatformIO project in [`firmware/`](firmware/) — `pio run` builds the default `esp32d-pca9685`,
-`pio run -e esp32d-direct` the direct build, and `pio run -e <variant> -t buildfs` the filesystem
-image. See [`firmware/README.md`](firmware/README.md). Full history in [CHANGELOG.md](CHANGELOG.md).
+Full history in [CHANGELOG.md](CHANGELOG.md).

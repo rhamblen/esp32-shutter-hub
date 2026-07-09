@@ -6,12 +6,15 @@ card) and [decisions/0005-mqtt-command-structure.md](decisions/0005-mqtt-command
 (the entities/topics it binds to). Everything here is implementable as written; items
 that need firmware are called out under **Firmware dependencies**.
 
-Two cards ship from one bundle:
+Two cards are specified here. **Status:** the operating card
+([`ha-card/shutter-hub-card.js`](../ha-card/shutter-hub-card.js)) **shipped in v0.4.2**;
+the calibration card is **deferred** to a future phase because it needs firmware that
+does not exist yet (see §4 and the plan).
 
-| Card | Type | Where it lives | Depends on |
-| ---- | ---- | -------------- | ---------- |
-| `shutter-hub-card` | Everyday control | Any dashboard | Phase 4 covers/buttons only |
-| `shutter-hub-calibration-card` | Setup / calibration | Admin (hidden) dashboard | Phase 4 **+** calibration transport (below) |
+| Card | Type | Status | Depends on |
+| ---- | ---- | ------ | ---------- |
+| `shutter-hub-card` | Everyday control | **Shipped v0.4.2** | Phase 4 covers/buttons only |
+| `shutter-hub-calibration-card` | Setup / calibration | **Deferred** | Phase 4 **+** calibration transport (§4) |
 
 ---
 
@@ -20,13 +23,15 @@ Two cards ship from one bundle:
 Per shutter, from ADR-0005 MQTT discovery. `<id>` is the hub slug (e.g. `front_left`);
 HA object-ids are prefixed by the hub name at discovery time.
 
+Entity ids below are the **actual discovery names** (verified against a live hub).
+
 | Entity | Example | Used by | Purpose |
 | ------ | ------- | ------- | ------- |
-| `cover.<hub>_<id>` | `cover.shutter_hub_front_left` | both | position 0–100, open/close/stop |
+| `cover.<hub>_<id>` | `cover.shutter_hub_shutter_1` | both | position 0–100, open/close/stop |
+| `button.<hub>_<id>_daylight` | `button.shutter_hub_shutter_1_daylight` | control card | recall Daylight preset |
+| `button.<hub>_<id>_privacy` | `button.shutter_hub_shutter_1_privacy` | control card | recall Privacy preset |
 | `button.<hub>_<id>_jog_open` | — | (optional) | nudge open one step |
 | `button.<hub>_<id>_jog_close` | — | (optional) | nudge close one step |
-| `button.<hub>_<id>_recall_daylight` | — | control card | move to Daylight preset |
-| `button.<hub>_<id>_recall_privacy` | — | control card | move to Privacy preset |
 | `button.<hub>_<id>_save_daylight` | — | calibration | store current angle → Daylight |
 | `button.<hub>_<id>_save_privacy` | — | calibration | store current angle → Privacy |
 | `sensor`/`number` (calibration) | see §4 | calibration | raw µs read + set-and-go |
