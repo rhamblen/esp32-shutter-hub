@@ -169,11 +169,21 @@ namespace WebUI {
 void begin() {
   String host = AppConfig::deviceName();
 
-  if (MDNS.begin(host.c_str())) {
-    MDNS.addService("http", "tcp", 80);
-    LOGI("mdns", "http://%s.local", host.c_str());
+  // mDNS ownership: HomeSpan and Arduino ESPmDNS share ONE underlying responder, and two
+  // initialisers collide — which left the HAP `_hap._tcp` record unannounced, so the Home
+  // app could never discover the bridge (proven-good HomeKey-ESP32 avoids this by letting
+  // HomeSpan be the sole mDNS owner). So when HomeKit is enabled we do NOT start mDNS here;
+  // HomeKit::begin() lets HomeSpan initialise it (same hostname, so <name>.local still works)
+  // and re-adds this http service under it. Only own mDNS ourselves when HomeKit is off.
+  if (!AppConfig::hkEnabled()) {
+    if (MDNS.begin(host.c_str())) {
+      MDNS.addService("http", "tcp", 80);
+      LOGI("mdns", "http://%s.local", host.c_str());
+    } else {
+      LOGW("mdns", "start failed");
+    }
   } else {
-    LOGW("mdns", "start failed");
+    LOGI("mdns", "HomeKit enabled — deferring mDNS to HomeSpan (sole owner)");
   }
 
   // Live log feed: register the sink so every LOG* line streams to WS clients.

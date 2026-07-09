@@ -16,6 +16,25 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.5.4] — 2026-07-09
+
+**HomeKit discovery, take 2 — single mDNS owner.** The Home app still couldn't discover the bridge
+after v0.5.2. Comparing against the proven-good **HomeKey-ESP32** (which also runs HomeSpan + a web
+server + MQTT) showed the real difference: *its web server never touches mDNS — HomeSpan is the sole
+owner.* Ours had two initialisers of the one shared ESPmDNS responder (WebUI's `_http` + HomeSpan's
+`_hap`), which left `_hap._tcp` unannounced.
+
+### Fixed
+- **WebUI no longer calls `MDNS.begin()` when HomeKit is enabled** — it defers to HomeSpan, which
+  becomes the sole mDNS owner (same hostname via `setHostNameSuffix("")`, so `<name>.local` still
+  resolves; `HomeKit::begin()` re-adds the `_http` service under HomeSpan's responder). When HomeKit
+  is disabled, WebUI owns mDNS exactly as before. Removed the v0.5.2 `MDNS.end()` band-aid (there's
+  now nothing to tear down — only one initialiser runs).
+
+### Notes
+- Confirmed the network is fine: other HomeKit accessories pair normally on the same 5 GHz phone, so
+  the fault was our advertisement, not the WiFi. This is the fix for "iPhone finds nothing".
+
 ## [0.5.3] — 2026-07-09
 
 **HomeKit no longer freezes the servos.** With the bridge enabled, servo control (both the Servo-test

@@ -149,13 +149,11 @@ void begin() {
   homeSpan.setPairCallback(onPair);
   homeSpan.setControllerCallback(onController);
 
-  // WebUI::begin() already ran MDNS.begin() for the web UI's _http service. HomeSpan wants to
-  // initialise mDNS itself to advertise _hap._tcp, but a second MDNS.begin() on an already-
-  // running responder no-ops, and the HAP service then never gets announced — the accessory
-  // never appears in the Home app (exactly the "iPhone finds nothing" symptom). Tear the
-  // responder down so HomeSpan gets a clean init; we re-add the _http service right after.
-  MDNS.end();
-
+  // HomeSpan is the SOLE mDNS owner when HomeKit is on: WebUI::begin() deliberately skips its
+  // own MDNS.begin() in that case (two initialisers of the one shared responder collided and left
+  // _hap._tcp unannounced — the Home app then discovers nothing; the working HomeKey-ESP32 build
+  // avoids it the same way). So homeSpan.begin() below performs the one and only mDNS init here;
+  // we re-add the web UI's _http service under it afterwards.
   homeSpan.begin(Category::Bridges, g_bridgeName.c_str(), g_host.c_str(), "ESP32 Shutter Hub");
 
   // After begin() the NVS handles are open: safe to set the code (progCall=false so a
@@ -193,7 +191,7 @@ void begin() {
   LOGI("homekit", "PAIR WITH THIS CODE: %.3s-%.2s-%.3s (bridge '%s', QR id SHUT on port 1201)",
        c, c + 3, c + 5, g_bridgeName.c_str());
 
-  // HomeSpan re-ran MDNS.begin(hostName); re-add the web UI's http service under it.
+  // HomeSpan initialised mDNS (the sole owner); advertise the web UI's http service under it.
   MDNS.addService("http", "tcp", 80);
 
   // Run HomeSpan on its OWN FreeRTOS task instead of calling poll() from the Arduino loop().
