@@ -6,6 +6,11 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Changed
+- **`shutter-hub-card` button order** is now **Close · Privacy · Daylight · Open** (was
+  Open · Close · Daylight · Privacy) — a closed→open progression. Card-only change; the deployed
+  inline resource on *My Home › Shutters* was updated in place (hard-refresh to pick it up).
+
 ### Release checklist / notes
 - **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`
   (firmware) bin **per variant** — `shutter-hub-<variant>-{full,ota}-vX.Y.Z.bin` — plus a **single

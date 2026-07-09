@@ -147,10 +147,10 @@ class ShutterHubCard extends HTMLElement {
         <div class="sh-target"><span class="sh-tlabel"></span><button class="sh-all" style="display:none">Select all</button></div>
         <div class="sh-slider"><input type="range" min="0" max="100" step="1" value="0"><span class="sh-pct">0%</span></div>
         <div class="sh-btns">
-          <button class="sh-btn" data-k="open"><ha-icon icon="mdi:arrow-up-bold"></ha-icon><span>Open</span></button>
           <button class="sh-btn" data-k="close"><ha-icon icon="mdi:arrow-down-bold"></ha-icon><span>Close</span></button>
-          <button class="sh-btn" data-k="daylight"><ha-icon icon="mdi:weather-sunny"></ha-icon><span>Daylight</span></button>
           <button class="sh-btn" data-k="privacy"><ha-icon icon="mdi:eye-off"></ha-icon><span>Privacy</span></button>
+          <button class="sh-btn" data-k="daylight"><ha-icon icon="mdi:weather-sunny"></ha-icon><span>Daylight</span></button>
+          <button class="sh-btn" data-k="open"><ha-icon icon="mdi:arrow-up-bold"></ha-icon><span>Open</span></button>
         </div>
         <div class="sh-btns stop">
           <button class="sh-btn" data-k="stop" style="grid-column:span 5"><ha-icon icon="mdi:stop"></ha-icon><span>Stop</span></button>
