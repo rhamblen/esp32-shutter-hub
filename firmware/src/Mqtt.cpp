@@ -173,14 +173,15 @@ void publishSensor(const char *object, const char *name, const char *field,
 }
 
 // The six per-shutter buttons (ADR 0005): jog, recall presets, save presets.
-struct BtnDef { const char *object; const char *label; const char *payload; bool config; };
+// Icons are declared device-side so the entities look right everywhere in HA.
+struct BtnDef { const char *object; const char *label; const char *payload; const char *icon; bool config; };
 const BtnDef BTNS[] = {
-  {"jog_open",        "Jog open",      "jog_open",        false},
-  {"jog_close",       "Jog close",     "jog_close",       false},
-  {"recall_daylight", "Daylight",      "recall:daylight", false},
-  {"recall_privacy",  "Privacy",       "recall:privacy",  false},
-  {"save_daylight",   "Save daylight", "save:daylight",   true},
-  {"save_privacy",    "Save privacy",  "save:privacy",    true},
+  {"jog_open",        "Jog open",      "jog_open",        "mdi:chevron-double-up",       false},
+  {"jog_close",       "Jog close",     "jog_close",       "mdi:chevron-double-down",     false},
+  {"recall_daylight", "Daylight",      "recall:daylight", "mdi:window-shutter-settings", false},
+  {"recall_privacy",  "Privacy",       "recall:privacy",  "mdi:window-shutter-settings", false},
+  {"save_daylight",   "Save daylight", "save:daylight",   "mdi:content-save-cog",        true},
+  {"save_privacy",    "Save privacy",  "save:privacy",    "mdi:content-save-cog",        true},
 };
 
 void publishCoverDiscovery(const String &id, const String &name) {
@@ -203,6 +204,7 @@ void publishButtonDiscovery(const String &id, const String &shName, const BtnDef
   p += "\"uniq_id\":\"" + g_node + "_" + id + "_" + b.object + "\",";
   p += "\"cmd_t\":\"" + g_base + "/cover/" + id + "/cmd\",";
   p += "\"pl_prs\":\"" + String(b.payload) + "\",";
+  p += "\"ic\":\"" + String(b.icon) + "\",";
   p += "\"avty_t\":\"" + statusTopic() + "\",";
   if (b.config) p += "\"ent_cat\":\"config\",";
   p += deviceBlock() + "}";

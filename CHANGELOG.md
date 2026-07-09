@@ -16,6 +16,17 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.4.1] — 2026-07-09
+
+### Changed
+- **Declared icons on the per-shutter HA buttons** — the MQTT discovery payloads now set each
+  button's icon device-side, so the entities look right everywhere in HA (device page,
+  auto-dashboards, pickers): **Daylight / Privacy recall** → `mdi:window-shutter-settings`,
+  **Jog open / close** → `mdi:chevron-double-up` / `mdi:chevron-double-down`,
+  **Save daylight / privacy** → `mdi:content-save-cog`. Retained configs republish on connect —
+  entities update in place, nothing to redo in HA. The cover keeps its `device_class: shutter`
+  state-driven icon.
+
 ## [0.4.0] — 2026-07-09
 
 MQTT / Home Assistant cover control (Phase 4): every configured shutter becomes a native HA
