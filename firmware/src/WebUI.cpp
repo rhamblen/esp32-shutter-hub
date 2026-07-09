@@ -263,7 +263,7 @@ void begin() {
     r->send(200, "application/json", "{\"ok\":true}");
   });
 
-  // ---- HomeKit (System > HomeKit sub-tab — config now, HomeSpan bridge in Phase 5) ----
+  // ---- HomeKit (System > HomeKit sub-tab — config + HomeSpan bridge state, Phase 5) ----
   server.on("/api/homekit", HTTP_GET, [](AsyncWebServerRequest *r) {
     if (!guard(r)) return;
     r->send(200, "application/json", hkConfigJson());
@@ -281,7 +281,7 @@ void begin() {
       return;
     }
     AppConfig::setHomeKit(en, name, code);
-    LOGI("homekit", "config saved: enabled=%d name='%s' (bridge lands in v0.5.0)",
+    LOGI("homekit", "config saved: enabled=%d name='%s' — REBOOT to apply (bridge starts at boot)",
          en, AppConfig::hkBridgeName().c_str());
     r->send(200, "application/json", hkConfigJson());
   });
@@ -289,7 +289,7 @@ void begin() {
     if (!guard(r)) return;
     if (!HomeKit::resetPairings()) {
       r->send(409, "application/json",
-        "{\"error\":\"HomeKit bridge is not in this firmware yet (arrives with v0.5.0)\"}");
+        "{\"error\":\"HomeKit bridge isn't running — enable it and reboot first\"}");
       return;
     }
     r->send(200, "application/json", "{\"ok\":true,\"msg\":\"pairings cleared — re-pair from the Home app\"}");
