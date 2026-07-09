@@ -511,8 +511,10 @@ function otaUpload(target, file) {
 $("#o_fwup").addEventListener("click", async () => {
   const f = $("#o_fwfile").files[0]; if (!f) { otaLog("Choose a firmware .bin first."); return; }
   $("#o_fwup").disabled = true; otaLog("Uploading firmware " + f.name + "…");
-  try { await otaUpload("firmware", f); otaLog("Firmware flashed — rebooting, reconnect in ~15s."); }
-  catch (e) { otaLog("Firmware failed: " + e); } $("#o_fwup").disabled = false;
+  try { await otaUpload("firmware", f);
+    otaLog("Firmware flashed. Flash a filesystem too if needed, then click Reboot to run it.");
+    $("#o_reboot").classList.add("primary"); $("#o_reboot").classList.remove("ghost");
+  } catch (e) { otaLog("Firmware failed: " + e); } $("#o_fwup").disabled = false;
 });
 $("#o_fsup").addEventListener("click", async () => {
   const f = $("#o_fsfile").files[0]; if (!f) { otaLog("Choose a LittleFS .bin first."); return; }

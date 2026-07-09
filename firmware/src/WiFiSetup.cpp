@@ -67,10 +67,14 @@ bool connectTo(const String &ssid, const String &pass) {
   return false;
 }
 
-void forgetAndReboot() {
-  LOGW("wifi", "clearing saved credentials and restarting into setup AP");
+void forget() {
+  LOGW("wifi", "clearing saved WiFi credentials");
   WiFiManager wm;
   wm.resetSettings();
+}
+
+void forgetAndReboot() {
+  forget();
   delay(200);
   ESP.restart();
 }

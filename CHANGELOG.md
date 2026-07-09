@@ -16,6 +16,31 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.5.1] — 2026-07-09
+
+**Reliable reboot.** Field-testing v0.5.0 exposed that the device often wouldn't restart on command
+— OTA firmware flashes and the web *Reboot* buttons set a flag serviced by the Arduino `loop()`, and
+when the loop is starved/blocked the restart never fired (so a freshly-flashed image never ran until a
+physical power-cycle). Reboots now fire from a high-priority `esp_timer`, independent of `loop()`.
+New firmware + filesystem bins.
+
+### Fixed
+- **`Diagnostics::scheduleReboot()`** — restarts via a one-shot `esp_timer` (dispatched on the
+  high-priority timer task), so a reboot happens even if `loop()` is stalled. `/api/system/reboot`,
+  *Reset WiFi*, and *Reset config* now send their response, do their NVS work inline, then schedule
+  the restart — no more loop-serviced `pending*` flags.
+- **OTA no longer auto-reboots**, removing a race: flashing firmware *then* filesystem could fire the
+  restart mid-filesystem-write or lose it entirely. Flash firmware and/or filesystem in any order,
+  then click **Reboot** (now reliable). The OTA page highlights *Reboot* after any flash.
+
+### Changed
+- `WiFiSetup::forget()` added (clear WiFi creds without restarting); `forgetAndReboot()` builds on it.
+
+### Migration
+- To get onto v0.5.1: OTA-flash the `…-ota-v0.5.1.bin` firmware (+ `…-littlefs-v0.5.1.bin`), then
+  **power-cycle once** to activate it (v0.5.0's software reboot is the very thing being fixed, so it
+  can't be relied on for this last hop). From v0.5.1 onward, the *Reboot* button is dependable.
+
 ## [0.5.0] — 2026-07-09
 
 **Phase 5 — Apple HomeKit.** The HomeSpan bridge behind the config tab shipped in v0.4.4 is now

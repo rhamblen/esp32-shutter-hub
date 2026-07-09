@@ -2,6 +2,7 @@
 #include "AppConfig.h"
 #include <WiFi.h>
 #include <esp_system.h>
+#include <esp_timer.h>
 #include <stdarg.h>
 
 #ifndef FW_VERSION
@@ -132,6 +133,26 @@ void reboot() {
   LOGW("diag", "reboot requested");
   delay(300);
   ESP.restart();
+}
+
+void scheduleReboot(uint32_t delayMs) {
+  static esp_timer_handle_t timer = nullptr;
+  LOGW("diag", "reboot scheduled in %u ms", (unsigned)delayMs);
+  if (!timer) {
+    // ESP_TIMER_TASK dispatch runs the callback in the high-priority esp_timer task,
+    // so the restart fires even if the Arduino loop() is starved or blocked.
+    const esp_timer_create_args_t args = {
+      .callback = [](void *) { esp_restart(); },
+      .arg = nullptr,
+      .dispatch_method = ESP_TIMER_TASK,
+      .name = "reboot",
+      .skip_unhandled_events = false,
+    };
+    esp_timer_create(&args, &timer);
+  } else {
+    esp_timer_stop(timer);                     // reschedule if called again
+  }
+  esp_timer_start_once(timer, (uint64_t)delayMs * 1000ULL);
 }
 
 }  // namespace Diagnostics

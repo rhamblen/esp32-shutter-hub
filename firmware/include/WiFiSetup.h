@@ -8,6 +8,7 @@
 
 namespace WiFiSetup {
 void connect();          // blocks until connected (opens the portal if unprovisioned)
+void forget();           // clear saved WiFi from NVS (does NOT restart — caller reboots)
 void forgetAndReboot();  // clear saved WiFi from NVS and restart into the setup AP
 
 // Switch to a different network in place (no reboot). Persists the new credentials

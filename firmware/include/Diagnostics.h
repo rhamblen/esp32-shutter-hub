@@ -12,7 +12,11 @@ void   logf(char level, const char *tag, const char *fmt, ...);  // structured s
 String humanUptime();                                    // "0d 01h 02m 03s"
 String resetReason();                                    // why the chip last restarted
 String infoJson();                                       // device health as JSON (served at /info)
-void   reboot();                                         // graceful restart
+void   reboot();                                         // immediate restart (blocks ~300 ms first)
+// Restart after delayMs, fired from a high-priority esp_timer — NOT the Arduino loop.
+// Safe to call from an async web handler: the HTTP response flushes, then the chip
+// restarts even if the main loop() is stalled (which the flag-in-loop pattern couldn't).
+void   scheduleReboot(uint32_t delayMs = 600);
 
 // ---- Live log feed (Logs page) ----
 // Sink receives one JSON object per line: {"t":<ms>,"lvl":"I","tag":"..","msg":".."}.

@@ -27,10 +27,7 @@
 
 static AsyncWebServer server(80);
 static AsyncWebSocket ws("/ws/logs");
-static bool   pendingReboot      = false;
-static bool   pendingForget      = false;
-static bool   pendingFactory     = false;
-static bool   pendingWifiConnect = false;
+static bool   pendingWifiConnect = false;   // in-place network switch (not a reboot)
 static String connSsid, connPass;
 
 // escape a string for embedding in JSON
@@ -225,23 +222,27 @@ void begin() {
     r->send(200, "application/json", mqttConfigJson());
   });
 
-  // ---- System quick actions (deferred so the HTTP response flushes first) ----
+  // ---- System quick actions ----
+  // Each sends its response first, then schedules the restart via a high-priority
+  // esp_timer (Diagnostics::scheduleReboot) so it fires even if the main loop is stalled.
   server.on("/api/system/reboot", HTTP_POST, [](AsyncWebServerRequest *r) {
     if (!guard(r)) return;
     r->send(200, "application/json", "{\"ok\":true,\"msg\":\"rebooting\"}");
-    pendingReboot = true;
+    Diagnostics::scheduleReboot(600);
   });
   server.on("/api/system/reset-wifi", HTTP_POST, [](AsyncWebServerRequest *r) {
     if (!guard(r)) return;
     r->send(200, "application/json",
       "{\"ok\":true,\"msg\":\"WiFi cleared — restarting into Shutter-Hub-Setup\"}");
-    pendingForget = true;
+    WiFiSetup::forget();                 // clear creds now; the timer restarts us shortly
+    Diagnostics::scheduleReboot(600);
   });
   server.on("/api/system/reset-config", HTTP_POST, [](AsyncWebServerRequest *r) {
     if (!guard(r)) return;
     r->send(200, "application/json",
       "{\"ok\":true,\"msg\":\"settings cleared — rebooting (WiFi kept)\"}");
-    pendingFactory = true;
+    AppConfig::factoryReset();           // wipe app settings now; timer restarts us shortly
+    Diagnostics::scheduleReboot(600);
   });
 
   // ---- Security (web auth) ----
@@ -517,9 +518,6 @@ void loop() {
     pendingWifiConnect = false;
     WiFiSetup::connectTo(connSsid, connPass);   // blocks ~12–24s; async server keeps serving
   }
-  if (pendingForget)  { delay(400); WiFiSetup::forgetAndReboot(); }
-  if (pendingFactory) { delay(400); AppConfig::factoryReset(); Diagnostics::reboot(); }
-  if (pendingReboot)  { delay(400); Diagnostics::reboot(); }
 }
 
 }  // namespace WebUI
