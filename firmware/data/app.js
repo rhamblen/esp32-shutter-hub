@@ -212,7 +212,7 @@ function hkRenderQr() {
   const uri = hkQrUri(code);
   $("#hk_qrcap").innerHTML = (hkStat.running
     ? "Scan with the iPhone camera or the Home app to pair"
-    : "Pairing QR preview — scannable once the v0.5.0 bridge is running")
+    : "Pairing QR preview — enable HomeKit and reboot to pair")
     + `<br><b>${hkFmt(code)}</b>`;
   if (uri === hkLastUri) return;
   hkLastUri = uri;
@@ -227,9 +227,10 @@ async function loadHomekit() {
     $("#hk_en").checked = d.enabled;
     $("#hk_name").value = d.name;
     $("#hk_code").value = hkFmt(d.code);
-    $("#hk_run").textContent = d.running ? "Running" : "Not in this firmware yet — arrives with v0.5.0";
+    $("#hk_run").textContent = d.running ? "Running"
+      : d.enabled ? "Enabled — reboot to start the bridge" : "Disabled";
     $("#hk_pair").textContent = d.running
-      ? (d.paired ? `Paired — ${d.controllers} controller(s)` : "Not paired") : "—";
+      ? (d.paired ? `Paired — ${d.controllers} controller(s)` : "Not paired — scan the QR to pair") : "—";
     $("#hk_reset").disabled = !d.running;
     hkRenderQr();
   } catch (e) { $("#hk_msg").textContent = "Load failed: " + e.message; }
@@ -251,10 +252,17 @@ $("#hk_save").addEventListener("click", async () => {
     const d = await apiPost("/api/homekit",
       { enabled: $("#hk_en").checked, name: $("#hk_name").value.trim(), code });
     hkStat = d;
-    $("#hk_msg").textContent = d.running
-      ? "Saved — reboot to apply." : "Saved — applies when the v0.5.0 bridge firmware is flashed.";
+    // Every HomeKit change is applied at boot, so a save alone never reaches the running
+    // bridge — steer the user to reboot before they try to pair.
+    $("#hk_msg").textContent = "Saved — now click “Reboot to apply” so the bridge picks up the change.";
+    $("#hk_reboot").classList.add("primary"); $("#hk_reboot").classList.remove("ghost");
     hkRenderQr();
   } catch (e) { $("#hk_msg").textContent = "Failed: " + e.message; }
+});
+$("#hk_reboot").addEventListener("click", async () => {
+  if (!confirm("Reboot the hub now to apply the HomeKit settings?")) return;
+  $("#hk_msg").textContent = "Rebooting — reconnect in ~15s, then pair from the Home app.";
+  try { await apiPost("/api/system/reboot"); } catch (e) {}
 });
 $("#hk_reset").addEventListener("click", async () => {
   if (!confirm("Reset HomeKit pairings? Every paired iPhone / Home hub will have to re-pair.")) return;

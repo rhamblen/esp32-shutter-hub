@@ -1,17 +1,25 @@
-// HomeKit — STUB. Phase 5: HomeSpan bridge exposing one Window Covering accessory
-// per shutter (+ Siri). The System > HomeKit tab (v0.4.4) already stores the config
-// (AppConfig::hkEnabled/hkBridgeName/hkSetupCode) and reads bridge state through this
-// API, so wiring HomeSpan in only changes this module. Contract for that work:
-//   - QR setup ID is "SHUT" (homeSpan.setQRID) — the web UI renders the pairing QR
-//     with that ID baked in, so firmware and UI must stay in sync.
-//   - HAP must move off port 80 (the web server owns it): homeSpan.setPort(1201).
-//   - WiFi stays owned by WiFiSetup/WiFiManager; HomeSpan must not manage it.
+// HomeKit — HomeSpan bridge exposing one Window Covering per shutter (Phase 5, v0.5.0).
+//
+// Native HAP (no hub/bridge hardware needed). Config lives in AppConfig
+// (hkEnabled/hkBridgeName/hkSetupCode); the System > HomeKit web tab reads bridge
+// state through the getters below and renders the pairing QR. Coexistence contract
+// with the rest of the firmware (all handled in HomeKit.cpp):
+//   - HAP runs on TCP port 1201 (homeSpan.setPortNum) — the async web server keeps 80.
+//   - mDNS hostname is pinned to the device name (setHostNameSuffix "") so <name>.local
+//     still resolves the web UI; the http service is re-asserted after HomeSpan starts.
+//   - WiFi stays owned by WiFiManager: we're already connected before HomeSpan polls, so its
+//     checkConnect() sees WL_CONNECTED and never calls WiFi.begin() itself (no startup blip).
+//     It's given the live creds only so it can reconnect on its own if the link later drops.
+//   - QR setup ID is "SHUT" — must match the web UI's X-HM:// payload.
+// Enabling/disabling or changing shutters takes effect on the next reboot (the accessory
+// tree is built once at begin(), like a normal HomeSpan sketch).
 #pragma once
 
 namespace HomeKit {
-void begin();          // no-op stub for now
-bool running();        // false until HomeSpan is wired in (v0.5.0)
-bool paired();         // any HomeKit controllers paired?
+void begin();          // start the bridge if AppConfig::hkEnabled(); no-op otherwise
+void loop();           // pump homeSpan.poll() + deferred pairing reset; call every main loop
+bool running();        // true once the bridge is up (enabled + begun)
+bool paired();         // any HomeKit controller currently paired?
 int  controllers();    // number of paired controllers
-bool resetPairings();  // wipe pairing data; false while the bridge isn't built
+bool resetPairings();  // erase HomeKit pairing data + reboot; false if the bridge isn't running
 }

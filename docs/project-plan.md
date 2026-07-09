@@ -16,7 +16,7 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
 | 4b    | v0.4.x  | HA Lovelace operating card     | ☑      |
-| 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☐      |
+| 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☑      |
 | 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
 | 8     | —       | HA calibration card (optional) | ☐      |
@@ -142,11 +142,17 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 ## Phase 5 — HomeKit (v0.5.0)
 - **Objective:** native Apple Home control.
 - **What we build:** HomeSpan bridge exposing one Window Covering per shutter; Siri.
-- **Status (v0.4.4):** groundwork shipped — System ▸ HomeKit config tab (bridge name, setup code
-  with default **748-88-377**, pairing QR, `/api/homekit`), stub `HomeKit` module with the bridge
-  contract documented in [HomeKit.h](../firmware/include/HomeKit.h) (QR ID `SHUT`, HAP port 1201,
-  WiFi stays with WiFiManager). Remaining: wire HomeSpan itself into `HomeKit::begin()`.
-- **Exit criteria:** shutters controllable from the Home app and Siri, alongside HA.
+- **Status (v0.5.0):** ☑ built — HomeSpan bridge in [HomeKit.cpp](../firmware/src/HomeKit.cpp), one
+  Window Covering accessory per shutter, driving the same `ServoController` slots as MQTT. Pinned to
+  `HomeSpan @ ~1.9.1` (last line supporting arduino-esp32 core 2.0.9). Coexistence: HAP on port 1201
+  (web server keeps 80), mDNS hostname pinned to the device name, WiFi stays with WiFiManager, QR id
+  `SHUT`. Setup code default **748-88-377**. Uncalibrated shutters still operate via the servo
+  envelope (MVP). **All HomeKit settings apply at boot** — the tab has a *Reboot to apply* button.
+  Flash is now ~90 % of the app partition (HomeSpan pulls in HAP/SRP crypto) — Phase 6 must fit the
+  remaining headroom.
+- **Exit criteria:** shutters controllable from the Home app and Siri, alongside HA. *(Pairing is
+  verified on the owner's hardware + Apple device — the active setup code is echoed to the web Logs
+  page to cross-check against the tab.)*
 
 ## Phase 6 — Light sensor + solar logic (v0.6.0)
 - **Objective:** automatic heat protection.

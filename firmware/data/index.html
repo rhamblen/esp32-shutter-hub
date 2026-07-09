@@ -293,7 +293,7 @@
       </div>
       <div class="card tabpane hidden" data-pane="homekit">
         <div class="toggle-row">
-          <div><b>Enable HomeKit bridge</b><p>Expose each shutter as a Window Covering in Apple Home. The bridge itself arrives with the v0.5.0 firmware — settings saved here apply then.</p></div>
+          <div><b>Enable HomeKit bridge</b><p>Expose each shutter as a Window Covering in Apple Home, pairable alongside Home Assistant. Enabling — or adding/removing shutters — takes effect after a reboot.</p></div>
           <label class="switch"><input type="checkbox" id="hk_en"><span class="slider"></span></label>
         </div>
         <div class="form2">
@@ -307,11 +307,14 @@
           <p id="hk_qrcap">Scan with the iPhone camera or the Home app to pair<br><b id="hk_codefmt"></b></p>
         </div>
         <div class="actions">
-          <button class="btn primary" id="hk_save">Save &amp; Apply changes</button>
+          <button class="btn primary" id="hk_save">Save changes</button>
+          <button class="btn ghost" id="hk_reboot">↻ Reboot to apply</button>
           <button class="btn ghost" id="hk_rand">⟳ Random code</button>
           <button class="btn danger" id="hk_reset" disabled>Reset pairings</button>
           <span class="msg" id="hk_msg"></span>
         </div>
+        <p class="msg">HomeKit changes — enabling, the setup code, the bridge name, adding/removing
+          shutters — only take effect after a reboot. Save, then <b>Reboot to apply</b> before pairing.</p>
       </div>
       <div class="card tabpane hidden" data-pane="security">
         <div class="toggle-row">

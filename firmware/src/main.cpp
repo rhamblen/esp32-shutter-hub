@@ -9,7 +9,7 @@
 //   ServoController multi-slot µs driver, backend = GPIO | PCA9685    [real]
 //   Shutters        per-blind definitions + calibration (NVS)     [Phase 2 real]
 //   Mqtt            HA covers/buttons + discovery + state         [Phase 4 real, v0.4.0]
-//   HomeKit         HomeSpan bridge                               [stub, Phase 5]
+//   HomeKit         HomeSpan bridge (Window Covering / shutter)   [Phase 5 real, v0.5.0]
 //   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
 //
 // The `-direct` variants run on a bare ESP32 dev board; the `-pca9685` variants
@@ -64,5 +64,6 @@ void loop() {
   WebUI::loop();
   ServoController::loop();   // advances the non-blocking servo sweep, if running
   Mqtt::loop();             // pump MQTT client + non-blocking reconnect
+  HomeKit::loop();          // pump HomeSpan (HAP) + deferred pairing reset
   delay(5);
 }

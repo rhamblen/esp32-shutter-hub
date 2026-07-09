@@ -16,6 +16,67 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.5.0] — 2026-07-09
+
+**Phase 5 — Apple HomeKit.** The HomeSpan bridge behind the config tab shipped in v0.4.4 is now
+live: each configured shutter appears in Apple Home as a **Window Covering**, pairable directly
+(no hub) and controllable alongside Home Assistant. New firmware **and** filesystem bins.
+
+### Added
+- **HomeSpan bridge** ([firmware/src/HomeKit.cpp](firmware/src/HomeKit.cpp)) — one HAP *Window
+  Covering* accessory per shutter under a single bridge. `update()` drives the same
+  `ServoController` slot as MQTT; `loop()` streams the live position back and, once the servo
+  settles, syncs Apple Home's target to the real position so moves made elsewhere (MQTT, the web
+  UI) are reflected in Home too. Position maths mirror the MQTT cover exactly (0 % = closed unless
+  the shutter's scale is inverted); an uncalibrated shutter rejects target changes.
+- **`homespan/HomeSpan @ ~1.9.1`** dependency — pinned to the 1.9.x line, the last that supports
+  arduino-esp32 core 2.0.9 (HomeSpan 2.x requires core ≥ 3.3.0; upgrading the core would churn
+  every other library, so it stays on 2.0.9).
+- **Live bridge state** — `/api/homekit` now reports real `running`/`paired`/`controllers`; the
+  System ▸ HomeKit tab shows *Running* / *Enabled — reboot to start* / *Disabled*, enables
+  *Reset pairings* only when the bridge is up, and its pairing QR is now the real, scannable code.
+- **Operable-by-default shutters (MVP)** — HomeKit is for *driving* blinds, not configuring them, so
+  an uncalibrated shutter is now still operable in Apple Home: it falls back to the servo's pulse
+  envelope (min = closed, max = open) for a usable 0–100 % range. Calibrate in the web UI for
+  accurate travel; the accessory logs which mode it's in.
+- **Active pairing code echoed to the web Logs page** at start-up (HomeSpan's own pairing log only
+  reaches the USB serial console) — so the code the *running* bridge expects can be checked against
+  what the tab shows.
+
+### Fixed
+- **Pairing failed after changing the setup code (“code not recognised” / QR hangs).** The pairing
+  verifier is baked in at boot, so a code (or enable, or bridge-name) changed in the web UI never
+  reached the running bridge until a restart — leaving the tab showing one code while the device
+  paired against another. The HomeKit tab now has an explicit **Reboot to apply** button; *Save*
+  no longer implies “applied”, and directs you to reboot before pairing.
+
+### Changed
+- **`HomeKit::loop()`** added to the main loop (pumps `homeSpan.poll()` + the deferred pairing
+  reset). *Reset pairings* erases HomeKit pairing data and reboots (HomeSpan `'H'`), deferred ~400 ms
+  so the HTTP response flushes first.
+- HomeKit tab copy updated now the bridge is real (no longer "arrives with v0.5.0"); notes that
+  enabling, or adding/removing shutters, takes effect after a reboot.
+
+### Design decisions / coexistence
+- **Port 1201 for HAP** (`setPortNum`) — the async web server keeps port 80.
+- **mDNS hostname pinned to the device name** (`setHostNameSuffix("")`) so `<name>.local` still
+  resolves the web UI; HomeSpan re-runs `MDNS.begin()`, so the `_http` service is re-asserted after.
+- **WiFi stays with WiFiManager** — we're already connected before HomeSpan polls, so its
+  `checkConnect()` sees `WL_CONNECTED` and never calls `WiFi.begin()` itself (no startup blip); it's
+  handed the live creds only for its own later reconnects.
+- **QR setup ID `SHUT`**, category *Bridges* (2), protocol IP (2) — the web UI's `X-HM://` payload
+  is computed to match HomeSpan's own encoder byte-for-byte.
+- **Flash is now ~90 %** of the 1.3 MB app partition (was ~63 %) — HomeSpan pulls in the HAP/SRP
+  crypto. Still fits with OTA headroom, but Phase 6 (light sensor) must budget against the remaining
+  ~10 %.
+
+### Known limitations
+- The accessory tree is built once at boot, so **any HomeKit change — enable, setup code, bridge
+  name, adding/removing a shutter — needs a reboot** to take effect (MQTT still updates live). The
+  tab now surfaces this with a *Reboot to apply* button.
+- Pairing itself is confirmed on real hardware with an Apple device: save → *Reboot to apply* →
+  scan the QR or enter the code shown. The active code is echoed to the web Logs page to cross-check.
+
 ## [0.4.4] — 2026-07-09
 
 HomeKit **configuration tab** (Phase 5 groundwork) — the System ▸ HomeKit sub-tab now stores the

@@ -64,13 +64,19 @@ persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N
 **S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config), **2** (v0.2.2–v0.3.0 Shutters
 page + calibration; PCA9685 backend + build variants + position memory). Phase 3 retired (folded
 into S/S2), **4** (v0.4.0 MQTT/HA covers + buttons + discovery + concurrent drive; verified on
-hardware), **4b** (v0.4.2 Lovelace operating card). **5 groundwork** shipped in v0.4.4: System ▸
-HomeKit config tab (`/api/homekit`, NVS `hk*` keys, default setup code **748-88-377** = "SHUTTERS"
-on a keypad, client-side `X-HM://` pairing QR). The HomeSpan bridge itself is the remaining Phase 5
-work — contract in `firmware/include/HomeKit.h`: QR setup ID **`SHUT`** (`homeSpan.setQRID`), HAP
-off port 80 (`homeSpan.setPort(1201)`), WiFi stays with WiFiManager. Remaining: **5** HomeKit →
-**6** light/solar → **7** production → **8** HA calibration card (optional). **0** (mechanical
-force test) still open.
+hardware), **4b** (v0.4.2 Lovelace operating card). **5 HomeKit** done (v0.5.0): HomeSpan bridge
+(`firmware/src/HomeKit.cpp`), one Window Covering accessory per shutter driving the same
+`ServoController` slots as MQTT; config tab shipped in v0.4.4 (`/api/homekit`, NVS `hk*` keys,
+default setup code **748-88-377**, client-side `X-HM://` QR). **Pinned `HomeSpan @ ~1.9.1`** — last
+line supporting arduino-esp32 **core 2.0.9** (2.x needs core ≥3.3.0; do NOT bump the core, it would
+churn every other lib). Coexistence (all in HomeKit.cpp): HAP `setPortNum(1201)` (web keeps 80),
+`setHostNameSuffix("")` pins mDNS host to the device name + re-adds the `_http` service, WiFi stays
+with WiFiManager (HomeSpan sees `WL_CONNECTED`, never calls WiFi.begin), `setQRID("SHUT")` +
+`setPairingCode(code,false)`. **Gotcha: the pairing verifier is baked at boot** — a code/enable/name
+change needs a reboot (the tab has *Reboot to apply*; the active code is logged to the web Logs
+page). Uncalibrated shutters still operate via the servo envelope (MVP). Flash now ~90 % of the app
+partition. Remaining: **6** light/solar → **7** production → **8** HA calibration card (optional).
+**0** (mechanical force test) still open.
 
 ## Gotchas
 
