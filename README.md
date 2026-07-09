@@ -62,6 +62,12 @@ stop → frame-step nudge) set each blind's closed/open endpoints and Daylight/P
 all persisted in NVS. Servo positions are remembered across reboots/OTA so the first move slews
 instead of snapping. A **Home Assistant Lovelace card** ([ha-card/](ha-card/)) gives a single tile
 with group + per-shutter Open/Close/Daylight/Privacy and a manual position slider.
+**Phase 5 (`v0.5.x`)** adds an **Apple HomeKit** bridge (HomeSpan): each shutter also appears in the
+Home app as a **Window Covering**, configured on a new **System › HomeKit** tab (bridge name, setup
+code, pairing QR). The bridge runs on its own task so it never interferes with servo control, and
+reboot/OTA are driven by a reliable timer. **Status:** the bridge is functional (servos and HA keep
+working with it enabled), but Apple Home **device discovery/pairing on the author's own network is
+still unresolved** and parked — see [CHANGELOG.md](CHANGELOG.md). Everything else is in daily use.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases) — per variant: full (USB) and
