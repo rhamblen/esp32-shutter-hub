@@ -37,8 +37,11 @@ shipped its config before the Phase 4 integration. New firmware **and** filesyst
 - **[HomeKit.h](firmware/include/HomeKit.h) stub API** — `running()/paired()/controllers()/resetPairings()`,
   so Phase 5 only swaps the module's internals. Contract noted there: QR setup ID `SHUT`
   (`homeSpan.setQRID`), HAP off port 80 (`homeSpan.setPort(1201)`), WiFi stays with WiFiManager.
-- **Icons on the System sub-tabs** — inline `currentColor` SVGs: cog (Device), wifi arcs (WiFi),
-  house (HomeKit), shield (Security). On phones the icon'd tabs collapse to icon-only.
+- **Icons on the tab bars** — inline `currentColor` SVGs on both sub-tab rows: System ▸ cog
+  (Device), wifi arcs (WiFi), house (HomeKit), shield (Security); MQTT ▸ globe (Broker), inbox
+  (Topics). On phones the icon'd tabs collapse to icon-only. (SSL/TLS was considered and
+  deliberately left out — the broker is local-LAN Mosquitto, so plaintext MQTT is the norm and
+  on-device TLS isn't worth the cert-management and handshake-RAM cost.)
 
 ### Changed
 - Factory reset (`Reset config`) now also clears the HomeKit settings; confirm text updated.
