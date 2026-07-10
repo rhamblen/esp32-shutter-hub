@@ -51,6 +51,50 @@ Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, n
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.7.0] — 2026-07-10
+
+**HomeKit pairing works.** The bridge is now discoverable in Apple Home and changes sync both
+ways (Home ↔ HA). This is the diagnostic/rollback baseline — it still carries the investigation's
+debug logging; v0.7.1 tidies it up.
+
+### Fixed
+- **HomeKit was completely undiscoverable and unpairable — root cause found & fixed.** With the bridge
+  enabled the device advertised no `_hap._tcp`, the HAP server on port 1201 never opened, and the Home
+  app saw nothing. The real cause was **not** mDNS or task/core (both were chased as red herrings):
+  HomeSpan 1.9.1's `Span::checkConnect()` validates its mDNS hostname with
+  `sscanf(hostName,"%m[A-Za-z0-9-]",&d)`, and **newlib-nano (this arduino-esp32 toolchain) does not
+  implement the `%m` allocating conversion**. So `d` was never set, `strlen(hostName)!=strlen(d)` was
+  falsely true, and HomeSpan hit its `while(1)` *PROGRAM HALTED* — silently, on the poll task, before
+  it ever advertised the service or opened 1201. (`shutter-hub` is a perfectly valid hostname; the
+  self-check was broken.)
+  - **Fix:** a vendored patch replaces that check with a nano-safe character loop. It lives in
+    `firmware/patches/HomeSpan.cpp` and is re-applied to `.pio/libdeps` before every build by
+    `patches/apply_patches.py` (`extra_scripts` in `platformio.ini`), so it survives library
+    reinstalls and applies to all four variants. See `firmware/patches/README.md`.
+- **mDNS now initialised on the main thread** (`WebUI::begin()`, both modes) — hostname + `_http._tcp`;
+  HomeSpan adds `_hap._tcp` on top. This replaced the earlier "HomeSpan is sole mDNS owner" scheme,
+  which was itself a misdiagnosis of the `%m` hang.
+
+### Added
+- **HomeKit health watchdog (WARN).** `HomeKit::loop()` now logs a `WARN` if HomeSpan's connect
+  callback hasn't fired within 10 s of boot — i.e. the bridge is stalled, not discoverable, 1201 closed.
+  Previously it failed silently.
+- **HomeKit diagnostics (temporary, removed in v0.7.1).** HomeSpan `setStatusCallback` streamed to the
+  web **Logs** page; a one-shot bridge summary (`running/paired/controllers/hapUp/host/freeHeap`); and
+  `[hs]` breadcrumbs threaded through HomeSpan's `checkConnect()` that pinpointed the `%m` hang.
+
+### Changed
+- **Log levels — first pass.** MQTT publish (`tx …`) traffic moved to **VERBOSE** (a failed publish now
+  logs **WARN**); MQTT `subscribed …` lines and the HomeKit `[dbg]` lines moved to **DEBUG**, so INFO
+  reads as a clean operational narrative. (Full Servo/Solar reclassification lands in v0.7.1.)
+- **HomeSpan poll task** now runs on **core 1** (`autoPoll(16384,1,1)`), changed from core 0 while
+  diagnosing; core was not the cause, but core 1 is tested-good and left as-is.
+
+### Notes
+- No behavioural change to servos, MQTT/HA control, or the solar logic. All four variants
+  (`esp32d-{direct,pca9685}`, `esp32c3-{direct,pca9685}`) build with the fix; the C3 bins remain
+  untested engineering builds.
+
 ## [0.6.2] — 2026-07-10
 
 **Check the wiring from the Info page.** A hardware table naming every device, its bus, its pins and

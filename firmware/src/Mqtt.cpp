@@ -88,8 +88,9 @@ String deviceBlock() {
 
 void publish(const String &topic, const String &payload, bool retain) {
   bool ok = client.publish(topic.c_str(), payload.c_str(), retain);
-  LOGD("mqtt", "tx %s (%u B)%s%s", topic.c_str(), (unsigned)payload.length(),
-       retain ? " [retained]" : "", ok ? "" : " FAILED");
+  if (ok) LOGV("mqtt", "tx %s (%u B)%s", topic.c_str(), (unsigned)payload.length(),
+               retain ? " [retained]" : "");
+  else    LOGW("mqtt", "tx %s FAILED (%u B)", topic.c_str(), (unsigned)payload.length());
 }
 
 // ---- Shutter helpers ---------------------------------------------------------
@@ -500,16 +501,16 @@ bool tryConnect() {
   LOGI("mqtt", "connected");
   publish(statusTopic(), "online", true);
   client.subscribe(cmdTopic().c_str());
-  LOGI("mqtt", "subscribed %s", cmdTopic().c_str());
+  LOGD("mqtt", "subscribed %s", cmdTopic().c_str());
   for (const char *leaf : {"set", "position/set", "cmd"}) {
     String w = g_base + "/cover/+/" + leaf;
     client.subscribe(w.c_str());
-    LOGI("mqtt", "subscribed %s", w.c_str());
+    LOGD("mqtt", "subscribed %s", w.c_str());
   }
   for (const char *leaf : {"enable/set", "trip_lux/set", "clear_lux/set"}) {
     String w = solarTopic(leaf);
     client.subscribe(w.c_str());
-    LOGI("mqtt", "subscribed %s", w.c_str());
+    LOGD("mqtt", "subscribed %s", w.c_str());
   }
   publishDiscovery();            // hub diagnostic sensors
   publishShutterDiscovery();     // per-shutter cover + button entities

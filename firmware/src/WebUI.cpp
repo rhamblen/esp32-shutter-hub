@@ -227,21 +227,22 @@ namespace WebUI {
 void begin() {
   String host = AppConfig::deviceName();
 
-  // mDNS ownership: HomeSpan and Arduino ESPmDNS share ONE underlying responder, and two
-  // initialisers collide — which left the HAP `_hap._tcp` record unannounced, so the Home
-  // app could never discover the bridge (proven-good HomeKey-ESP32 avoids this by letting
-  // HomeSpan be the sole mDNS owner). So when HomeKit is enabled we do NOT start mDNS here;
-  // HomeKit::begin() lets HomeSpan initialise it (same hostname, so <name>.local still works)
-  // and re-adds this http service under it. Only own mDNS ourselves when HomeKit is off.
-  if (!AppConfig::hkEnabled()) {
-    if (MDNS.begin(host.c_str())) {
-      MDNS.addService("http", "tcp", 80);
-      LOGI("mdns", "http://%s.local", host.c_str());
-    } else {
-      LOGW("mdns", "start failed");
-    }
+  // mDNS ownership: HomeSpan and Arduino ESPmDNS share ONE underlying responder. We initialise it
+  // HERE, on the main thread, for BOTH modes. Earlier this was DEFERRED to HomeSpan whenever HomeKit
+  // was enabled — but HomeSpan calls mdns_init() from its background autoPoll task (core 0, alongside
+  // WiFiManager-owned WiFi + AsyncTCP), and that call HANGS on this build: the responder never came
+  // up (no hostname, no _hap/_http) and the HAP server on port 1201 never started, so the Home app
+  // could never discover *or* pair with the bridge (v0.7.0 diagnosis: onConnection never fired, 1201
+  // closed, `dns-sd` saw nothing for shutter-hub). Bringing mDNS up on the main thread is the path
+  // that always worked (it's what ran with HomeKit off). HomeSpan's checkConnect() then calls
+  // mdns_init() too, but with the responder already running that returns ESP_ERR_INVALID_STATE
+  // immediately (a cheap no-op, not a hang) and HomeSpan simply ADDS its _hap._tcp service on top.
+  if (MDNS.begin(host.c_str())) {
+    MDNS.addService("http", "tcp", 80);
+    LOGI("mdns", "http://%s.local%s", host.c_str(),
+         AppConfig::hkEnabled() ? " (HomeSpan will add _hap._tcp)" : "");
   } else {
-    LOGI("mdns", "HomeKit enabled — deferring mDNS to HomeSpan (sole owner)");
+    LOGW("mdns", "start failed");
   }
 
   // Live log feed: register the sink so every LOG* line streams to WS clients.

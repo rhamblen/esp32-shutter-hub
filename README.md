@@ -78,9 +78,9 @@ calibration, and pairings are untouched.
 
 ## Status
 
-**Current release `v0.6.2`.** In daily use: the web UI, per-shutter calibration, Home Assistant
-control over MQTT, and the Lovelace card. Two things are built but unproven — **HomeKit pairing does
-not work** and the **light sensor is not yet wired**; both are detailed below.
+**Current release `v0.7.0`.** In daily use: the web UI, per-shutter calibration, Home Assistant
+control over MQTT, the Lovelace card, and — as of `v0.7.0` — **Apple HomeKit pairing**. One thing is
+still unproven: the **light sensor is not yet wired**; see below.
 
 Every shutter
 defined in the web UI appears in HA as a native **`cover`** (open/close/stop + position 0–100) plus
@@ -100,11 +100,11 @@ with group + per-shutter Open/Close/Daylight/Privacy and a manual position slide
 **Phase 5 (`v0.5.x`)** adds an **Apple HomeKit** bridge (HomeSpan): each shutter also appears in the
 Home app as a **Window Covering**, configured on a new **System › HomeKit** tab (bridge name, setup
 code, pairing QR). The bridge runs on its own task so it never interferes with servo control, and
-reboot/OTA are driven by a reliable timer. **Status: incomplete — pairing does not work.** The bridge
-builds, boots and advertises, and the hub stays fully functional with it enabled (servos and HA are
-unaffected), but **no controller has ever completed pairing** on the author's hardware. Three rounds
-of fixes (v0.5.1–v0.5.4) each removed a real defect without producing a pairing; the work is parked
-and the bridge can be left disabled with no loss of function — see [CHANGELOG.md](CHANGELOG.md).
+reboot/OTA are driven by a reliable timer. **Status: working as of `v0.7.0`.** Pairing failed on the
+author's hardware through v0.6.x; the root cause was finally found in v0.7.0 — HomeSpan 1.9.1's mDNS
+hostname check uses a `sscanf("%m…")` conversion that **newlib-nano doesn't implement**, halting the
+bridge before it advertised. With that patched, the bridge pairs and shutters **sync both ways**
+(Home ↔ HA) — see [CHANGELOG.md](CHANGELOG.md).
 **Phase 6 (`v0.6.0`)** adds **solar heat protection**: a **VEML7700** light sensor on its own I²C
 bus drives a trip/clear state machine — when the sun stays above a threshold for a set dwell the
 shutters move to a chosen preset, and a second threshold releases them. Both actions can be set to
@@ -115,10 +115,14 @@ compiling; **not yet verified against physical sensor hardware.**
 **`v0.6.2`** makes the Info page a wiring check: a **Hardware & wiring** table naming every device,
 its I²C bus (shared or dedicated), its pins, and its address or PCA9685 channel — plus HomeKit
 status and a human-readable brightness percentage alongside raw lux.
+**`v0.7.0`** makes **HomeKit pairing work** (see above), adds a bridge-health WARN watchdog, and
+begins a log-level cleanup. Its fix is carried as a vendored HomeSpan patch under
+[firmware/patches/](firmware/patches/).
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
-to build/flash. Prebuilt ESP32-D bins ship on each
-[release](https://github.com/rhamblen/esp32-shutter-hub/releases) — per variant: full (USB) and
-firmware (OTA), plus one shared LittleFS filesystem image.
+to build/flash. Prebuilt bins ship on each
+[release](https://github.com/rhamblen/esp32-shutter-hub/releases) — all four variants (ESP32-D, plus
+ESP32-C3 as untested engineering builds): full (USB) and firmware (OTA), plus one shared LittleFS
+filesystem image.
 
 ## Repo layout
 

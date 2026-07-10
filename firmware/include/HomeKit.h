@@ -5,8 +5,11 @@
 // state through the getters below and renders the pairing QR. Coexistence contract
 // with the rest of the firmware (all handled in HomeKit.cpp):
 //   - HAP runs on TCP port 1201 (homeSpan.setPortNum) — the async web server keeps 80.
-//   - mDNS hostname is pinned to the device name (setHostNameSuffix "") so <name>.local
-//     still resolves the web UI; the http service is re-asserted after HomeSpan starts.
+//   - mDNS is initialised by WebUI::begin() on the MAIN thread (hostname + _http._tcp), for both
+//     modes. HomeSpan then ADDS its _hap._tcp service to that already-running responder. Do NOT let
+//     HomeSpan own mdns_init(): it calls it from its background autoPoll task and that hangs here
+//     (WiFiManager-owned WiFi + AsyncTCP on core 0) — the responder never came up and port 1201
+//     never opened (v0.7.0). hostName is still pinned to the device name (setHostNameSuffix "").
 //   - WiFi stays owned by WiFiManager: we're already connected before HomeSpan polls, so its
 //     checkConnect() sees WL_CONNECTED and never calls WiFi.begin() itself (no startup blip).
 //     It's given the live creds only so it can reconnect on its own if the link later drops.
