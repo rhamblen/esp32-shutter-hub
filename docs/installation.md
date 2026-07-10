@@ -36,6 +36,10 @@ Go to the [Releases page](https://github.com/rhamblen/esp32-shutter-hub/releases
 assets for the **`esp32d-pca9685`** variant (that is the real four-shutter hub; `esp32d-direct` is a
 single-servo bench build). A release carries three files per variant:
 
+> `esp32c3-*` bins are also published, but they are **untested engineering builds** — the pin map is
+> still the ESP32-D's and solar heat protection cannot work on that chip. Use an ESP32-D.
+> [pinout.md](pinout.md#esp32-c3-status--not-ready) has the detail.
+
 | File | What it is | When you need it |
 | ---- | ---------- | ---------------- |
 | `shutter-hub-esp32d-pca9685-full-vX.Y.Z.bin` | Bootloader + partitions + app, merged | First USB flash only |
@@ -255,9 +259,13 @@ If you add a shutter later, reboot the hub so HomeSpan republishes its accessory
 
 ## Step 9 — Set up solar heat protection (optional)
 
-The VEML7700 sits on its **own I²C bus** (`Wire1`, GPIO25/26 by default) so a fault on the sensor
-lead cannot take down the PCA9685 servo bus — see
-[ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md).
+The VEML7700 sits on its **own I²C bus** (`Wire1`, SDA GPIO25 / SCL GPIO26 by default) so a fault on
+the sensor lead cannot take down the PCA9685 servo bus on GPIO21/22 — see
+[ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md) and [pinout.md](pinout.md).
+
+> **ESP32-D only.** Solar heat protection needs a *second* hardware I²C controller. The ESP32-D has
+> two; the **ESP32-C3 has one**, so the sensor bus cannot exist there and the feature will not work
+> on a C3 board however it is configured. See [pinout.md](pinout.md#esp32-c3-status--not-ready).
 
 > **Status:** built and compiling, **not yet verified against physical sensor hardware.** The
 > simulate-lux slider works regardless, so you can exercise the whole state machine before the sensor

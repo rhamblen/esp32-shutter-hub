@@ -3,6 +3,11 @@
 Day-to-day operation, once the hub is built, flashed, and calibrated. If you have not done that yet,
 start at [installation.md](installation.md).
 
+> **About the screenshots.** The web-UI pictures below are design mockups, not captures of a running
+> device. They show the layout and the controls in the positions you will find them, but wording,
+> colours, and version numbers on the real screens may differ — and will drift as the firmware moves
+> on. Trust the device in front of you over the picture.
+
 The hub has **four faces**, and they all drive the same servos and stay in sync with each other:
 
 | Face | Address | Best for |
@@ -113,9 +118,14 @@ set specific percentages, or trigger the Home Assistant buttons instead.
 
 ## Solar heat protection
 
+> Requires an **ESP32-D**. The sensor needs a second hardware I²C bus, which the ESP32-C3 does not
+> have — see [pinout.md](pinout.md#esp32-c3-status--not-ready).
+
 The VEML7700 watches the light level. When lux stays **above** the trip threshold for the trip dwell,
 the hub moves the shutters to your chosen bright-action position. When lux stays **below** the clear
 threshold for the clear dwell, it moves them to the clear-action position.
+
+![The Solar page](diagrams/solar-page.svg)
 
 The state machine reads:
 
@@ -155,6 +165,8 @@ minute per shutter and does not disturb anything else.
 Open **Shutters**, pick the blind, use **slow close** / **stop** / **nudge** to land the endpoint
 exactly where you want it, and press **Save current** on the row concerned. It writes to NVS
 immediately — no save button, no reboot.
+
+![The Shutters calibration page](diagrams/calibration-page.svg)
 
 The transport controls, in the order you actually use them:
 

@@ -23,7 +23,7 @@ Design principles, key trade-offs, and topology. Companion to
 | Central hub | 4 independent ESP32 nodes | Shutters share a room; short loom; 4× fewer parts; true sync | 0001 |
 | MG90D | MG90S / DS3235 | Digital accuracy; huge torque margin for lightweight slats; DS3235 oversized | 0002 |
 | XL4015 5.1 V | LM2596 | Servo peak 2–3 A vs LM2596's realistic ~2 A; XL4015 gives margin | 0003 |
-| PCA9685 driver | Direct ESP32 PWM | Clean multi-servo drive, shared I2C with sensor, easy channel expansion | 0003 |
+| PCA9685 driver | Direct ESP32 PWM | Clean multi-servo drive off one I2C bus, easy channel expansion | 0003 |
 | Custom firmware (HomeSpan+MQTT) | ESPHome | Keeps native HomeKit + custom smooth motion + calibration UI + OTA | 0004 |
 | Pushrod + ball link | Direct servo-to-rod coupling | Tolerates misalignment; force off the gear train; easy install/removal | — |
 

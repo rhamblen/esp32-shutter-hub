@@ -35,14 +35,19 @@ of shutters is configuration, not code.
 
 ## Hardware (locked)
 
-| Component | Choice |
-| --------- | ------ |
-| Controller | ESP32-D |
-| Servo driver | PCA9685 (16-ch I2C) |
-| Servos | MG90D digital metal-gear ×4 |
-| Power | USB-C PD → AITRIP trigger (12 V) → XL4015 @ 5.1 V |
-| Light sensor | VEML7700 |
-| Linkage | M2 × 50 mm ball-link pushrod + printed arms |
+| Component | Choice | Default pins (ESP32-D) |
+| --------- | ------ | ---------------------- |
+| Controller | ESP32-D | — |
+| Servo driver | PCA9685 (16-ch I2C, `0x40`) | `Wire` — SDA **GPIO21**, SCL **GPIO22** |
+| Servos | MG90D digital metal-gear ×4 | PCA9685 **CH0–CH3** |
+| Power | USB-C PD → AITRIP trigger (12 V) → XL4015 @ 5.1 V | — |
+| Light sensor | VEML7700 (I2C, `0x10`) | `Wire1` — SDA **GPIO25**, SCL **GPIO26** |
+| Linkage | M2 × 50 mm ball-link pushrod + printed arms | — |
+
+The sensor sits on a **second, separate I2C bus** so a fault on its lead can never wedge the servo
+bus ([ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md)). Every pin above is
+runtime-configurable and stored in NVS. Full map, including the ESP32-C3 proposal and the pins the
+firmware rejects: **[docs/pinout.md](docs/pinout.md)**.
 
 ## Installation
 
@@ -110,6 +115,7 @@ firmware (OTA), plus one shared LittleFS filesystem image.
 | ---- | -------- |
 | [docs/installation.md](docs/installation.md) | Full install guide — flash, WiFi, calibrate, HA, HomeKit, solar |
 | [docs/user-guide.md](docs/user-guide.md) | Everyday operation, solar behaviour, recalibration, troubleshooting |
+| [docs/pinout.md](docs/pinout.md) | GPIO map — ESP32-D defaults, ESP32-C3 proposal, rejected pins |
 | [docs/project-brief.md](docs/project-brief.md) | Master engineering specification |
 | [docs/project-plan.md](docs/project-plan.md) | Phased roadmap + status + open decisions |
 | [docs/architecture.md](docs/architecture.md) | Principles, trade-offs, topology |

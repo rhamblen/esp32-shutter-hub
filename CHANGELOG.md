@@ -13,11 +13,30 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   carries its own troubleshooting table.
 - **[docs/user-guide.md](docs/user-guide.md)** — everyday operation: the four saved positions,
   the four control faces (web UI, HA, Apple Home, Lovelace card), solar behaviour incl. hysteresis
-  and the 2 h manual override, recalibration, and routine maintenance.
+  and the 2 h manual override, recalibration, and routine maintenance. Embeds the Shutters and Solar
+  page mockups, footnoted as mockups rather than captures.
+- **[docs/pinout.md](docs/pinout.md)** — GPIO map for both boards: the ESP32-D defaults the firmware
+  actually ships (`Wire` SDA21/SCL22 → PCA9685; `Wire1` SDA25/SCL26 → VEML7700; GPIO13 servo signal
+  on `-direct`), the pins `validGpio()` rejects and why, and a **proposed** ESP32-C3 map.
+
+### Fixed
+- **Stale "shared I2C bus" notes**, which contradicted [ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md)
+  and the shipped v0.6.0 firmware. `project-brief.md` claimed "PCA9685 and VEML7700 share one bus"
+  and omitted the sensor bus from its pinout table; `architecture.md` still gave "shared I2C with
+  sensor" as a reason to pick the PCA9685; `project-plan.md` D9 referred to "the shared I2C bus".
+
+### Notes
+- **ESP32-C3 is not shippable yet**, recorded in [docs/pinout.md](docs/pinout.md). Both C3 envs
+  compile (`esp32c3-pca9685` links at 89.4 % flash), but: **solar cannot work on the C3** — the
+  VEML7700 needs a second I²C controller (`SOC_I2C_NUM` is `2` on the ESP32-D, `1` on the C3), and
+  the Arduino core declares `Wire1` unconditionally so `LightSensor.cpp` compiles against a
+  peripheral that does not exist; and `ServoController::validGpio()` still carries the ESP32-D
+  whitelist, so on a C3 it would accept nonexistent pins (25/26/27/32/33) and the SPI-flash pins
+  (12–17). Firmware fix pending.
 
 ### Changed
-- **README** — new **Installation** section (five-step summary linking to the guides above), and
-  both new documents listed in the repo-layout table.
+- **README** — new **Installation** section (five-step summary linking to the guides above); the
+  hardware table now carries default pins per component; new documents listed in the repo-layout table.
 
 ### Release checklist / notes
 - **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`

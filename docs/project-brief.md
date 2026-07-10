@@ -178,15 +178,24 @@ XL4015 buck converter    →  set to 5.1 V   (≈5 A rated; replaces LM2596)
 
 ### Hub pinout (ESP32-D)
 
+Defaults; all of them are runtime-configurable and persisted in NVS. Full table — including the
+ESP32-C3 proposal and the pins the firmware refuses — in [pinout.md](pinout.md).
+
 | Pin           | Function                                   |
 | ------------- | ------------------------------------------ |
-| GPIO21 (SDA)  | I2C — shared by PCA9685 (0x40) + VEML7700 (0x10) |
-| GPIO22 (SCL)  | I2C clock                                  |
+| GPIO21 (SDA)  | I2C `Wire` — **servo bus**, PCA9685 (0x40) |
+| GPIO22 (SCL)  | I2C `Wire` clock                           |
+| GPIO25 (SDA)  | I2C `Wire1` — **sensor bus**, VEML7700 (0x10) |
+| GPIO26 (SCL)  | I2C `Wire1` clock                          |
+| GPIO13        | Servo signal — `-direct` builds only        |
 | GPIO34        | (optional) servo-rail voltage monitor (ADC, brownout detect) |
 | GPIO0         | Boot / recovery                            |
 | PCA9685 CH0–3 | Servo PWM → shutters 1–4                    |
 
-I2C addresses do not conflict, so PCA9685 and VEML7700 share one bus.
+The I2C addresses do not conflict, so the PCA9685 and VEML7700 *could* share one bus — but from
+v0.6.0 they deliberately do not. The sensor runs on its own `Wire1`, so a fault on its long lead to
+the window can never wedge the servo bus and strand the shutters. See
+[ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md).
 
 ---
 
