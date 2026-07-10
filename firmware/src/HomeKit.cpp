@@ -16,19 +16,11 @@
 #define FW_VERSION "0.0.0"
 #endif
 
-// [dbg v0.7.0] Breadcrumb hook, called from an INSTRUMENTED copy of HomeSpan's checkConnect()
-// (firmware/.pio/libdeps/<env>/HomeSpan/src/HomeSpan.cpp) to localise exactly where its post-connect
-// init stalls — the poll task reaches "Device not yet Paired" but never adds _hap or opens 1201.
-// Logged at WARN so the crumbs stand out. TEMPORARY: revert the library edits + this hook once found.
-void hsCrumb(const char *m) { LOGW("homekit", "[hs] %s", m); }
-
 namespace {
 bool          g_started      = false;   // bridge actually begun (enabled + set up)
 volatile bool g_paired       = false;   // at least one controller paired (pair callback)
 volatile bool g_resetPending = false;   // web UI asked to erase pairings
 unsigned long g_resetAt      = 0;       // when to run it (lets the HTTP response flush)
-unsigned long g_dbgAt        = 0;       // [dbg v0.7.0] when to emit the one-shot bridge summary
-bool          g_dbgDone      = false;   // [dbg v0.7.0] summary already logged?
 volatile bool g_hapUp        = false;   // HomeSpan finished post-connect init (connect callback fired)
 unsigned long g_hapWatchAt   = 0;       // when to WARN if the HAP server never came up
 bool          g_hapWarned    = false;   // stall WARN already emitted?
@@ -104,7 +96,7 @@ struct DevShutter : Service::WindowCovering {
       return false;                       // reject: Home app reverts the tile
     }
     int us = pctToUs(s, tp);
-    LOGI("homekit", "%s: target %d%% -> %d us%s", Shutters::idAt(idx).c_str(), tp, us,
+    LOGD("homekit", "%s: target %d%% -> %d us%s", Shutters::idAt(idx).c_str(), tp, us,
          s.calibrated ? "" : " (default envelope — not calibrated)");
     ServoController::moveSlotUs(slot, us);
     return true;
@@ -132,13 +124,11 @@ void onPair(boolean isPaired) {
 void onController() {
   LOGI("homekit", "controller list changed (%d paired)", HomeKit::controllers());
 }
-// [dbg v0.7.0] Stream HomeSpan's own state machine to the web Logs page so we can see the
-// bridge progress without a USB serial cable. The states that matter for the "device won't
-// show up in the Home app" hunt: HS_WIFI_CONNECTING -> HS_PAIRING_NEEDED means the bridge is
-// up, mDNS is announced and it's *discoverable*; HS_PAIRED means a controller got through.
-// Remove this callback (and its setStatusCallback registration) once pairing is confirmed.
+// Mirror HomeSpan's own state machine to the web Logs page (DEBUG) — handy for future HomeKit
+// debugging without a USB serial cable: "Device not yet Paired" = up and discoverable, "Paired"
+// once a controller completes pairing.
 void onStatus(HS_STATUS s) {
-  LOGD("homekit", "[dbg] HomeSpan status -> %s", homeSpan.statusString(s));
+  LOGD("homekit", "HomeSpan state: %s", homeSpan.statusString(s));
 }
 }  // namespace
 
@@ -168,7 +158,7 @@ void begin() {
   homeSpan.setWifiCallbackAll(onConnection);   // (1.9.x name for setConnectionCallback)
   homeSpan.setPairCallback(onPair);
   homeSpan.setControllerCallback(onController);
-  homeSpan.setStatusCallback(onStatus);        // [dbg v0.7.0] mirror HomeSpan state to web Logs
+  homeSpan.setStatusCallback(onStatus);        // mirror HomeSpan state to the web Logs (DEBUG)
 
   // HomeSpan is the SOLE mDNS owner when HomeKit is on: WebUI::begin() deliberately skips its
   // own MDNS.begin() in that case (two initialisers of the one shared responder collided and left
@@ -212,25 +202,18 @@ void begin() {
   LOGI("homekit", "PAIR WITH THIS CODE: %.3s-%.2s-%.3s (bridge '%s', QR id SHUT on port 1201)",
        c, c + 3, c + 5, g_bridgeName.c_str());
 
-  // mDNS is already up: WebUI::begin() initialised the shared responder (hostname + _http._tcp)
-  // on the main thread before we got here. HomeSpan's checkConnect() will ADD its _hap._tcp
-  // service to that running responder. We deliberately do NOT touch mDNS from this side any more —
-  // the old MDNS.addService() here ran before the responder existed (it logged FAILED) and the
-  // whole "let HomeSpan own mDNS" scheme hung HomeSpan's poll task at mdns_init() (see WebUI.cpp).
+  // mDNS is already up: WebUI::begin() initialised the shared responder (hostname + _http._tcp) on
+  // the main thread before we got here, and HomeSpan's checkConnect() ADDS its _hap._tcp on top (its
+  // own mdns_init() is then a no-op). We deliberately do NOT touch mDNS from this side.
 
-  // Run HomeSpan on its OWN FreeRTOS task (autoPoll) — NOT from the Arduino loop(): HAP/pairing
-  // crypto can hold the CPU for long stretches and, on the shared main loop, that starved servo
-  // slewing + MQTT (servos/HA froze whenever the bridge was on). It runs on CORE 1 (with the Arduino
-  // loop), NOT core 0: HomeSpan's post-connect init calls into the ESP-IDF mDNS and lwIP service
-  // tasks, which live on core 0 — pinning our poll task to core 0 as well made it BLOCK waiting on
-  // those same-core tasks, so init never finished (no _hap._tcp, HAP server never opened on 1201,
-  // connect callback never fired — v0.7.0 diagnosis). On core 1 the core-0 network tasks run freely
-  // and init completes; preemptive scheduling keeps servos/MQTT responsive. 16 KB stack gives the
-  // SRP big-number math headroom during pairing.
-  homeSpan.autoPoll(16384, 1, 1);        // stackSize, priority, cpu core (core 1 — see above)
+  // Run HomeSpan on its OWN FreeRTOS task (autoPoll) — NOT from the Arduino loop(): HAP/pairing crypto
+  // can hold the CPU for long stretches and, on the shared main loop, that starved servo slewing +
+  // MQTT (servos/HA froze whenever the bridge was on). Runs on core 1 with the Arduino loop; 16 KB
+  // stack gives the SRP big-number math headroom during pairing. (Core was NOT the HomeKit-stall
+  // cause — that was HomeSpan's %m hostname sscanf, fixed in firmware/patches/; core 1 is tested-good.)
+  homeSpan.autoPoll(16384, 1, 1);        // stackSize, priority, cpu core
 
   g_started    = true;
-  g_dbgAt      = millis() + 8000;        // [dbg v0.7.0] summarise the bridge ~8 s after boot
   g_hapWatchAt = millis() + 10000;       // WARN if HAP init hasn't completed by 10 s (see loop())
 }
 
@@ -238,18 +221,6 @@ void loop() {
   // homeSpan.poll() now runs on its own task (autoPoll, see begin()) — the main loop must NOT
   // call it too. This only services the deferred pairing reset.
   if (!g_started) return;
-
-  // [dbg v0.7.0] One-shot bridge summary on the web Logs page ~8 s after boot. Confirms the
-  // bridge is still up, flags an *unexpected* existing pairing (controllers>0 while the Home app
-  // can't see it = stale sf=0 pairing, fix with the Reset Pairings button), and prints the name
-  // to ping. If the Home app shows nothing, run `ping <name>.local` from a PC: resolves = mDNS
-  // is live and the issue is elsewhere; fails = _hap._tcp isn't on the wire.
-  if (!g_dbgDone && millis() >= g_dbgAt) {
-    g_dbgDone = true;
-    LOGD("homekit", "[dbg] bridge summary: running=%d paired=%d controllers=%d hapUp=%d host=%s.local port=1201 freeHeap=%u",
-         (int)g_started, (int)g_paired, controllers(), (int)g_hapUp, g_host.c_str(), (unsigned)ESP.getFreeHeap());
-    LOGD("homekit", "[dbg] if the Home app can't see it, from a PC run:  ping %s.local", g_host.c_str());
-  }
 
   // Health watchdog (WARN): HomeSpan's poll task should finish its network init within a few seconds
   // of WiFi being up. If the connect callback never fired, the bridge is NOT advertising _hap._tcp

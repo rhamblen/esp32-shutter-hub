@@ -81,17 +81,17 @@ void loop() {
 
   switch (g_state) {
     case IDLE:
-      if (lux >= tripLux) { enter(COUNT_TRIP); LOGI("solar", "bright (%.0f lx) — counting to trip", lux); }
+      if (lux >= tripLux) { enter(COUNT_TRIP); LOGD("solar", "bright (%.0f lx) — counting to trip", lux); }
       break;
     case COUNT_TRIP:
-      if (lux < tripLux) { enter(IDLE); LOGI("solar", "fell back below trip — cancelled"); }
+      if (lux < tripLux) { enter(IDLE); LOGD("solar", "fell back below trip — cancelled"); }
       else if (now - g_phaseStart >= tripMs) { applyTarget(AppConfig::solarBrightTarget(), "trip"); enter(TRIPPED); }
       break;
     case TRIPPED:
-      if (lux <= clearLux) { enter(COUNT_CLEAR); LOGI("solar", "dimmed (%.0f lx) — counting to clear", lux); }
+      if (lux <= clearLux) { enter(COUNT_CLEAR); LOGD("solar", "dimmed (%.0f lx) — counting to clear", lux); }
       break;
     case COUNT_CLEAR:
-      if (lux > clearLux) { enter(TRIPPED); LOGI("solar", "brightened above clear — cancelled"); }
+      if (lux > clearLux) { enter(TRIPPED); LOGD("solar", "brightened above clear — cancelled"); }
       else if (now - g_phaseStart >= clearMs) { applyTarget(AppConfig::solarClearTarget(), "clear"); enter(IDLE); }
       break;
   }

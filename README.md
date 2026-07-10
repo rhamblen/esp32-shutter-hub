@@ -78,7 +78,7 @@ calibration, and pairings are untouched.
 
 ## Status
 
-**Current release `v0.7.0`.** In daily use: the web UI, per-shutter calibration, Home Assistant
+**Current release `v0.7.1`.** In daily use: the web UI, per-shutter calibration, Home Assistant
 control over MQTT, the Lovelace card, and — as of `v0.7.0` — **Apple HomeKit pairing**. One thing is
 still unproven: the **light sensor is not yet wired**; see below.
 
@@ -117,7 +117,8 @@ its I²C bus (shared or dedicated), its pins, and its address or PCA9685 channel
 status and a human-readable brightness percentage alongside raw lux.
 **`v0.7.0`** makes **HomeKit pairing work** (see above), adds a bridge-health WARN watchdog, and
 begins a log-level cleanup. Its fix is carried as a vendored HomeSpan patch under
-[firmware/patches/](firmware/patches/).
+[firmware/patches/](firmware/patches/). **`v0.7.1`** tidies that up — removes the investigation's
+debug scaffolding and finishes the log-level cleanup (no behavioural change).
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases) — all four variants (ESP32-D, plus

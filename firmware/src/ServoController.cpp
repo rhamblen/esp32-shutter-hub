@@ -200,7 +200,7 @@ bool setChannel(uint8_t ch) {
   g_sweep = false;                           // the bench sweep doesn't follow a focus change
   g_ch = ch;
   AppConfig::setServoChannel(ch);
-  LOGI("servo", "test focus → channel %u (at %d µs%s)", g_ch, (int)roundf(g_s[g_ch].cur),
+  LOGD("servo", "test focus → channel %u (at %d µs%s)", g_ch, (int)roundf(g_s[g_ch].cur),
        g_s[g_ch].moving ? ", mid-move" : "");
   return true;
 }
@@ -250,7 +250,7 @@ bool attach() {
   hwAttach(s);
   g_s[s].tgt = (int)roundf(g_s[s].cur);   // hold position — no surprise move on attach
   hwWrite(s, g_s[s].tgt);
-  LOGI("servo", "attached at %d µs", g_s[s].tgt);
+  LOGD("servo", "attached at %d µs", g_s[s].tgt);
   return g_s[s].live;
 }
 
@@ -260,7 +260,7 @@ void detach() {
   g_s[s].tgt = (int)roundf(g_s[s].cur);   // freeze any in-flight move where it stopped
   hwDetach(s);
   rememberPos(s); persistPos(s);          // a deliberate stop — save the frozen position now
-  LOGI("servo", "detached (released) at %d µs", (int)roundf(g_s[s].cur));
+  LOGD("servo", "detached (released) at %d µs", (int)roundf(g_s[s].cur));
 }
 
 bool attached() { return g_s[activeSlot()].live; }
@@ -301,14 +301,14 @@ void startSweep() {
   hwAttach(s);
   g_sweep = true;
   g_s[s].tgt = (g_s[s].cur < (MIN_US + MAX_US) / 2) ? MAX_US : MIN_US;
-  LOGI("servo", "sweep started");
+  LOGD("servo", "sweep started");
 }
 
 void stopSweep() {
   int s = activeSlot();
   g_sweep = false;
   g_s[s].tgt = (int)roundf(g_s[s].cur);   // stop where we are, not at the far end
-  LOGI("servo", "sweep stopped");
+  LOGD("servo", "sweep stopped");
 }
 bool sweeping()  { return g_sweep; }
 

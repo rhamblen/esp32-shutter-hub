@@ -51,6 +51,28 @@ Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, n
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.7.1] — 2026-07-10
+
+Tidy-up of the v0.7.0 HomeKit fix. **No behavioural change** — same fix, cleaned up. The `%m`
+HomeSpan patch and the HomeKit health watchdog carry over unchanged.
+
+### Removed
+- **All temporary HomeKit investigation diagnostics.** The `[hs]` breadcrumbs threaded through
+  HomeSpan's `checkConnect()` (and the `hsCrumb` hook) are gone from `firmware/patches/HomeSpan.cpp`
+  and `HomeKit.cpp` — the patch is now the `%m` fix only. The one-shot `[dbg]` bridge summary and the
+  `ping` hint are removed.
+
+### Changed
+- **Log levels — second pass (completes the v0.7.0 first pass).** Per-action lines moved INFO → DEBUG:
+  MQTT cover commands + `rx`, servo attach/detach/test-focus/sweep, HomeKit per-move targets, and the
+  solar state-machine's intermediate "counting to trip/clear" / "cancelled" transitions. INFO is now
+  reserved for milestones (boot, connections, config/calibration changes, pairing events, the solar
+  *action* taken). The HomeSpan status callback is kept as a clean **DEBUG** line (`HomeSpan state: …`).
+
+### Kept from v0.7.0
+- The vendored HomeSpan `%m` patch (`firmware/patches/`), the mDNS-on-main-thread init, the HomeKit
+  HAP-stall **WARN** watchdog, and `autoPoll` on core 1.
+
 ## [0.7.0] — 2026-07-10
 
 **HomeKit pairing works.** The bridge is now discoverable in Apple Home and changes sync both

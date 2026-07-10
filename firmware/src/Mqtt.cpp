@@ -391,11 +391,11 @@ void handleCover(const String &id, const String &sub, const String &msg) {
              open ? "open" : "closed");
         return;
       }
-      LOGI("mqtt", "%s: %s → %d µs", id.c_str(), msg.c_str(), us);
+      LOGD("mqtt", "%s: %s → %d µs", id.c_str(), msg.c_str(), us);
       ServoController::moveSlotUs(s.slot, us);
       SolarLogic::notifyManualMove(id);
     } else if (msg == "STOP") {
-      LOGI("mqtt", "%s: STOP", id.c_str());
+      LOGD("mqtt", "%s: STOP", id.c_str());
       ServoController::stopSlot(s.slot);
     } else {
       LOGW("mqtt", "%s: unknown set payload '%s'", id.c_str(), msg.c_str());
@@ -407,7 +407,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
     if (!s.cal) { LOGW("mqtt", "%s: position ignored — not calibrated", id.c_str()); return; }
     int pct = constrain((int)msg.toInt(), 0, 100);
     int us  = pctToUs(s, pct);
-    LOGI("mqtt", "%s: position %d%% → %d µs", id.c_str(), pct, us);
+    LOGD("mqtt", "%s: position %d%% → %d µs", id.c_str(), pct, us);
     ServoController::moveSlotUs(s.slot, us);
     SolarLogic::notifyManualMove(id);
     return;
@@ -421,7 +421,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
       int  tgt        = ServoController::slotTargetUs(s.slot) + dir * JOG_STEP_US;
       if (s.cal)                             // never jog past the calibrated endpoints
         tgt = constrain(tgt, min(s.openUs, s.closedUs), max(s.openUs, s.closedUs));
-      LOGI("mqtt", "%s: %s → %d µs", id.c_str(), msg.c_str(), tgt);
+      LOGD("mqtt", "%s: %s → %d µs", id.c_str(), msg.c_str(), tgt);
       ServoController::moveSlotUs(s.slot, tgt);
       SolarLogic::notifyManualMove(id);
     } else if (msg.startsWith("recall:")) {
@@ -434,7 +434,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
         LOGW("mqtt", "%s: recall:%s ignored — favourite not saved yet", id.c_str(), fav.c_str());
         return;
       }
-      LOGI("mqtt", "%s: recall:%s → %d µs", id.c_str(), fav.c_str(), us);
+      LOGD("mqtt", "%s: recall:%s → %d µs", id.c_str(), fav.c_str(), us);
       ServoController::moveSlotUs(s.slot, us);
       SolarLogic::notifyManualMove(id);
     } else if (msg.startsWith("save:")) {
@@ -454,7 +454,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
 void onMessage(char *topic, byte *payload, unsigned int len) {
   String t(topic), msg;
   for (unsigned int k = 0; k < len && k < 180; k++) msg += (char)payload[k];
-  LOGI("mqtt", "rx %s: %s", topic, msg.c_str());
+  LOGD("mqtt", "rx %s: %s", topic, msg.c_str());
   String pfx = g_base + "/cover/";
   if (t.startsWith(pfx)) {
     String rest = t.substring(pfx.length());       // "<id>/set" | "<id>/position/set" | "<id>/cmd"

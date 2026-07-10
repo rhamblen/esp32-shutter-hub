@@ -361,8 +361,6 @@ void Span::commandMode(){
 
 //////////////////////////////////////
 
-extern void hsCrumb(const char *);   // [dbg] breadcrumb hook defined in firmware HomeKit.cpp
-
 void Span::checkConnect(){
 
   if(connected%2){
@@ -410,7 +408,6 @@ void Span::checkConnect(){
     return;
   }
     
-  hsCrumb("init: entered post-connect");
   char id[18];                              // create string version of Accessory ID for MDNS broadcast
   memcpy(id,HAPClient::accessory.ID,17);    // copy ID bytes
   id[17]='\0';                              // add terminating null
@@ -438,8 +435,6 @@ void Span::checkConnect(){
     while(1);
   }
 
-  hsCrumb("init: hostname validated, pre-MDNS.begin");
-
   LOG0("\nStarting MDNS...\n\n");
   LOG0("HostName:      %s.local:%d\n",hostName,tcpPortNum);
   LOG0("Display Name:  %s\n",displayName);
@@ -449,7 +444,6 @@ void Span::checkConnect(){
   MDNS.begin(hostName);                         // set server host name (.local implied)
   MDNS.setInstanceName(displayName);            // set server display name
   MDNS.addService("_hap","_tcp",tcpPortNum);    // advertise HAP service on specified port
-  hsCrumb("init: _hap._tcp added");
 
   // add MDNS (Bonjour) TXT records for configurable as well as fixed values (HAP Table 6-7)
 
@@ -510,11 +504,9 @@ void Span::checkConnect(){
   if(webLog.timeServer)
     xTaskCreateUniversal(webLog.initTime, "timeSeverTaskHandle", 8096, &webLog, 1, NULL, 0);  
   
-  hsCrumb("init: TXT+hash done, pre hapServer.begin (port 1201)");
   LOG0("Starting HAP Server on port %d...\n\n",tcpPortNum);
 
   hapServer->begin();
-  hsCrumb("init: hapServer up (1201 listening)");
 
   LOG0("\n");
 
@@ -524,7 +516,6 @@ void Span::checkConnect(){
   if(wifiCallback)
     wifiCallback();
 
-  hsCrumb("init: COMPLETE — invoking connect callback");
   if(wifiCallbackAll)
     wifiCallbackAll((connected+1)/2);
 
