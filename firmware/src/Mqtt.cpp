@@ -39,7 +39,8 @@ const uint32_t SHUTTER_PUB_MS = 250;   // shutter position/state publish cadence
 const uint32_t SOLAR_PUB_MS   = 5000;  // solar lux/state publish cadence
 const int      SOLAR_LUX_EPS  = 25;    // don't re-publish lux for jitter smaller than this
 
-int    g_lastLux      = -1;            // last published lux / solar state (publish on change only)
+int    g_lastLux      = -1;            // last published lux / brightness / solar state
+int    g_lastBright   = -1;            // (publish on change only)
 String g_lastSolState = "";
 
 // Last published per shutter index, so state topics only publish on change.
@@ -282,11 +283,19 @@ void publishSolarNumber(const char *object, const char *name, const char *leaf, 
 
 void publishSolarDiscovery() {
   if (!g_haDisc) return;
-  {   // live light level
+  {   // live light level — raw lux; Phase 8b's calibration reads this one's history
     String cfg = "homeassistant/sensor/" + g_node + "/solar_lux/config";
     String p = "{\"name\":\"Light level\",\"uniq_id\":\"" + g_node + "_solar_lux\",";
     p += "\"stat_t\":\"" + solarTopic("lux") + "\",\"avty_t\":\"" + statusTopic() + "\",";
     p += "\"dev_cla\":\"illuminance\",\"unit_of_meas\":\"lx\",\"stat_cla\":\"measurement\",";
+    p += deviceBlock() + "}";
+    publish(cfg, p, true);
+  }
+  {   // human-facing 0-100 % brightness (log scale). No dev_cla: `illuminance` would force lx.
+    String cfg = "homeassistant/sensor/" + g_node + "/solar_brightness/config";
+    String p = "{\"name\":\"Brightness\",\"uniq_id\":\"" + g_node + "_solar_brightness\",";
+    p += "\"stat_t\":\"" + solarTopic("brightness") + "\",\"avty_t\":\"" + statusTopic() + "\",";
+    p += "\"unit_of_meas\":\"%\",\"stat_cla\":\"measurement\",\"ic\":\"mdi:brightness-percent\",";
     p += deviceBlock() + "}";
     publish(cfg, p, true);
   }
@@ -307,16 +316,21 @@ void publishSolarDiscovery() {
   }
   publishSolarNumber("solar_trip_lux",  "Solar trip lux",  "trip_lux",  "mdi:brightness-7");
   publishSolarNumber("solar_clear_lux", "Solar clear lux", "clear_lux", "mdi:brightness-4");
-  LOGI("mqtt", "HA discovery: solar sensor/state/switch + 2 threshold numbers published");
+  LOGI("mqtt", "HA discovery: solar lux/brightness/state sensors + switch + 2 threshold numbers");
 }
 
-// lux + state publish on change (lux ignores sub-EPS jitter); `force` also echoes config.
+// lux/brightness/state publish on change (lux ignores sub-EPS jitter); `force` also echoes config.
 void publishSolarStates(bool force) {
-  int    lux = (int)lroundf(LightSensor::lux());
-  String st  = SolarLogic::stateText();
+  int    lux    = (int)lroundf(LightSensor::lux());
+  int    bright = LightSensor::brightnessPct();
+  String st     = SolarLogic::stateText();
   if (force || abs(lux - g_lastLux) >= SOLAR_LUX_EPS) {
     publish(solarTopic("lux"), String(lux), true);
     g_lastLux = lux;
+  }
+  if (force || bright != g_lastBright) {
+    publish(solarTopic("brightness"), String(bright), true);
+    g_lastBright = bright;
   }
   if (force || st != g_lastSolState) {
     publish(solarTopic("state"), st, true);
@@ -503,7 +517,7 @@ bool tryConnect() {
   publishState();
   resetStateCache();
   publishShutterStates(true);
-  g_lastLux = -1; g_lastSolState = "";
+  g_lastLux = -1; g_lastBright = -1; g_lastSolState = "";
   publishSolarStates(true);
   g_shDirty  = false;
   g_solDirty = false;

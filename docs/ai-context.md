@@ -66,10 +66,20 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
   Both targets are one of **open|closed|daylight|privacy|none** (`AppConfig::SolarTarget`, 0–4);
   `none` advances state but drives nothing. Solar config applies **without a reboot**.
   Web: **Solar** page + `/api/solar`, `/api/solar/simulate` (simulate-lux slider works with no
-  sensor fitted). MQTT: `<base>/solar/{lux,state}` published retained; `<base>/solar/{enable,
-  trip_lux,clear_lux}/set` subscribed → HA illuminance + state sensors, an automation switch and two
-  writable `number` thresholds (clear ≥ trip is rejected). Card keys: `solar_switch`/`solar_lux`/
-  `solar_state`, all optional.
+  sensor fitted). MQTT: `<base>/solar/{lux,brightness,state}` published retained; `<base>/solar/{enable,
+  trip_lux,clear_lux}/set` subscribed → HA illuminance + brightness-% + state sensors, an automation
+  switch and two writable `number` thresholds (clear ≥ trip is rejected). Card keys:
+  `solar_switch`/`solar_lux`/`solar_state`, all optional.
+- **`brightness` is display-only** (`LightSensor::brightnessPct()`): `20 × log10(clamp(lux,1,1e5))`,
+  one lux decade per 20 points — 0 dark … 100 full sun. Perceptual, not linear (a linear % of the
+  120 k full scale reads 0 % indoors). It **compresses the 30–60 k trip band to 90 %–96 %**, so the
+  state machine trips on raw lux and never on this. Raw `lux` also stays as the Phase-8b history source.
+- **Info page hardware table (v0.6.2):** `GET /api/info` carries `servo` (`usesPca,pin,channel,sda,
+  scl,attached`), `sensor` (`enabled,present,bus,sda,scl,dedicatedSupported` — pins are the **active**
+  ones, post-clamp), `homekit` (`enabled,running,paired,controllers`) and `shutters`
+  (`name,channel,calibrated`). `renderHw()` in `data/app.js` draws one row per physical device; it is a
+  **read-only mirror** — pins are set on Servo test, channels on Shutters, the sensor bus on Solar.
+  On a PCA9685 build `ServoController::pin()` aliases the channel, so the UI branches on `usesPca`.
 - **Manual override:** a web recall or an MQTT set/position/jog/recall calls
   `SolarLogic::notifyManualMove(id)` → automation suspended **2 h on that shutter** (ephemeral, not
   persisted). SolarLogic's own moves go straight to `ServoController::moveSlotUs` and never self-suspend.

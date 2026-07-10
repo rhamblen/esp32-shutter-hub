@@ -139,6 +139,16 @@ bool  present()   { return g_present; }
 bool  simulated() { return g_sim; }
 float lux()       { return g_sim ? g_simLux : (enabled() ? g_live : 0.0f); }
 
+// 0 = dark … 100 = full sun, one lux decade per 20 points (log10 over 1 … 100 000 lx).
+// Linear-over-full-scale was rejected: 500 lx (a bright room) would report 0 %.
+uint8_t brightnessPct() {
+  float l = lux();
+  if (l < 1.0f) return 0;                       // also covers disabled/absent (lux() == 0)
+  if (l > 100000.0f) l = 100000.0f;
+  int pct = (int)lroundf(20.0f * log10f(l));    // log10(100000) = 5 → 5 * 20 = 100
+  return (uint8_t)constrain(pct, 0, 100);
+}
+
 void simulate(float lux) { g_sim = true; g_simLux = lux < 0 ? 0 : lux; }
 void useLive()           { g_sim = false; }
 

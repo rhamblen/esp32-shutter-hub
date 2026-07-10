@@ -312,7 +312,7 @@ class ShutterHubCard extends HTMLElement {
 
 // Version tracks the project release tag (single SemVer stream — see docs/ai-context.md).
 // HA caches card JS hard, so this console banner is how you tell which card is actually loaded.
-const CARD_VERSION = "0.6.1";
+const CARD_VERSION = "0.6.2";
 
 customElements.define("shutter-hub-card", ShutterHubCard);
 window.customCards = window.customCards || [];

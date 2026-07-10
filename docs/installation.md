@@ -106,6 +106,12 @@ Windows and Android setups), find the hub's IP in your router's DHCP table and u
 
 You should land on the **Dashboard**, showing firmware version, chip, variant, IP, and uptime.
 
+Scroll down to **Hardware & wiring**. It lists every device the firmware expects: the PCA9685 with
+its I²C bus, pins and address, a row per shutter with its channel, and the VEML7700 with its bus,
+pins, and whether it is answering. Check it against the board now — a wrong pin here is a fault you
+would otherwise chase through the next three steps. On a direct-GPIO build the table shows the single
+servo's signal pin and no channels, because there are none. Full map in [pinout.md](pinout.md).
+
 ---
 
 ## Step 4 — Prove the servos move
@@ -121,6 +127,8 @@ If nothing moves, the fault is almost always in this list:
 | ESP32 reboots when the servo moves | Brown-out from inrush | Add the bulk capacitor across PCA9685 V+ / GND |
 | Servo buzzes, drifts, never settles | No common ground | Tie the buck converter's ground to the ESP32's ground |
 | Info page shows `direct` not `pca9685` | Wrong build variant flashed | Reflash the `esp32d-pca9685` image |
+| Wrong blind moves | Shutter assigned to the wrong channel | Compare the channel rows on Info ▸ Hardware & wiring against the servo leads |
+| Info ▸ Hardware & wiring shows the wrong SDA/SCL | Bus pins reconfigured, or bus shared | Set the servo bus pins on **Servo test**, the sensor bus on **Solar** |
 
 ---
 

@@ -79,7 +79,34 @@ static String dashInfoJson() {
        ",\"state\":\"" + jesc(Mqtt::stateText()) + "\"},";
   j += "\"last_flash\":{\"type\":\"" + jesc(AppConfig::lastFlashType()) +
        "\",\"ok\":" + String(AppConfig::lastFlashOk() ? "true" : "false") +
-       ",\"epoch\":" + String(AppConfig::lastFlashEpoch()) + "}";
+       ",\"epoch\":" + String(AppConfig::lastFlashEpoch()) + "},";
+  // Hardware map (v0.6.2) — enough to check the wiring against the board without
+  // opening three other pages: which device on which bus, on which pins, at which
+  // address/channel. `pin` is meaningless on a PCA9685 build (ServoController::pin()
+  // aliases the channel there), so the UI keys everything off `usesPca`.
+  j += "\"servo\":{\"usesPca\":" + String(ServoController::usesPca() ? "true" : "false") +
+       ",\"pin\":"     + String(ServoController::pin()) +
+       ",\"channel\":" + String(ServoController::channel()) +
+       ",\"sda\":"     + String(ServoController::sdaPin()) +
+       ",\"scl\":"     + String(ServoController::sclPin()) +
+       ",\"attached\":" + String(ServoController::attached() ? "true" : "false") + "},";
+  j += "\"sensor\":{\"enabled\":" + String(LightSensor::enabled() ? "true" : "false") +
+       ",\"present\":" + String(LightSensor::present() ? "true" : "false") +
+       ",\"bus\":"     + String(LightSensor::activeBus()) +
+       ",\"sda\":"     + String(LightSensor::activeSda()) +
+       ",\"scl\":"     + String(LightSensor::activeScl()) +
+       ",\"dedicatedSupported\":" + String(LightSensor::dedicatedSupported() ? "true" : "false") + "},";
+  j += "\"homekit\":{\"enabled\":" + String(AppConfig::hkEnabled() ? "true" : "false") +
+       ",\"running\":" + String(HomeKit::running() ? "true" : "false") +
+       ",\"paired\":"  + String(HomeKit::paired() ? "true" : "false") +
+       ",\"controllers\":" + String(HomeKit::controllers()) + "},";
+  j += "\"shutters\":[";
+  for (int i = 0; i < Shutters::count(); i++) {
+    if (i) j += ",";
+    j += "{\"name\":\"" + jesc(Shutters::nameAt(i)) + "\",\"channel\":" + String(Shutters::channelAt(i)) +
+         ",\"calibrated\":" + String(Shutters::calibratedAt(i) ? "true" : "false") + "}";
+  }
+  j += "]";
   j += "}";
   return j;
 }
@@ -127,6 +154,7 @@ static String solarConfigJson() {
   j +=   "\"activeScl\":" + String(LightSensor::activeScl()) + ",";
   j +=   "\"present\":" + String(LightSensor::present() ? "true" : "false") + ",";
   j +=   "\"lux\":"     + String(LightSensor::lux(), 0) + ",";
+  j +=   "\"brightness\":" + String(LightSensor::brightnessPct()) + ",";   // 0-100 %, log scale
   j +=   "\"simulated\":" + String(LightSensor::simulated() ? "true" : "false");
   j += "},";
   j += "\"trip\":{\"lux\":"  + String(AppConfig::solarTripLux())  + ",\"secs\":" + String(AppConfig::solarTripSecs())  + "},";

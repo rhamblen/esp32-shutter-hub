@@ -11,15 +11,20 @@
 //   publish    <base>/cover/<id>/position      0–100                       (retained)
 //   publish    <base>/cover/<id>/state         opening|closing|open|closed|stopped (retained)
 //
-// Solar heat protection (Phase 6, v0.6.0) adds a hub-wide block — an illuminance sensor,
-// a state sensor, an enable switch, and two writable lux thresholds (the `number` entities
-// an HA-side calibration card writes back into):
+// Solar heat protection (Phase 6, v0.6.0) adds a hub-wide block — an illuminance sensor, a
+// brightness-percent sensor, a state sensor, an enable switch, and two writable lux thresholds
+// (the `number` entities an HA-side calibration card writes back into):
 //   subscribe  <base>/solar/enable/set         ON | OFF
 //   subscribe  <base>/solar/trip_lux/set       lux (must stay above clear_lux)
 //   subscribe  <base>/solar/clear_lux/set      lux (must stay below trip_lux)
 //   publish    <base>/solar/lux                current lux                 (retained)
+//   publish    <base>/solar/brightness         0-100 %, log scale          (retained)
 //   publish    <base>/solar/state              disabled|idle|counting-trip|tripped|counting-clear
 //   publish    <base>/solar/{enable,trip_lux,clear_lux}   echoed config    (retained)
+//
+// `brightness` is a DISPLAY value (0 dark … 100 full sun, one lux decade per 20 points). The
+// state machine trips on raw `lux`; the log curve compresses the 30-60 k band the thresholds
+// live in, so never drive automation from it.
 //
 // Uses PubSubClient (blocking). Safe because the web UI is served by the async
 // web server on its own task — a stalled broker never freezes the interface.

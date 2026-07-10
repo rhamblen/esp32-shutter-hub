@@ -45,6 +45,20 @@ h2{font-size:1rem;margin:0}
 .kv span{color:var(--muted)}
 .kv b{font-weight:600;text-align:right}
 
+/* Hardware & wiring table (Info page) — scrolls sideways on a phone rather than
+   squashing the pin column, which is the one you're actually cross-checking. */
+.hwwrap{overflow-x:auto}
+.hw{width:100%;border-collapse:collapse;font-size:.85rem;white-space:nowrap}
+.hw th{text-align:left;color:var(--muted);font-weight:600;font-size:.72rem;letter-spacing:.05em;
+  text-transform:uppercase;padding:0 14px 8px 4px;border-bottom:1px solid var(--line)}
+.hw td{padding:11px 14px 11px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.hw tr:last-child td{border-bottom:0}
+.hw td:first-child{font-weight:600}
+.hw td:nth-child(2),.hw td:nth-child(3),.hw td:nth-child(4){color:var(--muted);
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem}
+.hw .sub-row td:first-child{font-weight:500;color:var(--muted);padding-left:16px}
+.hw .st-ok{color:var(--green)}.hw .st-warn{color:var(--amber)}.hw .st-off{color:var(--muted)}
+
 /* Forms */
 label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:12px}
 label.full{grid-column:1/-1}

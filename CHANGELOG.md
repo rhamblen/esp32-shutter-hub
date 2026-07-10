@@ -16,6 +16,59 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.6.2] — 2026-07-10
+
+**Check the wiring from the Info page.** A hardware table naming every device, its bus, its pins and
+its channel — plus HomeKit status alongside MQTT. And a human-readable brightness percentage next to
+the raw lux reading.
+
+### Added
+- **Hardware & wiring table** on the **Info** page — one row per physical device, so the pinout on
+  screen can be read straight off against the board:
+  - **PCA9685 builds** — the driver's I²C bus (and whether the VEML7700 is **sharing** it or it's
+    **servos only**), its SDA/SCL GPIOs, address `0x40`, and whether it's driving or released.
+    Beneath it, one indented row per shutter giving its **channel** and calibration state.
+  - **Direct-GPIO builds** — the servo's signal GPIO and an explicit *"no channel — single servo"*;
+    no channel rows are drawn, because there is nothing to check.
+  - **VEML7700** — dedicated (`Wire1`) or shared with the PCA9685 (`Wire`), the SDA/SCL GPIOs
+    actually in use (the PCA9685's, when shared), address `0x10`, and detected / not detected /
+    disabled. A footnote calls out a one-controller chip, a sensor not ACKing, and the fact that the
+    servo bus pins are set on the Servo-test page.
+- **HomeKit status on the Info page** — `Disabled` · `Enabled — reboot to start` ·
+  `Active — not paired` · `Paired — N controller(s)`, matching the System ▸ HomeKit tab.
+- **Brightness sensor (0–100 %)** — a human-facing companion to the raw lux reading, published
+  retained on `<base>/solar/brightness` and discovered in Home Assistant as **Brightness** (`%`,
+  `mdi:brightness-percent`). Also shown on the web UI's Solar ▸ Status card and exposed on
+  `/api/solar` as `sensor.brightness`.
+  - **Logarithmic, one lux decade per 20 points** — `20 × log10(clamp(lux, 1, 100000))`. Anchors:
+    1 lx → 0 %, 10 → 20, 100 → 40, 1 k → 60, 10 k → 80, 100 k → 100. A dark room reads 0 %, a lit
+    room 40 %, a bright room 54 %, overcast daylight 80 %, full sun 100 %.
+  - A **linear** percent of the 120 k lx full scale was rejected: it reads 0 % for every indoor
+    level and only starts moving in direct sun.
+
+### Notes
+- **Brightness is display-only.** The solar state machine still trips on **raw lux**. The log curve
+  deliberately compresses the 30–60 k lx band the thresholds live in (clear = 90 %, trip = 96 %), and
+  it isn't cleanly invertible — never drive automation from it. Raw `lux` keeps publishing unchanged,
+  which is also what Phase 8b's HA-history calibration reads.
+- The existing solar entities are **unchanged**: the `Solar automation` switch and the two writable
+  lux threshold `number`s remain published to Home Assistant, and the Lovelace card keeps its
+  solar toggle.
+- **The sensor's low end is coarse by design.** At gain 1/8 one count is ~1.84 lx (≈ 5 % on this
+  curve), so a dark room reads 0 % and the first step is visible. That's the price of a full scale
+  that reaches direct sunlight.
+- **The Info page is a mirror, not a control.** Every value in the hardware table is set elsewhere —
+  servo bus pins on **Servo test**, channels on **Shutters**, the sensor bus on **Solar**. It exists
+  so all three can be checked against the board in one place.
+
+### Changed
+- `GET /api/info` gained four objects: `servo` (`usesPca`, `pin`, `channel`, `sda`, `scl`,
+  `attached`), `sensor` (`enabled`, `present`, `bus`, `sda`, `scl`, `dedicatedSupported` — the pins
+  are the **active** ones, after any clamp to the shared bus), `homekit` (`enabled`, `running`,
+  `paired`, `controllers`), and `shutters` (`name`, `channel`, `calibrated` per blind).
+- `ha-card/shutter-hub-card.js` — `CARD_VERSION` stamped `0.6.2` (rides the project SemVer stream;
+  no functional change to the card).
+
 ## [0.6.1] — 2026-07-10
 
 **The sensor's I²C bus is now a setting** — and with it, solar heat protection works on the ESP32-C3.

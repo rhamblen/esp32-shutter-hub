@@ -35,6 +35,14 @@ uint8_t activeScl();
 
 float lux();            // latest effective lux — the simulated value if an override is set,
                         // else the live reading (0 when disabled/absent)
+
+// Human-facing brightness, 0 = dark … 100 = full sun. Logarithmic — one decade of lux per
+// 20 points — because perceived brightness is roughly log(illuminance) and a linear percent
+// of the 120 k lx full scale reads 0 % for every indoor level. Anchors: 1 lx → 0, 10 → 20,
+// 100 → 40, 1 k → 60, 10 k → 80, 100 k → 100.
+// DISPLAY ONLY. The solar state machine trips on raw lux: this curve deliberately compresses
+// the 30–60 k band the thresholds live in (90 % vs 96 %), and it is not cleanly invertible.
+uint8_t brightnessPct();
 bool  simulated();      // true while a simulate override is active
 void  simulate(float lux);   // force an effective lux (test without hardware)
 void  useLive();        // drop the override, return to the live reading

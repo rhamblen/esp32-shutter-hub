@@ -219,6 +219,15 @@ spare your shutter definitions — treat it as a last resort, and expect to reca
 
 ## When something is wrong
 
+Start on the **Info** page. Beneath the device and network cards, **Hardware & wiring** lists every
+device the firmware expects — the PCA9685 with its I²C bus, pins and address, a row per shutter with
+its channel and whether it is calibrated, and the light sensor with its bus, pins, and whether it is
+answering at `0x10`. It is the fastest way to tell a wiring fault from a configuration one. The same
+card reports **HomeKit** as disabled, enabled-pending-reboot, active, or paired.
+
+Everything in that table is set elsewhere — servo bus pins on **Servo test**, channels on
+**Shutters**, the sensor bus on **Solar**. It shows what the hub believes; it does not change it.
+
 | Symptom | First thing to check |
 | ------- | -------------------- |
 | One shutter unresponsive, others fine | Its PCA9685 channel assignment on the **Shutters** page; then the servo lead |

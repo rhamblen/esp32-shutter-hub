@@ -55,7 +55,19 @@
           <div class="kv"><span>WiFi signal</span><b id="i_rssi">–</b></div>
           <div class="kv"><span>Free heap</span><b id="i_heap">–</b></div>
           <div class="kv"><span>MQTT broker</span><b id="i_mqtt">–</b></div>
+          <div class="kv"><span>HomeKit</span><b id="i_hk">–</b></div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="ic teal">⚙</span><div><h2>Hardware &amp; wiring</h2>
+          <p>Buses, pins and channels as the firmware has them — check these against the board</p></div></div>
+        <div class="hwwrap">
+          <table class="hw">
+            <thead><tr><th>Device</th><th>Bus</th><th>Pins</th><th>Address / channel</th><th>Status</th></tr></thead>
+            <tbody id="i_hw"></tbody>
+          </table>
+        </div>
+        <p class="msg" id="i_hwnote"></p>
       </div>
     </section>
 
@@ -101,7 +113,7 @@
         <div id="t_solar"></div>
         <div id="t_shutters"></div>
         <p class="msg" id="t_none">No shutters defined yet — per-shutter cover topics appear here once you add one on the <b>Shutters</b> page.</p>
-        <p class="msg">With HA discovery on, entity configs are also published retained under <b>homeassistant/{cover,button,sensor,switch,number}/…</b> — one cover + six buttons per shutter, plus the hub-wide solar sensor, state, automation switch and two writable lux thresholds.</p>
+        <p class="msg">With HA discovery on, entity configs are also published retained under <b>homeassistant/{cover,button,sensor,switch,number}/…</b> — one cover + six buttons per shutter, plus the hub-wide solar sensors (light level, brightness %, state), the automation switch and two writable lux thresholds.</p>
       </div>
     </section>
 

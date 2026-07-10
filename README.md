@@ -13,6 +13,7 @@ Zemismart JM36/JC601.
 - **Apple HomeKit** — HomeSpan bridge exposes each shutter as its own Window Covering accessory.
 - **Home Assistant** — one `cover.*` per shutter via MQTT discovery, plus lux/position sensors.
 - **Local web UI** — control, per-shutter calibration, and OTA at `http://shutter-hub.local`.
+- **Wiring at a glance** — an Info-page table of every device, its I²C bus, pins, address and channel.
 - **Per-shutter calibration** — closed/open limits + named favourites (Privacy, Daylight) in µs.
 - **Solar heat protection** — VEML7700 sunlight monitoring with configurable trip/clear thresholds.
 - **Manual-override handling** — automation backs off for 2 h after a manual move.
@@ -106,6 +107,9 @@ shutters move to a chosen preset, and a second threshold releases them. Both act
 slider** lets the whole thing be exercised before the sensor is even wired. Lux, state, an
 automation switch and two writable thresholds are published to Home Assistant. **Status:** built and
 compiling; **not yet verified against physical sensor hardware.**
+**`v0.6.2`** makes the Info page a wiring check: a **Hardware & wiring** table naming every device,
+its I²C bus (shared or dedicated), its pins, and its address or PCA9685 channel — plus HomeKit
+status and a human-readable brightness percentage alongside raw lux.
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases) — per variant: full (USB) and

@@ -46,6 +46,65 @@ $$(".tabs").forEach(bar => {
 });
 
 // ---- Info -------------------------------------------------------------------
+// HomeKit reads as one of four states, matching what System > HomeKit shows: off,
+// configured-but-not-yet-booted, bridge up and pairable, or paired.
+function hkStateText(h) {
+  if (!h) return "—";
+  if (!h.enabled) return "Disabled";
+  if (!h.running) return "Enabled — reboot to start";
+  return h.paired ? `Paired — ${h.controllers} controller(s)` : "Active — not paired";
+}
+// Hardware map: one row per physical device, so the pins/bus/channel on screen can be
+// read straight off against the wiring. PCA9685 builds address servos by channel and
+// carry a shutter row each; a direct-GPIO build has one servo on one pin and no channels.
+const gpio = p => (p === 255 || p == null) ? "—" : "GPIO" + p;
+function renderHw(d) {
+  const sv = d.servo, ls = d.sensor;
+  const sensorOnPca = sv.usesPca && ls.enabled && ls.bus === 1;
+  const cell = (t, cls) => cls ? `<td class="${cls}">${t}</td>` : `<td>${t}</td>`;
+  const row = (dev, bus, pins, addr, status, statusCls, cls) =>
+    `<tr${cls ? ` class="${cls}"` : ""}><td>${dev}</td>${cell(bus)}${cell(pins)}${cell(addr)}` +
+    `<td class="${statusCls}">${status}</td></tr>`;
+  const rows = [];
+
+  if (sv.usesPca) {
+    rows.push(row("PCA9685 servo driver",
+      "I²C (Wire) — " + (sensorOnPca ? "shared with VEML7700" : "servos only"),
+      `SDA ${gpio(sv.sda)} · SCL ${gpio(sv.scl)}`,
+      "0x40 · 16 channels",
+      sv.attached ? "driving" : "idle (released)", sv.attached ? "st-ok" : "st-off"));
+    if (d.shutters.length) {
+      d.shutters.forEach(s => rows.push(row("↳ " + esc(s.name), "—", "—", "CH" + s.channel,
+        s.calibrated ? "calibrated" : "not calibrated", s.calibrated ? "st-ok" : "st-warn", "sub-row")));
+    } else {
+      rows.push(row("↳ no shutters defined", "—", "—", "—", "add one on Shutters", "st-warn", "sub-row"));
+    }
+  } else {
+    rows.push(row("Servo (direct GPIO)", "—", "Signal " + gpio(sv.pin), "no channel — single servo",
+      sv.attached ? "driving" : "idle (released)", sv.attached ? "st-ok" : "st-off"));
+  }
+
+  if (!ls.enabled) {
+    rows.push(row("VEML7700 light sensor", "—", "—", "0x10", "disabled", "st-off"));
+  } else {
+    const ded = ls.bus === 0;
+    rows.push(row("VEML7700 light sensor",
+      ded ? "I²C (Wire1) — dedicated"
+          : "I²C (Wire) — " + (sv.usesPca ? "shared with PCA9685" : "sensor only"),
+      `SDA ${gpio(ls.sda)} · SCL ${gpio(ls.scl)}`, "0x10",
+      ls.present ? "detected" : "not detected", ls.present ? "st-ok" : "st-warn"));
+  }
+  $("#i_hw").innerHTML = rows.join("");
+
+  const notes = [];
+  if (!sv.usesPca) notes.push("Direct-GPIO build — one servo on one pin, so there are no PCA9685 channels to check.");
+  if (sv.usesPca) notes.push("Servo bus pins are set on the Servo test page.");
+  if (ls.enabled && ls.bus === 1 && !ls.dedicatedSupported)
+    notes.push("This chip has only one I²C controller, so the sensor must share the servo bus.");
+  if (ls.enabled && !ls.present) notes.push("Sensor not ACKing at 0x10 — check 3V3, GND and the two bus leads.");
+  $("#i_hwnote").textContent = notes.join(" ");
+}
+
 let infoTimer = null;
 async function loadInfo() {
   try {
@@ -68,6 +127,8 @@ async function loadInfo() {
     $("#i_rssi").textContent = rssiTxt(d.wifi.rssi);
     $("#i_heap").textContent = fmtKB(d.free_heap);
     $("#i_mqtt").textContent = d.mqtt.enabled ? (d.mqtt.connected ? "Connected" : d.mqtt.state) : "Disabled";
+    $("#i_hk").textContent = hkStateText(d.homekit);
+    renderHw(d);
   } catch (e) {}
   clearTimeout(infoTimer);
   if ($("#page-info").offsetParent !== null) infoTimer = setTimeout(loadInfo, 5000);
@@ -95,6 +156,7 @@ function renderTopics() {
     `<div class="kv"><span>${label} <i class="tdir">${dir}</i>${hint ? `<small class="thint">${hint}</small>` : ""}</span><b class="mono">${topic}</b></div>`;
   $("#t_solar").innerHTML =
     row("Light level", "hub →", `${base}/solar/lux`, "lux, retained") +
+    row("Brightness", "hub →", `${base}/solar/brightness`, "0–100 %, log scale — 0 dark, 100 full sun; display only") +
     row("Solar state", "hub →", `${base}/solar/state`, "disabled · idle · counting-trip · tripped · counting-clear") +
     row("Automation on/off", "→ hub", `${base}/solar/enable/set`, "ON · OFF") +
     row("Trip threshold", "→ hub", `${base}/solar/trip_lux/set`, "lux — must stay above clear") +
@@ -535,6 +597,8 @@ function soRenderStatus(d) {
   $("#so_lux").textContent = luxTxt(d.sensor.lux);
   $("#so_state").textContent = STATE_TEXT[d.state] || d.state;
   const bits = [];
+  // Brightness is the log-scaled 0-100 % that HA sees; lux is what the thresholds compare.
+  bits.push(d.sensor.brightness + " % brightness");
   if (d.state === "counting-trip" || d.state === "counting-clear") bits.push("in " + durTxt(d.remaining));
   else if (d.state === "tripped") bits.push("bright → " + SOLAR_TARGETS[d.brightTarget]);
   if (d.suspended > 0) bits.push(d.suspended + " on manual hold");

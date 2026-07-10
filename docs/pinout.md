@@ -11,6 +11,11 @@ dedicated-bus default is clamped to shared ([ADR 0012](decisions/0012-selectable
 All I²C and servo pins are **configurable at runtime** (web UI → Servo test / Solar) and persisted in
 NVS. The values below are the compiled-in defaults a factory-reset device comes up with.
 
+To read what a **running** hub actually has — which device on which bus, on which pins, at which
+address or channel, and whether it is answering — open its **Info** page and look at the
+**Hardware & wiring** table (v0.6.2+). This page is the authority for a factory-fresh device; that
+table is the authority for a configured one.
+
 ---
 
 ## ESP32-D (ESP32-WROOM DevKit) — the locked, shipping board
