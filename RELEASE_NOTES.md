@@ -1,51 +1,50 @@
-# v0.6.0 — Light sensor + solar heat protection (Phase 6)
+# v0.6.1 — Selectable sensor I²C bus (and solar on the ESP32-C3)
 
-Phase 6 teaches the hub to watch the sun. A **VEML7700** ambient-light sensor feeds a trip/clear
-state machine: when the light stays above a threshold for a set dwell, every calibrated shutter
-moves to a preset you choose; when it stays below a second threshold, a second action runs. The gap
-between the two thresholds is hysteresis, so a passing cloud never flaps the blinds.
+v0.6.0 gave the light sensor its own I²C bus so a damaged sensor lead could never wedge the servo
+driver. That's still the right default — but it quietly made solar heat protection **impossible on
+the ESP32-C3**, which has only one I²C controller.
 
-> **Build it before the sensor arrives.** The Solar page carries a **simulate-lux slider** — drive
-> the whole state machine, watch the shutters move, and tune the thresholds with no sensor fitted.
-> Everything in this release was exercised that way; **it has not yet been verified against physical
-> VEML7700 hardware.**
+The bus is now a **setting**. It defaults to dedicated, and falls back to shared where the chip can't
+do better. This release also brings the full installation and user guides, and a pinout reference.
 
-## What's new since v0.5.4
+> **Why it failed silently.** The Arduino core declares `Wire1` unconditionally, so the C3 build
+> compiled and linked without complaint. Only at runtime does `Wire1.begin()` reach
+> `if (i2c_num >= SOC_I2C_NUM) return ESP_ERR_INVALID_ARG` — and the sensor reports *"not detected"*
+> forever, indistinguishable from a wiring fault.
 
-- **Solar heat protection** — new `LightSensor` (real VEML7700 driver, replacing the stub) and
-  `SolarLogic` (`idle → counting-trip → tripped → counting-clear`) with independent dwell timers.
-  Defaults: trip above **60 000 lx for 10 min → Privacy**; clear below **30 000 lx for 20 min →
-  do nothing**.
-- **The sensor gets its own I²C bus.** It runs on **`Wire1`** (default **SDA 25 / SCL 26**, editable
-  in the UI), *not* the PCA9685's bus — so a damaged sensor lead can never wedge the servo driver.
-  This reverses an earlier design assumption; the reasoning is in
-  [ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md).
-- **Five-valued actions.** The bright and clear targets are each **Open · Closed · Daylight ·
-  Privacy · Do nothing**. `Do nothing` advances the state but moves nothing — so a trip to Privacy
-  isn't automatically undone, and setting *both* to `Do nothing` turns the hub into a pure
-  sensor/reporter.
-- **Manual override** — a move you make yourself (web recall, or an HA cover/position/jog/recall
-  command) suspends automation on **that shutter for 2 hours**. The hub keeps tracking the light.
-- **New Solar page** — Status (live lux, state, dwell countdown, simulate slider), Sensor (type,
-  `Wire1` pins, live *detected @0x10* pill), Sensitivity (four numbers), Actions (both targets +
-  automation switch). Applies **without a reboot**.
-- **Home Assistant** — discovery now publishes an **illuminance sensor**, a **solar-state sensor**, a
-  **Solar automation switch**, and two **writable `number`** entities for the trip and clear lux
-  thresholds. Writing a clear ≥ trip is rejected (inverted hysteresis oscillates).
-- **`shutter-hub-card` v0.6.0** — optional solar toggle + live lux caption in the group header, via
-  the new `solar_switch` / `solar_lux` / `solar_state` config keys. Omit them and the card is
-  unchanged, so installs without a sensor are unaffected.
+## What's new since v0.6.0
 
-Full detail per version in [CHANGELOG.md](CHANGELOG.md).
+- **The sensor's I²C bus is a setting** ([ADR 0012](docs/decisions/0012-selectable-sensor-i2c-bus.md)),
+  chosen on the **Solar** page:
+  - **Dedicated (default)** — its own `Wire1` on SDA 25 / SCL 26. A sensor-lead fault can't touch the
+    servo bus. Needs a chip with two I²C controllers (the ESP32-D has two).
+  - **Shared** — rides the PCA9685's `Wire` on GPIO21/22. Saves two pins; always available; the only
+    option on a single-controller chip. Gives up the fault isolation.
+- **Solar now works on the ESP32-C3.** A dedicated preference is clamped to shared, logged, and the
+  Solar page disables the dedicated option with an explanation rather than leaving you to guess.
+- **Dedicated-bus pins are validated.** v0.6.0 would happily save GPIO34–39 as I²C pins; they're
+  input-only and can never drive an open-drain line. `POST /api/solar` now rejects them, along with
+  identical or non-output-capable pins.
+- **[docs/installation.md](docs/installation.md)** — end-to-end install guide, each step with its own
+  troubleshooting table.
+- **[docs/user-guide.md](docs/user-guide.md)** — everyday operation: the four saved positions, the
+  four control faces, solar behaviour incl. hysteresis and the 2 h manual override, recalibration.
+- **[docs/pinout.md](docs/pinout.md)** — GPIO map per board, the pins the firmware rejects and why,
+  and a proposed ESP32-C3 map.
+
+Full detail in [CHANGELOG.md](CHANGELOG.md).
 
 ### Notes
 
-- **Reported lux is approximate.** The driver reports a linear `counts × resolution` at a fixed
-  sun-range setting (gain 1/8, 25 ms integration, full scale ≈ 120 k lx); the vendor's high-lux
-  correction polynomial is deliberately skipped because it diverges across the 60–120 k lx band the
-  sensor exists to watch. Thresholds are calibrated against what *this* sensor reports.
-- **Flash is now 91.2%** of the app partition on `esp32d-pca9685`. The VEML7700 driver is hand-rolled
-  rather than pulled from Adafruit precisely to stay inside that budget.
+- **Shared mode re-couples the sensor and the servos.** A shorted sensor lead can wedge the servo bus.
+  It's opt-in, off by default on the ESP32-D, and the UI says so. ADR 0011's reasoning is unchanged —
+  it's now the default rather than the only mode.
+- **The ESP32-C3 is still not shippable and no C3 binaries are attached here.** This release removes
+  the *solar* blocker; `ServoController::validGpio()` still carries the ESP32-D whitelist and would
+  accept pins that don't exist on a C3 (25/26/27/32/33) or that are its SPI flash (12–17). Both C3
+  envs do compile (89.5 % / 90.1 % flash). See [docs/pinout.md](docs/pinout.md).
+- **Still not verified against physical VEML7700 hardware** — the sensor isn't wired yet. Everything
+  continues to be exercised through the Solar page's simulate-lux slider.
 
 ## Download (ESP32-D / WROOM)
 
@@ -53,14 +52,14 @@ Two servo-backend variants; the LittleFS image is shared across both.
 
 | File | Use |
 | ---- | --- |
-| `shutter-hub-esp32d-pca9685-full-v0.6.0.bin` | First USB flash — PCA9685 (I2C multi-channel) build, at `0x0` |
-| `shutter-hub-esp32d-pca9685-ota-v0.6.0.bin`  | Firmware OTA — PCA9685 build |
-| `shutter-hub-esp32d-direct-full-v0.6.0.bin`  | First USB flash — direct-GPIO (single bench servo) build, at `0x0` |
-| `shutter-hub-esp32d-direct-ota-v0.6.0.bin`   | Firmware OTA — direct-GPIO build |
-| `shutter-hub-esp32d-littlefs-v0.6.0.bin`     | Filesystem image (web UI) — shared by both variants |
+| `shutter-hub-esp32d-pca9685-full-v0.6.1.bin` | First USB flash — PCA9685 (I2C multi-channel) build, at `0x0` |
+| `shutter-hub-esp32d-pca9685-ota-v0.6.1.bin`  | Firmware OTA — PCA9685 build |
+| `shutter-hub-esp32d-direct-full-v0.6.1.bin`  | First USB flash — direct-GPIO (single bench servo) build, at `0x0` |
+| `shutter-hub-esp32d-direct-ota-v0.6.1.bin`   | Firmware OTA — direct-GPIO build |
+| `shutter-hub-esp32d-littlefs-v0.6.1.bin`     | Filesystem image (web UI) — shared by both variants |
 
-**The filesystem image is mandatory this time** — the Solar page lives in it. Flash firmware alone
-and you'll get the old UI with no Solar tab.
+**Flash the filesystem image too.** The bus selector lives in it; firmware alone leaves you on the
+old Solar page with no way to pick a bus.
 
 ## Flash it
 
@@ -72,12 +71,14 @@ and you'll get the old UI with no Solar tab.
 
 ## Wiring the sensor
 
-Four wires to the VEML7700 breakout: **3V3 · GND · SDA → GPIO25 · SCL → GPIO26** (change the pins on
-the Solar page if you prefer others — but never GPIO34–39, which are input-only and cannot drive
-I²C). Keep the lead short, twist SDA/SCL with GND, and put a 0.1 µF cap at the sensor. Details in
-[docs/hardware-layout.md](docs/hardware-layout.md).
+**Dedicated bus (default):** 3V3 · GND · SDA → GPIO25 · SCL → GPIO26.
+**Shared bus:** wire SDA/SCL in parallel with the PCA9685 on GPIO21/22.
+
+Either way keep the lead short, twist SDA/SCL with GND, and put a 0.1 µF cap at the sensor. Never use
+GPIO34–39 — input-only, they cannot drive I²C. Details in
+[docs/hardware-layout.md](docs/hardware-layout.md) and [docs/pinout.md](docs/pinout.md).
 
 ## Build from source
 
 PlatformIO in [firmware/](firmware/): `pio run -e esp32d-pca9685` (or `-e esp32d-direct`), filesystem
-with `-t buildfs`. ESP32-C3 variants are defined but deferred.
+with `-t buildfs`. ESP32-C3 variants compile but are deferred and unshipped.

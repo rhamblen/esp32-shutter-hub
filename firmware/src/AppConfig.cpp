@@ -34,8 +34,9 @@ String   g_hkCode     = "74888377";
 // Light sensor + solar (Phase 6)
 bool     g_lsEn       = false;
 uint8_t  g_lsType     = 0;        // 0 = VEML7700, 1 = analog LDR (reserved)
-uint8_t  g_lsSda      = 25;       // Wire1 SDA (own bus, distinct from the PCA9685 21/22)
-uint8_t  g_lsScl      = 26;       // Wire1 SCL
+uint8_t  g_lsBus      = AppConfig::BUS_DEDICATED;   // preference; clamped on 1-controller SoCs
+uint8_t  g_lsSda      = 25;       // dedicated-bus SDA (distinct from the PCA9685's 21/22)
+uint8_t  g_lsScl      = 26;       // dedicated-bus SCL
 bool     g_solEn      = false;
 uint32_t g_solTripLux = 60000;
 uint16_t g_solTripS   = 600;      // 10 min
@@ -79,6 +80,7 @@ void begin() {
 
   g_lsEn       = prefs.getBool("lsEn", false);
   g_lsType     = prefs.getUChar("lsType", 0);
+  g_lsBus      = prefs.getUChar("lsBus", BUS_DEDICATED);
   g_lsSda      = prefs.getUChar("lsSda", 25);
   g_lsScl      = prefs.getUChar("lsScl", 26);
   g_solEn      = prefs.getBool("solEn", false);
@@ -209,13 +211,17 @@ void setHomeKit(bool enabled, const String &name, const String &code) {
 
 bool     lsEnabled() { return g_lsEn; }
 uint8_t  lsType()    { return g_lsType; }
+uint8_t  lsBus()     { return g_lsBus > BUS_SHARED ? (uint8_t)BUS_DEDICATED : g_lsBus; }
 uint8_t  lsSda()     { return g_lsSda; }
 uint8_t  lsScl()     { return g_lsScl; }
 
-void setLightSensor(bool enabled, uint8_t type, uint8_t sda, uint8_t scl) {
-  g_lsEn = enabled; g_lsType = type; g_lsSda = sda; g_lsScl = scl;
+void setLightSensor(bool enabled, uint8_t type, uint8_t bus, uint8_t sda, uint8_t scl) {
+  g_lsEn = enabled; g_lsType = type;
+  g_lsBus = bus > BUS_SHARED ? (uint8_t)BUS_DEDICATED : bus;
+  g_lsSda = sda; g_lsScl = scl;
   prefs.putBool("lsEn", g_lsEn);
   prefs.putUChar("lsType", g_lsType);
+  prefs.putUChar("lsBus", g_lsBus);
   prefs.putUChar("lsSda", g_lsSda);
   prefs.putUChar("lsScl", g_lsScl);
 }

@@ -271,20 +271,26 @@
 
       <!-- Sensor -->
       <div class="card">
-        <div class="card-head"><span class="ic pink">☀</span><div><h2>Sensor</h2><p>VEML7700 on its own I²C bus (Wire1)</p></div></div>
+        <div class="card-head"><span class="ic pink">☀</span><div><h2>Sensor</h2><p id="so_bushead">VEML7700 on its own I²C bus (Wire1)</p></div></div>
         <div class="form2">
           <label>Sensor type
             <select id="so_type"><option value="0">VEML7700 (I²C)</option><option value="1" disabled>Analog LDR — later</option></select>
           </label>
           <div class="endbtn"><span class="pill" id="so_detpill"><span class="dot"></span><span>unknown</span></span></div>
         </div>
-        <div class="form2">
+        <label class="full">I²C bus
+          <select id="so_bus">
+            <option value="0">Dedicated — own bus (Wire1)</option>
+            <option value="1">Shared with the PCA9685 (Wire)</option>
+          </select>
+        </label>
+        <div class="form2" id="so_pins">
           <label>Wire1 SDA GPIO<input id="so_sda" type="number" min="0" max="39" value="25"></label>
           <label>Wire1 SCL GPIO<input id="so_scl" type="number" min="0" max="39" value="26"></label>
         </div>
-        <p class="msg">Its own bus — a sensor-lead fault can't disturb the PCA9685 servo bus on GPIO21/22. Avoid GPIO34–39 (input-only, can't drive I²C).</p>
+        <p class="msg" id="so_busnote"></p>
         <div class="toggle-row">
-          <div><b>Enable sensor</b><p>Power up the VEML7700 and read light on Wire1</p></div>
+          <div><b>Enable sensor</b><p>Power up the VEML7700 and read light on the selected bus</p></div>
           <label class="switch"><input type="checkbox" id="so_lsen"><span class="slider"></span></label>
         </div>
       </div>

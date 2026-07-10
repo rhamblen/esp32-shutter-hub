@@ -64,18 +64,24 @@ String   hkBridgeName();                        // resolved (never blank)
 String   hkSetupCode();                         // digits only, e.g. "74888377"
 void     setHomeKit(bool enabled, const String &name, const String &code);
 
-// ---- Light sensor + solar heat protection (Phase 6, v0.6.0) ----
-// The VEML7700 sits on its own I2C bus (Wire1) so a sensor-lead fault can never wedge
-// the PCA9685 servo bus — see ADR 0011. Pins default to SDA 25 / SCL 26 (any normal
-// GPIO; not 34–39, which are input-only and can't drive I2C). `type` reserves an analog
-// LDR fallback (0 = VEML7700, 1 = analog) though only the VEML7700 path is built today.
+// ---- Light sensor + solar heat protection (Phase 6, v0.6.0; bus choice v0.6.1) ----
+// The VEML7700 bus is a setting (ADR 0012):
+//   BUS_DEDICATED  its own Wire1 on lsSda/lsScl (default 25/26) — the default and the
+//                  recommendation: a sensor-lead fault can't wedge the servo bus (ADR 0011).
+//                  Needs a SoC with two I2C controllers, so NOT available on the ESP32-C3.
+//   BUS_SHARED     rides the PCA9685's Wire on i2cSda/i2cScl (21/22). Always available;
+//                  the only option on a one-controller chip. Re-couples the two devices.
+// `type` reserves an analog LDR fallback (0 = VEML7700, 1 = analog); only VEML7700 is built.
 enum SolarTarget : uint8_t { TGT_OPEN = 0, TGT_CLOSED = 1, TGT_DAYLIGHT = 2, TGT_PRIVACY = 3, TGT_NONE = 4 };
+enum SensorBus   : uint8_t { BUS_DEDICATED = 0, BUS_SHARED = 1 };
 
 bool     lsEnabled();
 uint8_t  lsType();                             // 0 = VEML7700, 1 = analog LDR (reserved)
-uint8_t  lsSda();                              // Wire1 SDA, default 25
-uint8_t  lsScl();                              // Wire1 SCL, default 26
-void     setLightSensor(bool enabled, uint8_t type, uint8_t sda, uint8_t scl);
+uint8_t  lsBus();                              // SensorBus — the *preference*; LightSensor
+                                               // clamps it to BUS_SHARED on a 1-controller SoC
+uint8_t  lsSda();                              // dedicated-bus SDA, default 25 (unused when shared)
+uint8_t  lsScl();                              // dedicated-bus SCL, default 26 (unused when shared)
+void     setLightSensor(bool enabled, uint8_t type, uint8_t bus, uint8_t sda, uint8_t scl);
 
 // Solar automation: trip to the bright target when lux stays above tripLux for tripSecs;
 // return to the clear target when lux stays below clearLux for clearSecs. Targets are a

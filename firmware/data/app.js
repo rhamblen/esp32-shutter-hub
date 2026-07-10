@@ -496,7 +496,33 @@ const STATE_TEXT = { disabled: "automation off", idle: "idle", tripped: "tripped
   "counting-trip": "counting to trip…", "counting-clear": "counting to clear…" };
 const luxTxt = v => Math.round(v).toLocaleString();
 const durTxt = s => s >= 60 ? Math.round(s / 60) + " min" : s + " s";
-let soFilled = false;
+let soFilled = false, soCfg = null;   // soCfg: last /api/solar payload, for the bus renderer
+
+// The sensor bus is a choice (ADR 0012). Dedicated needs a second I2C controller, which the
+// ESP32-C3 doesn't have — the firmware reports that as `dedicatedSupported`, and since one
+// LittleFS image serves every variant this has to be decided here at runtime, not at build time.
+function soRenderBus() {
+  if (!soCfg) return;
+  const s = soCfg.sensor;
+  const ded = +$("#so_bus").value === 0;
+  $("#so_bus").options[0].disabled = !s.dedicatedSupported;
+  $("#so_pins").classList.toggle("hidden", !ded);
+  $("#so_bushead").textContent = ded
+    ? "VEML7700 on its own I²C bus (Wire1)"
+    : "VEML7700 sharing the PCA9685's I²C bus (Wire)";
+  let note;
+  if (!s.dedicatedSupported) {
+    note = "This chip has only one I²C controller, so the sensor must share the PCA9685's bus. " +
+           "A dedicated bus needs an ESP32-D.";
+  } else if (ded) {
+    note = "Recommended. Its own bus — a sensor-lead fault can't disturb the PCA9685 servo bus on " +
+           "GPIO21/22. Avoid GPIO34–39 (input-only, can't drive I²C).";
+  } else {
+    note = `Shares GPIO${s.activeSda}/${s.activeScl} with the PCA9685 — set those on the Servo test ` +
+           "page, not here. Saves two pins, but a shorted sensor lead can then wedge the servos.";
+  }
+  $("#so_busnote").textContent = note;
+}
 
 function soDetPill(s) {
   const p = $("#so_detpill");
@@ -524,9 +550,12 @@ async function loadSolar() {
   }
   try {
     const d = await apiGet("/api/solar");
+    soCfg = d;
     $("#so_type").value = d.sensor.type;
+    $("#so_bus").value = d.sensor.bus;
     $("#so_sda").value = d.sensor.sda; $("#so_scl").value = d.sensor.scl;
     $("#so_lsen").checked = d.sensor.enabled;
+    soRenderBus();
     $("#so_triplux").value  = d.trip.lux;  $("#so_tripmin").value  = Math.round(d.trip.secs / 60);
     $("#so_clearlux").value = d.clear.lux; $("#so_clearmin").value = Math.round(d.clear.secs / 60);
     $("#so_bright").value = d.brightTarget; $("#so_clear").value = d.clearTarget;
@@ -538,7 +567,7 @@ async function loadSolar() {
     soRenderStatus(d);
   } catch (e) { $("#so_msg").textContent = "Load failed: " + e.message; }
 }
-async function soRefresh() { try { soRenderStatus(await apiGet("/api/solar")); } catch (e) {} }
+async function soRefresh() { try { soCfg = await apiGet("/api/solar"); soRenderStatus(soCfg); } catch (e) {} }
 
 $("#so_save").addEventListener("click", async () => {
   const tl = +$("#so_triplux").value, cl = +$("#so_clearlux").value;
@@ -547,7 +576,7 @@ $("#so_save").addEventListener("click", async () => {
   try {
     soRenderStatus(await apiPost("/api/solar", {
       lsEnabled: $("#so_lsen").checked, lsType: $("#so_type").value,
-      sda: $("#so_sda").value, scl: $("#so_scl").value,
+      bus: $("#so_bus").value, sda: $("#so_sda").value, scl: $("#so_scl").value,
       enabled: $("#so_solen").checked,
       tripLux: tl, tripMin: $("#so_tripmin").value,
       clearLux: cl, clearMin: $("#so_clearmin").value,
@@ -557,6 +586,7 @@ $("#so_save").addEventListener("click", async () => {
   } catch (e) { $("#so_msg").textContent = "Failed: " + e.message; }
 });
 $("#so_reset").addEventListener("click", loadSolar);
+$("#so_bus").addEventListener("change", soRenderBus);
 $("#so_sim").addEventListener("input", () => $("#so_simv").textContent = luxTxt(+$("#so_sim").value) + " lx");
 async function soSim(body, note) {
   try { soRenderStatus(await apiPost("/api/solar/simulate", body)); $("#so_smsg").textContent = note; }

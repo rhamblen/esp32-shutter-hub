@@ -118,8 +118,13 @@ static String solarConfigJson() {
   j += "\"sensor\":{";
   j +=   "\"enabled\":" + String(AppConfig::lsEnabled() ? "true" : "false") + ",";
   j +=   "\"type\":"    + String(AppConfig::lsType()) + ",";
-  j +=   "\"sda\":"     + String(AppConfig::lsSda()) + ",";
+  j +=   "\"bus\":"     + String(AppConfig::lsBus()) + ",";        // preference (0 dedicated, 1 shared)
+  j +=   "\"sda\":"     + String(AppConfig::lsSda()) + ",";        // dedicated-bus pins (form fields)
   j +=   "\"scl\":"     + String(AppConfig::lsScl()) + ",";
+  j +=   "\"dedicatedSupported\":" + String(LightSensor::dedicatedSupported() ? "true" : "false") + ",";
+  j +=   "\"activeBus\":" + String(LightSensor::activeBus()) + ",";  // after clamping on a 1-bus SoC
+  j +=   "\"activeSda\":" + String(LightSensor::activeSda()) + ",";
+  j +=   "\"activeScl\":" + String(LightSensor::activeScl()) + ",";
   j +=   "\"present\":" + String(LightSensor::present() ? "true" : "false") + ",";
   j +=   "\"lux\":"     + String(LightSensor::lux(), 0) + ",";
   j +=   "\"simulated\":" + String(LightSensor::simulated() ? "true" : "false");
@@ -342,11 +347,27 @@ void begin() {
       return r->hasParam(k, true) ? r->getParam(k, true)->value() : d;
     };
     auto b = [&](const char *k) { return p(k, "") == "true" || p(k, "") == "1"; };
-    // Sensor (Wire1 bus + type + enable). Minutes in the form → seconds in NVS.
+    // Sensor (bus choice + pins + type + enable). Minutes in the form → seconds in NVS.
     bool     lsEn    = b("lsEnabled");
     uint8_t  lsType  = (uint8_t) p("lsType", String(AppConfig::lsType())).toInt();
+    uint8_t  lsBus   = (uint8_t) p("bus", String(AppConfig::lsBus())).toInt();
     uint8_t  sda     = (uint8_t) p("sda", String(AppConfig::lsSda())).toInt();
     uint8_t  scl     = (uint8_t) p("scl", String(AppConfig::lsScl())).toInt();
+    if (lsBus > AppConfig::BUS_SHARED) lsBus = AppConfig::BUS_DEDICATED;
+    if (lsBus == AppConfig::BUS_DEDICATED) {
+      if (!LightSensor::dedicatedSupported()) {
+        r->send(400, "application/json",
+          "{\"error\":\"this chip has only one I2C controller — use the shared bus\"}");
+        return;
+      }
+      // Dedicated pins are only ever used on a two-controller SoC (the ESP32-D), so the
+      // servo GPIO whitelist is the right validator here — it rejects 34–39 and the strapping pins.
+      if (sda == scl || !ServoController::isValidPin(sda) || !ServoController::isValidPin(scl)) {
+        r->send(400, "application/json",
+          "{\"error\":\"invalid dedicated-bus pins (must differ, be output-capable, not GPIO34-39)\"}");
+        return;
+      }
+    }
     // Solar thresholds + targets.
     bool     solEn   = b("enabled");
     uint32_t tripLux = (uint32_t) p("tripLux",  String(AppConfig::solarTripLux())).toInt();
@@ -355,11 +376,13 @@ void begin() {
     uint16_t clrS    = (uint16_t)(p("clearMin", String(AppConfig::solarClearSecs() / 60)).toInt() * 60);
     uint8_t  bright  = (uint8_t) p("brightTarget", String(AppConfig::solarBrightTarget())).toInt();
     uint8_t  clear   = (uint8_t) p("clearTarget",  String(AppConfig::solarClearTarget())).toInt();
-    AppConfig::setLightSensor(lsEn, lsType, sda, scl);
+    AppConfig::setLightSensor(lsEn, lsType, lsBus, sda, scl);
     AppConfig::setSolar(solEn, tripLux, tripS, clrLux, clrS, bright, clear);
-    LightSensor::reconfigure();          // apply bus pins / enable without a reboot
+    LightSensor::reconfigure();          // apply bus choice / pins / enable without a reboot
     Mqtt::solarChanged();                // echo the new thresholds/switch state to HA
-    LOGI("solar", "config saved: sensor=%d bus SDA%u/SCL%u, automation=%d", lsEn, sda, scl, solEn);
+    LOGI("solar", "config saved: sensor=%d on the %s bus (SDA%u/SCL%u), automation=%d",
+         lsEn, LightSensor::activeBus() == AppConfig::BUS_DEDICATED ? "dedicated" : "shared",
+         LightSensor::activeSda(), LightSensor::activeScl(), solEn);
     r->send(200, "application/json", solarConfigJson());
   });
   // Force an effective lux for testing (?lux=N) or drop back to the live sensor (?live=1).

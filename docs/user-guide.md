@@ -118,8 +118,10 @@ set specific percentages, or trigger the Home Assistant buttons instead.
 
 ## Solar heat protection
 
-> Requires an **ESP32-D**. The sensor needs a second hardware I²C bus, which the ESP32-C3 does not
-> have — see [pinout.md](pinout.md#esp32-c3-status--not-ready).
+> Works on any board. By default the sensor gets its **own I²C bus** so a fault on its lead can't
+> disturb the servos. Chips with a single I²C controller (the ESP32-C3) instead **share** the
+> PCA9685's bus — the Solar page picks this for you and explains why. See
+> [ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md).
 
 The VEML7700 watches the light level. When lux stays **above** the trip threshold for the trip dwell,
 the hub moves the shutters to your chosen bright-action position. When lux stays **below** the clear

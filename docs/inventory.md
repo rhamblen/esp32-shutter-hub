@@ -22,7 +22,7 @@ Starting-state facts and parts the build assumes. Status: **⬤ ordered/in hand 
 | ESP32-D DevKit | Hub controller | ⬤ (existing stock) | 16 LEDC channels; two I2C controllers ([pinout.md](pinout.md)) |
 | PCA9685 | 16-ch servo driver | ⬤ | I2C 0x40 on `Wire` — **SDA GPIO21 / SCL GPIO22**; servos on CH0–3 |
 | MG90D digital metal-gear servo ×4 | Tilt actuators | ⬤ | ~2 kg·cm, ~13–14 g, 4.8–6 V |
-| VEML7700 | Ambient light sensor | ⬤ | I2C 0x10 on its own `Wire1` — **SDA GPIO25 / SCL GPIO26**; 0–120,000 lux |
+| VEML7700 | Ambient light sensor | ⬤ | I2C 0x10; own `Wire1` by default — **SDA GPIO25 / SCL GPIO26** — or shared with the PCA9685 ([ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md)); 0–120,000 lux |
 | USB-C PD charger (30 W+) | Mains source | ⬤ | |
 | AITRIP PD trigger board | PD → 12 V | ⬤ | Set to 12 V |
 | XL4015 buck converter (~5 A) | 12 V → **5.1 V** | ⬤ (ordered) | Replaces LM2596; large heatsink, screw terminals |

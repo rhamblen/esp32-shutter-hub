@@ -6,38 +6,6 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
-### Added
-- **[docs/installation.md](docs/installation.md)** — end-to-end install guide: USB first flash,
-  captive-portal WiFi setup, servo smoke test, per-shutter calibration, MQTT/Home Assistant,
-  the Lovelace card, HomeKit pairing, solar thresholds, web auth, and OTA updates. Each step
-  carries its own troubleshooting table.
-- **[docs/user-guide.md](docs/user-guide.md)** — everyday operation: the four saved positions,
-  the four control faces (web UI, HA, Apple Home, Lovelace card), solar behaviour incl. hysteresis
-  and the 2 h manual override, recalibration, and routine maintenance. Embeds the Shutters and Solar
-  page mockups, footnoted as mockups rather than captures.
-- **[docs/pinout.md](docs/pinout.md)** — GPIO map for both boards: the ESP32-D defaults the firmware
-  actually ships (`Wire` SDA21/SCL22 → PCA9685; `Wire1` SDA25/SCL26 → VEML7700; GPIO13 servo signal
-  on `-direct`), the pins `validGpio()` rejects and why, and a **proposed** ESP32-C3 map.
-
-### Fixed
-- **Stale "shared I2C bus" notes**, which contradicted [ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md)
-  and the shipped v0.6.0 firmware. `project-brief.md` claimed "PCA9685 and VEML7700 share one bus"
-  and omitted the sensor bus from its pinout table; `architecture.md` still gave "shared I2C with
-  sensor" as a reason to pick the PCA9685; `project-plan.md` D9 referred to "the shared I2C bus".
-
-### Notes
-- **ESP32-C3 is not shippable yet**, recorded in [docs/pinout.md](docs/pinout.md). Both C3 envs
-  compile (`esp32c3-pca9685` links at 89.4 % flash), but: **solar cannot work on the C3** — the
-  VEML7700 needs a second I²C controller (`SOC_I2C_NUM` is `2` on the ESP32-D, `1` on the C3), and
-  the Arduino core declares `Wire1` unconditionally so `LightSensor.cpp` compiles against a
-  peripheral that does not exist; and `ServoController::validGpio()` still carries the ESP32-D
-  whitelist, so on a C3 it would accept nonexistent pins (25/26/27/32/33) and the SPI-flash pins
-  (12–17). Firmware fix pending.
-
-### Changed
-- **README** — new **Installation** section (five-step summary linking to the guides above); the
-  hardware table now carries default pins per component; new documents listed in the repo-layout table.
-
 ### Release checklist / notes
 - **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`
   (firmware) bin **per variant** — `shutter-hub-<variant>-{full,ota}-vX.Y.Z.bin` — plus a **single
@@ -47,6 +15,64 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   variants (`esp32d-direct`, `esp32d-pca9685`) are shipped day-to-day; the C3 variants are deferred.
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
+
+## [0.6.1] — 2026-07-10
+
+**The sensor's I²C bus is now a setting** — and with it, solar heat protection works on the ESP32-C3.
+Plus the full installation and user guides, and a pinout reference.
+
+### Added
+- **Selectable sensor bus** ([ADR 0012](docs/decisions/0012-selectable-sensor-i2c-bus.md)) — the
+  VEML7700 can sit on its **own `Wire1`** (default, SDA 25 / SCL 26 — the fault-isolated choice from
+  ADR 0011) **or share the PCA9685's `Wire`** (GPIO21/22). Chosen on the **Solar** page. A dedicated
+  bus needs a second I²C controller, so on a one-controller chip the preference is **clamped to
+  shared** and the dedicated option is disabled with an explanation.
+- **[docs/installation.md](docs/installation.md)** — end-to-end install guide: USB first flash,
+  captive-portal WiFi setup, servo smoke test, per-shutter calibration, MQTT/Home Assistant,
+  the Lovelace card, HomeKit pairing, solar thresholds, web auth, and OTA updates. Each step
+  carries its own troubleshooting table.
+- **[docs/user-guide.md](docs/user-guide.md)** — everyday operation: the four saved positions,
+  the four control faces (web UI, HA, Apple Home, Lovelace card), solar behaviour incl. hysteresis
+  and the 2 h manual override, recalibration, and routine maintenance. Embeds the Shutters and Solar
+  page mockups, footnoted as mockups rather than captures.
+- **[docs/pinout.md](docs/pinout.md)** — GPIO map for both boards: the ESP32-D defaults the firmware
+  actually ships, the pins `validGpio()` rejects and why, and a **proposed** ESP32-C3 map.
+
+### Fixed
+- **Solar failed silently on the ESP32-C3.** The C3 has one I²C controller (`SOC_I2C_NUM == 1`) to
+  the ESP32-D's two, but the Arduino core declares `Wire1` unconditionally — so the C3 build linked
+  cleanly and then `Wire1.begin()` returned `ESP_ERR_INVALID_ARG` at runtime. The sensor reported
+  *"not detected"* forever, with nothing to distinguish it from a wiring fault. The bus setting above
+  fixes this: the C3 falls back to the shared bus and the sensor works.
+- **GPIO34–39 could be saved as dedicated I²C pins.** They're input-only and can never drive an
+  open-drain I²C line. `POST /api/solar` now validates dedicated-bus pins with
+  `ServoController::validGpio()` (correct here — dedicated mode only exists on the ESP32-D) and
+  rejects identical, non-output-capable, or strapping pins.
+- **Stale "shared I2C bus" notes**, which contradicted [ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md)
+  and the shipped v0.6.0 firmware. `project-brief.md` claimed "PCA9685 and VEML7700 share one bus"
+  and omitted the sensor bus from its pinout table; `architecture.md` still gave "shared I2C with
+  sensor" as a reason to pick the PCA9685; `project-plan.md` D9 referred to "the shared I2C bus".
+
+### Changed
+- **README** — new **Installation** section (five-step summary linking to the guides above); the
+  hardware table now carries default pins per component; new documents listed in the repo-layout table.
+- `AppConfig::setLightSensor()` takes a `bus` argument; new `lsBus()` / `SensorBus` enum in NVS.
+  `LightSensor` gained `dedicatedSupported()`, `activeBus()`, `activeSda()`, `activeScl()`, and
+  `/api/solar` reports all four so the (variant-shared) web UI can adapt at runtime.
+
+### Notes
+- **`reconfigure()` never tears down a shared bus.** `TwoWire::end()` really does deinit the
+  peripheral — calling it on `Wire` would kill the PCA9685 and freeze every servo. Only the dedicated
+  `Wire1` is ever ended. Conversely `TwoWire::begin()` **is** idempotent on an already-started master
+  bus, which is why shared mode needs no ownership handshake with `ServoController`.
+- **Shared mode re-couples sensor and servos** — a shorted sensor lead can wedge the servo bus. It is
+  opt-in, off by default on the ESP32-D, and the UI says so. ADR 0011's reasoning is unchanged; it is
+  now the default rather than the only mode.
+- **The ESP32-C3 is still not shippable**, and no C3 binaries are attached to releases. This release
+  removes the *solar* blocker; `validGpio()` still carries the ESP32-D whitelist and would accept
+  pins that don't exist on a C3 (25/26/27/32/33) or that are its SPI flash (12–17). See
+  [docs/pinout.md](docs/pinout.md).
+- Flash: **91.3 %** (`esp32d-pca9685`), 91.9 % (`esp32d-direct`); C3 envs link at 89.5 % / 90.1 %.
 
 ## [0.6.0] — 2026-07-10
 

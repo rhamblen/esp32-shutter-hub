@@ -26,7 +26,7 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 | `docs/architecture.md` | Principles, trade-off table, topology, gotchas |
 | `docs/inventory.md` | Shutter facts + BOM + power budget |
 | `docs/hardware-layout.md` | Copper-breadboard build plan: placement, cuts, standoffs, cables, connectors |
-| `docs/decisions/0001–0011` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware, MQTT commands, MQTT-only HA, Lovelace card, build variants, position memory, concurrent drive, dedicated sensor I2C bus |
+| `docs/decisions/0001–0012` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware, MQTT commands, MQTT-only HA, Lovelace card, build variants, position memory, concurrent drive, dedicated sensor I2C bus, selectable sensor bus |
 | `firmware/data/` | LittleFS web UI (index.html, style.css, app.js) served by `WebUI` |
 | `CHANGELOG.md` | Keep-a-Changelog; update every phase |
 
@@ -35,8 +35,10 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 - **Shutters:** 4 panels, ~450 mm wide, 11 slats, ~75 mm slat height, edge tilt rod, lightweight.
 - **Servo:** MG90D (digital metal gear, ~2 kg·cm, ~13–14 g, 4.8–6 V).
 - **Driver:** PCA9685 (I2C 0x40, CH0–3).
-- **Sensor:** VEML7700 (I2C 0x10) on its **own bus `Wire1`** — pins configurable, default SDA 25 /
-  SCL 26 ([ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md)). **Not** on the PCA9685 bus.
+- **Sensor:** VEML7700 (I2C 0x10). Its bus is a **setting** ([ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md)):
+  **dedicated `Wire1`** (default, SDA 25 / SCL 26, fault-isolated per [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md))
+  or **shared** with the PCA9685 on `Wire` (21/22). Dedicated needs `SOC_I2C_NUM > 1` — true on the
+  ESP32-D, **false on the C3**, where the preference is clamped to shared.
 - **Power:** USB-C PD → AITRIP trigger (12 V) → XL4015 @ **5.1 V** → ESP32 + PCA9685 + servo rail;
   1000–2200 µF bulk cap; common ground. XL4015 replaced LM2596.
 - **Linkage:** M2×50 mm ball-link pushrod (hole-to-hole 68–78 mm); horns 8/10/12 mm; printed arm
@@ -57,7 +59,7 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
   Config in NVS, web assets in LittleFS.
 - **Servo drive (ADR 0010, v0.4.0):** per-slot slew state — all channels move concurrently at the
   shared speed; bench API acts on the active test channel; slot API (`moveSlotUs` …) for MQTT.
-- **Solar (ADR 0011, v0.6.0):** `LightSensor` (VEML7700 on `Wire1`, lean vendored driver, fixed
+- **Solar (ADR 0011 + 0012, v0.6.0/v0.6.1):** `LightSensor` (VEML7700 on the selected bus, lean vendored driver, fixed
   gain 1/8 + IT 25 ms → ~1.8432 lx/ct, full scale ≈120 k lx, **linear lux — no Vishay correction**,
   so reported lux is approximate) + `SolarLogic` (`idle→counting-trip→tripped→counting-clear`).
   Defaults: trip >60000 lx for 10 min → **Privacy**; clear <30000 lx for 20 min → **Do nothing**.
@@ -104,7 +106,16 @@ sensor isn't wired; everything was exercised through the simulate-lux slider.
 - Stagger servo start-up; keep bulk cap; ESP32 on the rail, not through the board; vent the XL4015.
 - Stepped `moveTo`, never instant `write`.
 - Calibration is per-shutter — panels differ.
-- **I2C: two separate buses.** PCA9685 0x40 on `Wire` (21/22); VEML7700 0x10 on `Wire1` (25/26).
-  They *could* share one bus (distinct addresses) — ADR 0011 deliberately chose not to, so a
-  sensor-lead fault can't wedge the servo driver. Don't "simplify" them back together.
-- `Wire.begin()` only runs inside `#if USE_PCA9685` — a `-direct` build has **no** shared bus.
+- **I2C: two buses by default.** PCA9685 0x40 on `Wire` (21/22); VEML7700 0x10 on `Wire1` (25/26).
+  They *could* share one bus (distinct addresses); ADR 0011 chose not to so a sensor-lead fault
+  can't wedge the servo driver. ADR 0012 made it a **setting** — don't hard-code either way.
+- **Never `end()` the shared bus.** `LightSensor::reconfigure()` only ever calls `Wire1.end()`
+  (guarded by `g_dedUp`). `Wire.end()` would deinit the PCA9685 and freeze every servo.
+  `TwoWire::begin()` *is* idempotent on a started master bus, so shared mode needs no handshake.
+- `Wire.begin()` only runs inside `#if USE_PCA9685` in ServoController — on a `-direct` build in
+  shared mode, `LightSensor` is the first caller and brings `Wire` up itself.
+- **`SOC_I2C_NUM` is 2 on the ESP32-D, 1 on the C3**, but the Arduino core declares `Wire1`
+  unconditionally — so a C3 build *links* and fails silently at runtime. Capability must be gated
+  on `SOC_I2C_NUM`, never on "it compiled".
+- The **LittleFS image is shared across all variants**, so any per-chip/per-variant UI difference
+  must come from the API at runtime (`usesPca`, `dedicatedSupported`), never from build-time markup.

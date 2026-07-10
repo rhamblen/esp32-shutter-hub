@@ -44,8 +44,10 @@ of shutters is configuration, not code.
 | Light sensor | VEML7700 (I2C, `0x10`) | `Wire1` — SDA **GPIO25**, SCL **GPIO26** |
 | Linkage | M2 × 50 mm ball-link pushrod + printed arms | — |
 
-The sensor sits on a **second, separate I2C bus** so a fault on its lead can never wedge the servo
-bus ([ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md)). Every pin above is
+By default the sensor sits on a **second, separate I2C bus** so a fault on its lead can never wedge
+the servo bus ([ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md)). It can also be told to
+**share** the PCA9685's bus ([ADR 0012](docs/decisions/0012-selectable-sensor-i2c-bus.md)) — the only
+option on chips with a single I2C controller, such as the ESP32-C3. Every pin above is
 runtime-configurable and stored in NVS. Full map, including the ESP32-C3 proposal and the pins the
 firmware rejects: **[docs/pinout.md](docs/pinout.md)**.
 

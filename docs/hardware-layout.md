@@ -141,9 +141,11 @@ unpolarised Dupont pairs for anything permanent — one reversed 3V3/GND on the 
 
 ### VEML7700 light sensor — its own bus (v0.6.0, [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md))
 
-The sensor does **not** join the PCA9685 on GPIO21/22. It runs on a second I²C bus, `Wire1`, so a
-damaged sensor lead can never wedge the servo driver. Pins are set on the web UI's **Solar** page —
-default **SDA GPIO25 / SCL GPIO26**.
+By default the sensor does **not** join the PCA9685 on GPIO21/22. It runs on a second I²C bus,
+`Wire1`, so a damaged sensor lead can never wedge the servo driver. Pins are set on the web UI's
+**Solar** page — default **SDA GPIO25 / SCL GPIO26**. That page can also switch it to **share** the
+PCA9685's bus ([ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md)) — which saves two pins and
+is the only option on a single-I²C chip, but gives up the isolation below.
 
 | Do | Why |
 | -- | --- |
