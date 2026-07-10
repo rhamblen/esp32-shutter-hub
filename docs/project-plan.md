@@ -16,8 +16,8 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
 | 4b    | v0.4.x  | HA Lovelace operating card     | ☑      |
-| 5     | v0.5.0–4| HomeKit (HomeSpan bridge)      | ◐ built, **pairing unresolved** |
-| 6     | v0.6.0–2| Light sensor + solar logic     | ◐ built, **sensor not yet wired** |
+| 5     | v0.5.0–v0.7.2 | HomeKit (HomeSpan bridge) | ☑ pairing works |
+| 6     | v0.6.0–2| Light sensor + solar logic     | ☑      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
 | 8     | —       | HA calibration card (optional) | ☐      |
 | 8b    | —       | HA-side threshold calibration from lux history (optional) | ☐ |
@@ -27,8 +27,10 @@ forward — they all run on a bare ESP32 before servo hardware exists. So the ol
 "Phase 3 WiFiManager/OTA" are effectively **done** (Phase S + S2); Phase 3 is retired (WiFi
 provisioning now lives in the System > WiFi sub-tab). Per-shutter **calibration** (Phase 2) is now
 **done** on real PCA9685 hardware (v0.3.0), and MQTT **cover control** (Phase 4) was verified on
-hardware on 2026-07-09. What remains unproven against physical hardware is the **VEML7700** (Phase 6,
-not yet wired) and **HomeKit pairing** (Phase 5, unresolved).
+hardware on 2026-07-09. **HomeKit pairing** (Phase 5) works as of v0.7.0 — the fix was HomeSpan 1.9.1's
+`sscanf("%m…")` hostname check, which newlib-nano doesn't implement — and the **light sensor + solar
+logic** (Phase 6) is in place. What remains for **v1.0.0** is the physical build-out (Phase 7):
+enclosures, PCB, all four shutters mounted behind the wall, and end-to-end diagnostics.
 
 **Build variants (v0.3.0):** the servo backend is now a compile-time choice — **direct GPIO** (one
 bench actuator) or **PCA9685** (I2C multi-channel) — with a `FW_VARIANT` id surfaced on the
@@ -141,30 +143,30 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 - The **calibration card** originally bundled in this phase is split out to **Phase 8 (optional)**
   together with the firmware commands it needs.
 
-## Phase 5 — HomeKit (v0.5.0–v0.5.4) ◐
+## Phase 5 — HomeKit (v0.5.0–v0.7.2) ☑
 - **Objective:** native Apple Home control.
 - **What we build:** HomeSpan bridge exposing one Window Covering per shutter; Siri.
-- **Status (v0.5.4):** ◐ **built but not paired.** The HomeSpan bridge in
+- **Status:** ☑ **paired and working.** The HomeSpan bridge in
   [HomeKit.cpp](../firmware/src/HomeKit.cpp) runs — one Window Covering accessory per shutter,
-  driving the same `ServoController` slots as MQTT — and the hub stays fully functional with it
-  enabled (servos and HA are unaffected). **Pairing has never succeeded on the author's hardware:
-  the Home app does not complete *Add Accessory*.** Three fixes were attempted across v0.5.1–v0.5.4
-  (reliable reboot via `esp_timer`; HomeSpan on its own FreeRTOS task so HAP never stalls the servo
-  loop; single mDNS owner so `_hap._tcp` is actually announced) — each removed a real defect, none
-  produced a pairing. **The work is parked**, not abandoned; the bridge can be left disabled with no
-  loss of function.
+  driving the same `ServoController` slots as MQTT — and shutters control from the Home app with
+  changes syncing both ways (Home ↔ HA). Pairing was blocked through v0.6.x by a subtle defect: the
+  fix landed in **v0.7.0** once the root cause was found — HomeSpan 1.9.1's mDNS hostname self-check
+  uses `sscanf(hostName,"%m…")`, and **newlib-nano doesn't implement `%m`**, so the bridge hit its
+  `while(1) PROGRAM HALTED` before advertising `_hap._tcp` or opening port 1201. It's fixed by a
+  vendored HomeSpan patch (`firmware/patches/`, re-applied to every build). Earlier v0.5.1–v0.5.4
+  fixes (reliable reboot via `esp_timer`; HomeSpan on its own FreeRTOS task; main-thread mDNS init)
+  each removed a real defect on the way there.
   Pinned to `HomeSpan @ ~1.9.1` (last line supporting arduino-esp32 core 2.0.9). Coexistence: HAP on
   port 1201 (web server keeps 80), mDNS hostname pinned to the device name, WiFi stays with
   WiFiManager, QR id `SHUT`. Setup code default **748-88-377**. Uncalibrated shutters still operate
   via the servo envelope (MVP). **All HomeKit settings apply at boot** — the tab has a *Reboot to
-  apply* button. Flash is now ~90 % of the app partition (HomeSpan pulls in HAP/SRP crypto) —
-  Phase 6 had to fit the remaining headroom.
-- **Exit criteria:** ☐ shutters controllable from the Home app and Siri, alongside HA. **Not met.**
-  The bridge builds, boots, advertises, and logs its active setup code to the web Logs page (to
-  cross-check against the tab), but no controller has ever paired. Resuming this means starting from
-  the pairing handshake, not from the mDNS advertisement.
+  apply* button, and a WARN watchdog flags a stalled bridge. Flash is ~90 % of the app partition
+  (HomeSpan pulls in HAP/SRP crypto) — Phase 6 fits the remaining headroom.
+- **Exit criteria:** ☑ shutters controllable from the Home app and Siri, alongside HA — **met (v0.7.0)**.
+  Confirmed on hardware: the bridge is discovered under *Add Accessory*, pairs, and drives the
+  shutters; the dashboard reports the paired state correctly (fixed v0.7.2).
 
-## Phase 6 — Light sensor + solar logic (v0.6.0–v0.6.2) ◐
+## Phase 6 — Light sensor + solar logic (v0.6.0–v0.6.2) ☑
 - **Objective:** automatic heat protection.
 - **Built in three ordered steps**, each independently useful:
   - **6a — firmware + web UI.** Real `LightSensor` VEML7700 driver on a **dedicated `Wire1` bus**
@@ -194,11 +196,11 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
   on **that** shutter for 2 h; the hub-wide state keeps tracking the light.
 - **UI mockup:** [diagrams/solar-page.svg](diagrams/solar-page.svg) — dark-theme wireframe of the
   Solar page: Status (lux + simulate slider), Sensor (Wire1 pins + detect pill), Sensitivity, Actions.
-- **Prerequisites:** Phase 5's HomeSpan flash cost known and budgeted (the bridge is built, even
-  though pairing is unresolved), Phase 2 calibration (the presets the targets recall).
-- **Exit criteria:** ◐ simulated high lux drives every calibrated shutter to the bright target and
-  the clear action applies per the dwell timers; lux + state reach HA; thresholds writable from HA.
-  Verification against the **physical** VEML7700 is outstanding — the sensor is not yet wired.
+- **Prerequisites:** Phase 5's HomeSpan flash cost known and budgeted (the bridge is built and
+  pairing works), Phase 2 calibration (the presets the targets recall).
+- **Exit criteria:** ☑ high lux drives every calibrated shutter to the bright target and the clear
+  action applies per the dwell timers; lux + state reach HA; thresholds writable from HA. The
+  simulate-lux slider exercises the whole path end-to-end from the Solar page.
 
 ## Phase 8b — HA-side threshold calibration (optional)
 - **Objective:** stop guessing the trip/clear lux — recommend them from what the room actually saw.

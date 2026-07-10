@@ -36,9 +36,10 @@ Go to the [Releases page](https://github.com/rhamblen/esp32-shutter-hub/releases
 assets for the **`esp32d-pca9685`** variant (that is the real four-shutter hub; `esp32d-direct` is a
 single-servo bench build). A release carries three files per variant:
 
-> `esp32c3-*` bins are also published, but they are **untested engineering builds** — the pin map is
-> still the ESP32-D's and solar heat protection cannot work on that chip. Use an ESP32-D.
-> [pinout.md](pinout.md#esp32-c3-status--not-ready) has the detail.
+> `esp32c3-*` bins are also published, but they are **untested engineering builds**. They carry the
+> same firmware — the servo-pin whitelist is now C3-safe (v0.7.2) and solar works on the C3's shared
+> I²C bus — but the C3 has fewer PWM channels and has not been verified on real hardware. **Use an
+> ESP32-D** for a real build. [pinout.md](pinout.md) has the detail.
 
 | File | What it is | When you need it |
 | ---- | ---------- | ---------------- |
@@ -242,17 +243,15 @@ naming differs, set `daylight:` and `privacy:` explicitly per shutter. See
 
 ---
 
-## Step 8 — Pair with Apple Home (optional, and currently not working)
+## Step 8 — Pair with Apple Home (optional)
 
 The hub runs a [HomeSpan](https://github.com/HomeSpan/HomeSpan) bridge: each shutter appears in the
 Home app as its own **Window Covering**, alongside — not instead of — the Home Assistant entities.
 
-> **Status: pairing does not work.** The bridge builds, boots and advertises, and the hub stays fully
-> functional with it enabled — but **no controller has ever completed pairing** on the author's
-> hardware, and the work is parked. If the Home app never finds the bridge, or finds it and fails to
-> add it, that is the known open issue, not a mistake on your part. **You can skip this step
-> entirely** — everything else works without it. See [CHANGELOG.md](../CHANGELOG.md) and
-> [project-plan.md](project-plan.md) Phase 5.
+> **Optional.** HomeKit adds nothing you can't already do from Home Assistant or the web UI — skip it
+> if you don't use Apple Home. If you do: enable HomeKit on the System ▸ HomeKit tab, **reboot** (the
+> pairing verifier is baked at boot), then add the accessory with the setup code shown on that tab.
+> Changes then sync both ways between Apple Home and Home Assistant.
 
 1. **System → HomeKit.** Set a **Bridge name** and an 8-digit **Setup code** (default `748-88-377`;
    **⟳ Random code** generates a fresh one).
@@ -273,13 +272,14 @@ The VEML7700 sits on its **own I²C bus** (`Wire1`, SDA GPIO25 / SCL GPIO26 by d
 the sensor lead cannot take down the PCA9685 servo bus on GPIO21/22 — see
 [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md) and [pinout.md](pinout.md).
 
-> **ESP32-D only.** Solar heat protection needs a *second* hardware I²C controller. The ESP32-D has
-> two; the **ESP32-C3 has one**, so the sensor bus cannot exist there and the feature will not work
-> on a C3 board however it is configured. See [pinout.md](pinout.md#esp32-c3-status--not-ready).
+> **Dedicated sensor bus needs two I²C controllers.** The ESP32-D has two, so the VEML7700 gets its
+> own `Wire1`, fault-isolated from the servo bus. The **ESP32-C3 has one**, so on a C3 the sensor
+> shares the PCA9685's `Wire` — solar still works, but you lose that fault isolation; the web UI clamps
+> the C3 to the shared bus automatically ([ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md)).
 
-> **Status:** built and compiling, **not yet verified against physical sensor hardware.** The
-> simulate-lux slider works regardless, so you can exercise the whole state machine before the sensor
-> is wired.
+> **Testing without the sensor:** the simulate-lux slider on the Solar page drives the whole trip/clear
+> state machine and the HA entities, so you can verify the automation before (or without) wiring a
+> VEML7700.
 
 Open the **Solar** page.
 

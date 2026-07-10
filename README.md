@@ -79,8 +79,9 @@ calibration, and pairings are untouched.
 ## Status
 
 **Current release `v0.7.2`.** In daily use: the web UI, per-shutter calibration, Home Assistant
-control over MQTT, the Lovelace card, and — as of `v0.7.0` — **Apple HomeKit pairing**. One thing is
-still unproven: the **light sensor is not yet wired**; see below.
+control over MQTT, the Lovelace card, **Apple HomeKit pairing** (as of `v0.7.0`), and **solar heat
+protection** driven by an ambient-light sensor. What's left for **v1.0.0** is the physical build-out —
+enclosures, a PCB, and all four shutters mounted behind the wall (see the roadmap below).
 
 Every shutter
 defined in the web UI appears in HA as a native **`cover`** (open/close/stop + position 0–100) plus
@@ -109,9 +110,8 @@ bridge before it advertised. With that patched, the bridge pairs and shutters **
 bus drives a trip/clear state machine — when the sun stays above a threshold for a set dwell the
 shutters move to a chosen preset, and a second threshold releases them. Both actions can be set to
 **Do nothing**, a manual move suspends automation on that blind for 2 h, and a **simulate-lux
-slider** lets the whole thing be exercised before the sensor is even wired. Lux, state, an
-automation switch and two writable thresholds are published to Home Assistant. **Status:** built and
-compiling; **not yet verified against physical sensor hardware.**
+slider** lets the whole path be exercised from the Solar page. Lux, state, an automation switch and
+two writable thresholds are published to Home Assistant.
 **`v0.6.2`** makes the Info page a wiring check: a **Hardware & wiring** table naming every device,
 its I²C bus (shared or dedicated), its pins, and its address or PCA9685 channel — plus HomeKit
 status and a human-readable brightness percentage alongside raw lux.

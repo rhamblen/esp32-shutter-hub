@@ -99,32 +99,35 @@ persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N
 **S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config), **2** (v0.2.2–v0.3.0 Shutters
 page + calibration; PCA9685 backend + build variants + position memory). Phase 3 retired (folded
 into S/S2), **4** (v0.4.0 MQTT/HA covers + buttons + discovery + concurrent drive; verified on
-hardware), **4b** (v0.4.2 Lovelace operating card). **5 HomeKit** ◐ **built, pairing unresolved**
-(v0.5.0–v0.5.4, released as v0.5.4): HomeSpan bridge
-(`firmware/src/HomeKit.cpp`), one Window Covering accessory per shutter driving the same
-`ServoController` slots as MQTT; config tab (`/api/homekit`, NVS `hk*` keys,
-default setup code **748-88-377**, client-side `X-HM://` QR). **No controller has ever paired** —
-the bridge boots and advertises, the hub stays fully functional with it enabled, but *Add Accessory*
-never completes. v0.5.1–v0.5.4 each fixed a real defect (reboot via `esp_timer`; HomeSpan on its own
-FreeRTOS task; single mDNS owner) without producing a pairing. **Parked** — do not assume HomeKit
-works. **Pinned `HomeSpan @ ~1.9.1`** — last
+hardware), **4b** (v0.4.2 Lovelace operating card). **5 HomeKit** ✓ **works** (v0.5.0–v0.7.2):
+HomeSpan bridge (`firmware/src/HomeKit.cpp`), one Window Covering accessory per shutter driving the
+same `ServoController` slots as MQTT; config tab (`/api/homekit`, NVS `hk*` keys, default setup code
+**748-88-377**, client-side `X-HM://` QR). Discovers, pairs, and syncs both ways (Home ↔ HA).
+**Root cause of the long "never pairable" saga (fixed v0.7.0):** HomeSpan 1.9.1's hostname self-check
+uses `sscanf(hostName,"%m…")`, and **newlib-nano doesn't implement `%m`**, so the bridge hit
+`while(1) PROGRAM HALTED` before advertising `_hap._tcp` / opening 1201 — *not* mDNS, WiFi, or cores
+(all chased as red herrings). Fixed by a **vendored HomeSpan patch** (`firmware/patches/HomeSpan.cpp`
++ `patches/apply_patches.py`, `extra_scripts`) — do NOT drop it. **Pinned `HomeSpan @ ~1.9.1`** — last
 line supporting arduino-esp32 **core 2.0.9** (2.x needs core ≥3.3.0; do NOT bump the core, it would
-churn every other lib). Coexistence (all in HomeKit.cpp): HAP `setPortNum(1201)` (web keeps 80),
-`setHostNameSuffix("")` pins mDNS host to the device name + re-adds the `_http` service, WiFi stays
-with WiFiManager (HomeSpan sees `WL_CONNECTED`, never calls WiFi.begin), `setQRID("SHUT")` +
-`setPairingCode(code,false)`. **Gotcha: the pairing verifier is baked at boot** — a code/enable/name
-change needs a reboot (the tab has *Reboot to apply*; the active code is logged to the web Logs
-page). Uncalibrated shutters still operate via the servo envelope (MVP). **6 light/solar** ◐ built
+churn every other lib). Coexistence (all in HomeKit.cpp): HAP `setPortNum(1201)` (web keeps 80); **mDNS
+is initialised by `WebUI::begin()` on the main thread** (hostname + `_http._tcp`) and HomeSpan just
+ADDS `_hap._tcp`; WiFi stays with WiFiManager (HomeSpan sees `WL_CONNECTED`, never calls WiFi.begin);
+`setQRID("SHUT")` + `setPairingCode(code,false)`; `autoPoll` on core 1; a WARN watchdog flags a stalled
+bridge. **Gotcha: the pairing verifier is baked at boot** — a code/enable/name change needs a reboot
+(the tab has *Reboot to apply*; the active code is logged to the web Logs page). `paired()` reads the
+persisted controller list, so status is correct after reboot/OTA (v0.7.2). Uncalibrated shutters still
+operate via the servo envelope (MVP). **6 light/solar** ✓ built
 (v0.6.0–v0.6.2): `LightSensor` + `SolarLogic` + Solar page + MQTT solar entities + card header toggle
 (v0.6.0); selectable sensor bus (v0.6.1, [ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md));
 Info-page hardware table + brightness-% sensor (v0.6.2) — see the Solar locked fact above and
 [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md).
-**Flash now 91.3 %** of the app partition (`esp32d-pca9685`; 91.9 % `esp32d-direct`, C3 envs link at
-89.5 % / 90.1 %) — treat any new library as suspect; that's why the
+**Flash ~91.6 %** of the app partition (`esp32d-pca9685`; 92.2 % `esp32d-direct`, C3 envs link at
+~89.8 % / 90.4 %) — treat any new library as suspect; that's why the
 VEML7700 driver is hand-rolled rather than Adafruit's. Remaining: **7** production → **8** HA
 calibration card (optional) → **8b** HA-side threshold calibration from lux history (optional).
-**0** (mechanical force test) still open. **Not yet verified against the physical VEML7700** — the
-sensor isn't wired; everything was exercised through the simulate-lux slider.
+**0** (mechanical force test) still open. The solar path is exercised end-to-end through the
+simulate-lux slider; **v1.0.0 is gated on the Phase 7 physical build-out** (enclosures, PCB, all four
+shutters mounted), not on any feature work.
 
 ## Gotchas
 

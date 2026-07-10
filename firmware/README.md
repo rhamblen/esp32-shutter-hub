@@ -4,7 +4,7 @@ PlatformIO project (Arduino Core, `esp32dev`). Structural reference:
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). See
 [../docs/project-plan.md](../docs/project-plan.md) for the phased roadmap.
 
-## What this version does (v0.6.2)
+## What this version does (v0.7.2)
 
 On-device WiFi setup, advertises `shutter-hub.local` over mDNS, and serves a
 **single-page web UI from LittleFS** (sidebar: Info · MQTT · Servo test · Shutters ·
@@ -33,10 +33,11 @@ setting — its own `Wire1` (default) or shared with the PCA9685 (ADR 0011/0012)
 sensor fitted. Lux, a 0–100 % brightness figure, solar state, an automation switch and two
 writable lux thresholds are published to Home Assistant.
 
-**Apple HomeKit (Phase 5, v0.5.x)**: a HomeSpan bridge exposes each shutter as a Window
+**Apple HomeKit (Phase 5, v0.5.x–v0.7.2)**: a HomeSpan bridge exposes each shutter as a Window
 Covering, configured under **System → HomeKit**. It runs on its own FreeRTOS task, so HAP
-never stalls the servo loop. **Pairing is unresolved** — the bridge advertises but no
-controller has completed pairing; leave it disabled unless you're working on it. See
+never stalls the servo loop. **Pairing works** (fixed v0.7.0 — HomeSpan 1.9.1's `sscanf("%m…")`
+hostname check isn't supported by newlib-nano; patched under [`patches/`](patches/)). The bridge
+is discovered, pairs, and syncs both ways with Home Assistant. See
 [../docs/project-plan.md](../docs/project-plan.md) Phase 5.
 
 ## WiFi setup (on-device — no credentials in the binary)
@@ -108,7 +109,7 @@ pio run -e esp32d-pca9685 -t upload   # auto-detects the port; monitor with:  pi
 **Option B — single merged image (NodeMCU-PyFlasher / esptool):**
 Flash the `-full-` image for your variant at offset `0x0`:
 ```
-esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.6.2.bin
+esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.7.2.bin
 ```
 In NodeMCU-PyFlasher: select the `...-full-...bin`, address `0x0`, flash.
 
@@ -145,7 +146,7 @@ firmware/
 │  ├─ ServoController.cpp      multi-slot µs driver, backend = GPIO | PCA9685
 │  ├─ Shutters.cpp             per-blind definitions + calibration (NVS)      [Phase 2]
 │  ├─ Mqtt.cpp                 HA covers/buttons/solar + discovery + state    [Phase 4/6]
-│  ├─ HomeKit.cpp              HomeSpan bridge         [Phase 5 — pairing unresolved]
+│  ├─ HomeKit.cpp              HomeSpan bridge (pairing works)                [Phase 5]
 │  ├─ LightSensor.cpp          VEML7700 driver (selectable I²C bus)           [Phase 6]
 │  └─ SolarLogic.cpp           trip/clear state machine + manual override     [Phase 6]
 ├─ dist/                       prebuilt release artifacts (bins gitignored; attached to releases)
