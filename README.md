@@ -44,6 +44,30 @@ of shutters is configuration, not code.
 | Light sensor | VEML7700 |
 | Linkage | M2 × 50 mm ball-link pushrod + printed arms |
 
+## Installation
+
+Full step-by-step in **[docs/installation.md](docs/installation.md)**; everyday operation in
+**[docs/user-guide.md](docs/user-guide.md)**. The short version:
+
+1. **Flash once over USB.** Take the `esp32d-pca9685` assets from a
+   [release](https://github.com/rhamblen/esp32-shutter-hub/releases) and write the `-full-` image to
+   `0x0` plus the `-littlefs-` image — or build from source with
+   `pio run -e esp32d-pca9685 -t upload && pio run -e esp32d-pca9685 -t uploadfs`.
+   Flash the filesystem too; without it the hub serves only a bare OTA recovery page.
+2. **Join your WiFi.** The hub raises a `Shutter-Hub-Setup` access point with a captive portal. Pick
+   your 2.4 GHz network once — the credentials live in NVS and survive every future update.
+3. **Open `http://shutter-hub.local`** and confirm a servo sweeps from the **Servo test** page.
+4. **Define and calibrate each shutter** on the **Shutters** page: name it, assign its PCA9685
+   channel, then set its closed/open endpoints and Daylight/Privacy favourites with the slow-run →
+   stop → nudge transport. Everything else depends on this step.
+5. **Point it at your MQTT broker** (**MQTT → Broker**, discovery on) and the covers, preset buttons
+   and solar entities appear in Home Assistant by themselves. Optionally add the Lovelace card from
+   [ha-card/](ha-card/), pair the HomeKit bridge from **System → HomeKit**, and set the trip/clear
+   thresholds on the **Solar** page.
+
+After the first flash every update goes over WiFi from the **OTA Update** page — settings,
+calibration, and pairings are untouched.
+
 ## Status
 
 Design complete on paper; **Home Assistant cover control over MQTT** plus a **custom Lovelace
@@ -84,6 +108,8 @@ firmware (OTA), plus one shared LittleFS filesystem image.
 
 | Path | Contents |
 | ---- | -------- |
+| [docs/installation.md](docs/installation.md) | Full install guide — flash, WiFi, calibrate, HA, HomeKit, solar |
+| [docs/user-guide.md](docs/user-guide.md) | Everyday operation, solar behaviour, recalibration, troubleshooting |
 | [docs/project-brief.md](docs/project-brief.md) | Master engineering specification |
 | [docs/project-plan.md](docs/project-plan.md) | Phased roadmap + status + open decisions |
 | [docs/architecture.md](docs/architecture.md) | Principles, trade-offs, topology |

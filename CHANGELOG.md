@@ -6,6 +6,19 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Added
+- **[docs/installation.md](docs/installation.md)** — end-to-end install guide: USB first flash,
+  captive-portal WiFi setup, servo smoke test, per-shutter calibration, MQTT/Home Assistant,
+  the Lovelace card, HomeKit pairing, solar thresholds, web auth, and OTA updates. Each step
+  carries its own troubleshooting table.
+- **[docs/user-guide.md](docs/user-guide.md)** — everyday operation: the four saved positions,
+  the four control faces (web UI, HA, Apple Home, Lovelace card), solar behaviour incl. hysteresis
+  and the 2 h manual override, recalibration, and routine maintenance.
+
+### Changed
+- **README** — new **Installation** section (five-step summary linking to the guides above), and
+  both new documents listed in the repo-layout table.
+
 ### Release checklist / notes
 - **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`
   (firmware) bin **per variant** — `shutter-hub-<variant>-{full,ota}-vX.Y.Z.bin` — plus a **single
