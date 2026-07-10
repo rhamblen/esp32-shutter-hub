@@ -1,0 +1,117 @@
+(kicad_sch (version 20230121)
+
+  (uuid "550e8400-e29b-41d4-a716-446655440000")
+
+  (paper "A3")
+
+  (title_block
+    (title "Shutter Hub — ESP32-D Smart Shutter Controller")
+    (date "2026-07-10")
+    (rev "1.0")
+    (company "")
+    (comment 1 "USB-C PD → AITRIP → XL4015 (5.1V) → ESP32-D + PCA9685 + VEML7700")
+    (comment 2 "Two I2C buses: servo (GPIO21/22) + sensor (GPIO25/26)")
+    (comment 3 "PCA9685 drives 4× MG90D servos via CH0–CH3")
+    (comment 4 "Build: breadboard prototype with hand-wired connections")
+  )
+
+  (lib_symbols
+    (symbol "Connector:USB_C_Receptacle" (in_bom yes) (on_board yes)
+      (property "Reference" "J" (at 0 10 0))
+      (property "Value" "USB_C_Receptacle" (at 0 -10 0))
+      (symbol "USB_C_Receptacle_0_1"
+        (rectangle (start -5 -5) (end 5 5) (stroke (width 0.254)) (fill (color 255 255 255 0)))
+      )
+      (symbol "USB_C_Receptacle_1_1"
+        (pin passive line (at -7 0 0) (length 2.54) (name "GND" (effects (font (size 1.27 1.27) (thickness 0.15)))) (number "1" (effects (font (size 1.27 1.27) (thickness 0.15)))))
+        (pin passive line (at 7 0 0) (length 2.54) (name "VBUS" (effects (font (size 1.27 1.27) (thickness 0.15)))) (number "2" (effects (font (size 1.27 1.27) (thickness 0.15)))))
+      )
+    )
+    (symbol "Device:R" (in_bom yes) (on_board yes)
+      (property "Reference" "R" (at 2.032 0 90))
+      (property "Value" "R" (at 0 0 90))
+      (symbol "R_0_1"
+        (rectangle (start -1.016 -2.54) (end 1.016 2.54) (stroke (width 0.254)) (fill (color 255 255 255 0)))
+      )
+      (symbol "R_1_1"
+        (pin passive line (at 0 3.81 270) (length 1.27) (name "~" (effects (font (size 1.27 1.27) (thickness 0.15)))) (number "1" (effects (font (size 1.27 1.27) (thickness 0.15)))))
+        (pin passive line (at 0 -3.81 90) (length 1.27) (name "~" (effects (font (size 1.27 1.27) (thickness 0.15)))) (number "2" (effects (font (size 1.27 1.27) (thickness 0.15)))))
+      )
+    )
+    (symbol "Device:C" (in_bom yes) (on_board yes)
+      (property "Reference" "C" (at 0.635 2.54 0))
+      (property "Value" "C" (at 0.635 -2.54 0))
+      (symbol "C_0_1"
+        (polyline (pts (xy -2.032 -0.762) (xy 2.032 -0.762)) (stroke (width 0.508)))
+        (polyline (pts (xy -2.032 0.762) (xy 2.032 0.762)) (stroke (width 0.508)))
+      )
+      (symbol "C_1_1"
+        (pin passive line (at 0 3.81 270) (length 3.048) (name "~" (effects (font (size 1.27 1.27) (thickness 0.15)))) (number "1" (effects (font (size 1.27 1.27) (thickness 0.15)))))
+        (pin passive line (at 0 -3.81 90) (length 3.048) (name "~" (effects (font (size 1.27 1.27) (thickness 0.15)))) (number "2" (effects (font (size 1.27 1.27) (thickness 0.15)))))
+      )
+    )
+  )
+
+  (junction (at 50 50) (diameter 0) (color 0 0 0 0))
+  (junction (at 50 200) (diameter 0) (color 0 0 0 0))
+  (junction (at 150 50) (diameter 0) (color 0 0 0 0))
+  (junction (at 250 50) (diameter 0) (color 0 0 0 0))
+  (junction (at 250 200) (diameter 0) (color 0 0 0 0))
+
+  (wire (pts (xy 50 50) (xy 150 50)) (stroke (width 0) (type default)) (uuid "net-power-v12-1"))
+  (wire (pts (xy 150 50) (xy 250 50)) (stroke (width 0) (type default)) (uuid "net-power-v12-2"))
+  (wire (pts (xy 250 50) (xy 350 50)) (stroke (width 0) (type default)) (uuid "net-power-v5-1"))
+  (wire (pts (xy 350 50) (xy 450 50)) (stroke (width 0) (type default)) (uuid "net-power-v5-2"))
+  (wire (pts (xy 450 50) (xy 550 50)) (stroke (width 0) (type default)) (uuid "net-power-v5-3"))
+
+  (wire (pts (xy 50 200) (xy 150 200)) (stroke (width 0) (type default)) (uuid "net-gnd-1"))
+  (wire (pts (xy 150 200) (xy 250 200)) (stroke (width 0) (type default)) (uuid "net-gnd-2"))
+  (wire (pts (xy 250 200) (xy 350 200)) (stroke (width 0) (type default)) (uuid "net-gnd-3"))
+  (wire (pts (xy 350 200) (xy 450 200)) (stroke (width 0) (type default)) (uuid "net-gnd-4"))
+  (wire (pts (xy 450 200) (xy 550 200)) (stroke (width 0) (type default)) (uuid "net-gnd-5"))
+
+  (no_connect (at 50 50) (uuid "nc-usbc-1"))
+
+  (text "USB-C PD Charger\n(30W+ @ 12V)" (at 50 20 0) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (text "AITRIP PD Trigger\n(set to 12V output)" (at 150 20 0) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (text "XL4015 Buck Converter\nVIN(12V) → VOUT(5.1V) ~5A\nFB resistors set to 5.1V" (at 250 15 0) (effects (font (size 1.27 1.27) (thickness 0.15)) (justify left)))
+
+  (label "V12_IN" (at 50 40) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "V12_IN" (at 150 40) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "V5_OUT" (at 250 40) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "V5_OUT" (at 350 40) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "V5_OUT" (at 450 40) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "V5_OUT" (at 550 40) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "GND" (at 50 210) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "GND" (at 150 210) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "GND" (at 250 210) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "GND" (at 350 210) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+  (label "GND" (at 450 210) (fields_autoplaced) (effects (font (size 1.27 1.27) (thickness 0.15))))
+
+  (text "\n════════════════════════════════════════════════════════════════\nLOADS\n════════════════════════════════════════════════════════════════" (at 50 250 0) (effects (font (size 1.5 1.5) (thickness 0.2)) (justify left)))
+
+  (text "ESP32-D (WROOM-32D DevKit)\n\nConnections:\n  • VIN ← V5_OUT\n  • GND ← GND\n  • GPIO21 (SDA) ← I2C servo bus\n  • GPIO22 (SCL) ← I2C servo bus\n  • GPIO25 (SDA) ← I2C sensor bus (VEML7700)\n  • GPIO26 (SCL) ← I2C sensor bus (VEML7700)\n\nDecoupling: 100nF cap across VIN–GND\nPlacement: center of breadboard" (at 50 290 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "PCA9685 16-Channel Servo Driver\nI2C address: 0x40 (default)\n\nConnections:\n  • V+ ← V5_OUT (via bulk cap)\n  • GND ← GND\n  • SDA ← GPIO21 (from ESP32)\n  • SCL ← GPIO22 (from ESP32)\n  • CH0–CH3 → MG90D servo signals\n\nBulk capacitor: 1000–2200 µF ≥10V\nPlacement: close to V+ pin\nDecoupling: 100nF cap across V+–GND" (at 350 290 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "VEML7700 Light Sensor\nI2C address: 0x10 (default)\n\nConnections:\n  • VDD ← V5_OUT\n  • GND ← GND\n  • SDA ← GPIO25 (from ESP32)\n  • SCL ← GPIO26 (from ESP32)\n\nPlacement: mounted near window/exterior\nDecoupling: 100nF cap across VDD–GND" (at 50 550 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "MG90D Servo × 4\n(one per shutter)\n\nConnections per servo:\n  • Red (power) ← V5_OUT servo rail\n  • Black (GND) ← GND servo rail\n  • Yellow (signal) ← PCA9685 CH0/CH1/CH2/CH3\n\nNote: Stagger servo startup in firmware\nto limit inrush current" (at 350 550 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "\n════════════════════════════════════════════════════════════════\nCRITICAL WIRING NOTES\n════════════════════════════════════════════════════════════════" (at 50 750 0) (effects (font (size 1.5 1.5) (thickness 0.2)) (justify left)))
+
+  (text "① SET XL4015 OUTPUT VOLTAGE TO EXACTLY 5.1V WITH A MULTIMETER BEFORE CONNECTING LOADS" (at 60 790 0) (effects (font (size 1 1) (thickness 0.15)) (bold)) (justify left)))
+
+  (text "② I2C Pull-up Resistors: 4.7kΩ on each I2C bus\n   Servo bus (GPIO21/22): 4.7kΩ to V5_OUT\n   Sensor bus (GPIO25/26): 4.7kΩ to V5_OUT" (at 60 810 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "③ Servo Rail Bulk Capacitor: 1000–2200 µF (≥10V rated)\n   Connect between PCA9685 V+ and GND\n   Place as close as physically possible to PCA9685 V+ pins" (at 60 830 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "④ Decoupling: 100nF capacitors across VDD–GND for:\n   • ESP32-D\n   • PCA9685\n   • VEML7700" (at 60 850 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "⑤ Common Ground: Single-point star ground at XL4015 GND output\n   All return paths converge here (ESP32, PCA9685, VEML7700, servo GND)" (at 60 870 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "⑥ Servo Power Rail: Wide copper/wiring (1–2mm) from capacitor to servo connectors\n   Must supply 2–3A peak without voltage drop" (at 60 890 0) (effects (font (size 1 1) (thickness 0.1)) (justify left)))
+
+  (text "⑦ Firmware: Stagger MG90D startup to prevent inrush current spike\n   Do not drive all servos simultaneously at power-on" (at 60 910 0) (effects (font (size 1 1) (thickness 0.15)) (justify left)))
+
+)

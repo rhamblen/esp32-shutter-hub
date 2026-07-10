@@ -2,18 +2,31 @@
 
 Circuit design source and fabrication outputs for the Shutter Hub.
 
-## Contents (as produced)
+## Contents
 
-| Path | Contents |
-| ---- | -------- |
-| `shutter-hub.kicad_sch` | KiCad schematic (power chain, ESP32-D, PCA9685, VEML7700, servo outputs) |
-| `shutter-hub.kicad_pcb` | KiCad PCB layout (distribution board) |
-| `gerbers/` | Fabrication outputs (zipped Gerbers + drill) |
-| `bom.csv` | Board bill of materials |
+| File | Purpose |
+| ---- | ------- |
+| `shutter-hub.kicad_sch` | KiCad schematic — complete ESP32-D circuit (power chain, I2C, servo driver, sensor) |
 
-Human-readable diagrams (for the docs/README) are exported as SVG to
-[`../docs/diagrams/`](../docs/diagrams/) — start with
-[`wiring-schematic.svg`](../docs/diagrams/wiring-schematic.svg).
+## Status
+
+**Schematic complete** (`shutter-hub.kicad_sch`) for breadboard prototyping. **PCB layout and fabrication** are Phase 7. Currently, the working build is hand-wired on breadboard per Phases 1–6.
+
+## Schematics & Drawings
+
+Human-readable diagrams are in [`../docs/diagrams/`](../docs/diagrams/):
+
+| Diagram | Purpose |
+| ------- | ------- |
+| [`wiring-schematic.svg`](../docs/diagrams/wiring-schematic.svg) | Power chain & signal routing (USB-C → XL4015 → ESP32-D, PCA9685, VEML7700) |
+| [`system-architecture.svg`](../docs/diagrams/system-architecture.svg) | Overall hub architecture and component relationships |
+| [`breadboard-plan.svg`](../docs/diagrams/breadboard-plan.svg) | Development breadboard layout (GPIO, I2C, power) |
+| [`hub-build-overview.svg`](../docs/diagrams/hub-build-overview.svg) | Physical assembly and enclosure overview |
+| [`standoff-mounting.svg`](../docs/diagrams/standoff-mounting.svg) | PCB mounting points and standoff placement |
+| [`cable-loom.svg`](../docs/diagrams/cable-loom.svg) | Servo rail and sensor cabling layout |
+| [`rail-cuts-bridges.svg`](../docs/diagrams/rail-cuts-bridges.svg) | Servo power rail distribution |
+
+See [`../docs/hardware-layout.md`](../docs/hardware-layout.md) for detailed component placement and [`../docs/pinout.md`](../docs/pinout.md) for GPIO/I2C pin mapping.
 
 ## Design intent (see `../docs/project-brief.md` §3–4)
 

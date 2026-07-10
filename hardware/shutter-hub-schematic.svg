@@ -1,0 +1,223 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1400" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: bold; fill: #1a1a1a; }
+      .section-title { font-size: 16px; font-weight: bold; fill: #1f4e9c; }
+      .component-box { fill: #f0f4ff; stroke: #1f4e9c; stroke-width: 2; }
+      .component-title { font-size: 13px; font-weight: bold; fill: #1f4e9c; }
+      .component-text { font-size: 11px; fill: #333; }
+      .wire { stroke: #333; stroke-width: 2; fill: none; }
+      .wire-label { font-size: 10px; fill: #666; font-weight: bold; }
+      .power-rail { stroke: #d63b3b; stroke-width: 3; fill: none; }
+      .gnd-rail { stroke: #333; stroke-width: 3; fill: none; }
+      .i2c-line { stroke: #1f6fd6; stroke-width: 2.5; fill: none; stroke-dasharray: 4,2; }
+      .pwm-line { stroke: #3f8a3f; stroke-width: 2.5; fill: none; stroke-dasharray: 4,2; }
+      .critical { font-size: 11px; fill: #d63b3b; font-weight: bold; }
+      .note { font-size: 10px; fill: #666; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="1400" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" class="title">Shutter Hub — ESP32-D Schematic</text>
+  <text x="600" y="50" text-anchor="middle" class="note">Smart Shutter Controller with PCA9685 Servo Driver &amp; VEML7700 Light Sensor</text>
+
+  <!-- ===== POWER CHAIN (top) ===== -->
+  <text x="20" y="90" class="section-title">POWER CHAIN</text>
+
+  <!-- USB-C -->
+  <rect x="20" y="110" width="140" height="70" rx="6" class="component-box"/>
+  <text x="90" y="132" text-anchor="middle" class="component-title">USB-C PD</text>
+  <text x="90" y="150" text-anchor="middle" class="component-text">Charger</text>
+  <text x="90" y="165" text-anchor="middle" class="component-text">30W+</text>
+
+  <!-- Arrow 1 -->
+  <path d="M 160 145 L 180 145" class="power-rail" marker-end="url(#arrowhead)"/>
+  <text x="170" y="138" class="wire-label">USB-C</text>
+
+  <!-- AITRIP -->
+  <rect x="180" y="110" width="140" height="70" rx="6" class="component-box"/>
+  <text x="250" y="132" text-anchor="middle" class="component-title">AITRIP</text>
+  <text x="250" y="150" text-anchor="middle" class="component-text">PD Trigger</text>
+  <text x="250" y="165" text-anchor="middle" class="component-text">→ 12V</text>
+
+  <!-- Arrow 2 -->
+  <path d="M 320 145 L 340 145" class="power-rail" marker-end="url(#arrowhead)"/>
+  <text x="330" y="138" class="wire-label">12V</text>
+
+  <!-- XL4015 -->
+  <rect x="340" y="105" width="160" height="80" rx="6" class="component-box"/>
+  <text x="420" y="130" text-anchor="middle" class="component-title">XL4015</text>
+  <text x="420" y="147" text-anchor="middle" class="component-text">Buck Converter</text>
+  <text x="420" y="162" text-anchor="middle" class="component-text">12V → 5.1V</text>
+  <text x="420" y="177" text-anchor="middle" class="critical">⚙ SET TO 5.1V!</text>
+
+  <!-- ===== RAILS (horizontal power distribution) ===== -->
+  <!-- V5_OUT rail -->
+  <line x1="500" y1="145" x2="1150" y2="145" class="power-rail"/>
+  <text x="520" y="135" class="wire-label" fill="#d63b3b">+5.1V RAIL</text>
+
+  <!-- GND rail -->
+  <line x1="500" y1="260" x2="1150" y2="260" class="gnd-rail"/>
+  <text x="520" y="275" class="wire-label">GND (single-point return)</text>
+
+  <!-- Connection from XL4015 to rails -->
+  <line x1="420" y1="185" x2="420" y2="220" class="gnd-rail"/>
+  <line x1="420" y1="220" x2="500" y2="220"/>
+  <line x1="500" y1="220" x2="500" y2="260" class="gnd-rail"/>
+  <line x1="500" y1="145" x2="420" y2="145" class="power-rail"/>
+
+  <!-- ===== LOADS SECTION ===== -->
+  <text x="20" y="330" class="section-title">LOADS &amp; CONNECTIONS</text>
+
+  <!-- ===== ESP32-D ===== -->
+  <rect x="20" y="350" width="220" height="180" rx="8" class="component-box" style="fill: #eaf1ff; stroke: #1f4e9c; stroke-width: 2.5;"/>
+  <text x="130" y="375" text-anchor="middle" class="component-title" style="font-size: 14px;">ESP32-D (WROOM-32D)</text>
+  <text x="30" y="398" class="component-text">● VIN ← +5.1V rail</text>
+  <text x="30" y="416" class="component-text">● GND ← GND rail</text>
+  <text x="30" y="434" class="component-text">● GPIO21 → I2C SDA (servo)</text>
+  <text x="30" y="452" class="component-text">● GPIO22 → I2C SCL (servo)</text>
+  <text x="30" y="470" class="component-text">● GPIO25 → I2C SDA (sensor)</text>
+  <text x="30" y="488" class="component-text">● GPIO26 → I2C SCL (sensor)</text>
+  <text x="30" y="510" class="note">Decoupling: 100nF cap VIN–GND</text>
+  <text x="30" y="523" class="note">Pull-ups: 4.7kΩ on both I2C buses</text>
+
+  <!-- Connect to power rails -->
+  <line x1="130" y1="350" x2="130" y2="310" class="power-rail"/>
+  <circle cx="130" cy="310" r="3" fill="#d63b3b"/>
+  <line x1="180" y1="530" x2="180" y2="260" class="gnd-rail"/>
+  <circle cx="180" cy="260" r="3" fill="#333"/>
+
+  <!-- ===== PCA9685 ===== -->
+  <rect x="290" y="350" width="220" height="200" rx="8" class="component-box"/>
+  <text x="400" y="375" text-anchor="middle" class="component-title" style="font-size: 14px;">PCA9685</text>
+  <text x="300" y="398" class="component-text">16-Channel Servo Driver</text>
+  <text x="300" y="416" class="component-text">I2C Addr: 0x40</text>
+  <text x="30" y="434" class="component-text">
+    <tspan x="300">● V+ ← +5.1V (via bulk cap)</tspan>
+    <tspan x="300" dy="18">● GND ← GND rail</tspan>
+    <tspan x="300" dy="18">● SDA ← GPIO21 (ESP32)</tspan>
+    <tspan x="300" dy="18">● SCL ← GPIO22 (ESP32)</tspan>
+    <tspan x="300" dy="18">● CH0–CH3 → servo signals</tspan>
+    <tspan x="300" dy="22" class="critical">⚙ Bulk cap: 1000–2200µF</tspan>
+    <tspan x="300" dy="18" class="note">Decoupling: 100nF cap</tspan>
+  </text>
+
+  <!-- Connect to power rail -->
+  <line x1="400" y1="350" x2="400" y2="310" class="power-rail"/>
+  <circle cx="400" cy="310" r="3" fill="#d63b3b"/>
+
+  <!-- Connect to GND rail -->
+  <line x1="450" y1="550" x2="450" y2="260" class="gnd-rail"/>
+  <circle cx="450" cy="260" r="3" fill="#333"/>
+
+  <!-- I2C connection to ESP32 -->
+  <path d="M 290 450 L 240 450" class="i2c-line"/>
+  <text x="255" y="445" class="wire-label">I2C</text>
+
+  <!-- ===== VEML7700 ===== -->
+  <rect x="560" y="350" width="220" height="160" rx="8" class="component-box"/>
+  <text x="670" y="375" text-anchor="middle" class="component-title" style="font-size: 14px;">VEML7700</text>
+  <text x="570" y="398" class="component-text">Ambient Light Sensor</text>
+  <text x="570" y="416" class="component-text">I2C Addr: 0x10</text>
+  <text x="570" y="438" class="component-text">● VDD ← +5.1V</text>
+  <text x="570" y="456" class="component-text">● GND ← GND rail</text>
+  <text x="570" y="474" class="component-text">● SDA ← GPIO25 (ESP32)</text>
+  <text x="570" y="492" class="component-text">● SCL ← GPIO26 (ESP32)</text>
+  <text x="570" y="510" class="note">Decoupling: 100nF cap</text>
+
+  <!-- Connect to power/gnd -->
+  <line x1="670" y1="350" x2="670" y2="310" class="power-rail"/>
+  <circle cx="670" cy="310" r="3" fill="#d63b3b"/>
+  <line x1="720" y1="510" x2="720" y2="260" class="gnd-rail"/>
+  <circle cx="720" cy="260" r="3" fill="#333"/>
+
+  <!-- I2C to ESP32 (separate bus) -->
+  <path d="M 560 470 L 240 470" class="i2c-line" stroke-dasharray="4,2"/>
+  <text x="390" y="465" class="wire-label" fill="#1f6fd6">I2C (Sensor Bus)</text>
+
+  <!-- ===== MG90D SERVOS ===== -->
+  <rect x="830" y="350" width="200" height="180" rx="8" class="component-box" style="fill: #eef7ee; stroke: #3f8a3f; stroke-width: 2.5;"/>
+  <text x="930" y="375" text-anchor="middle" class="component-title" style="font-size: 14px; fill: #3f8a3f;">MG90D Servo × 4</text>
+  <text x="840" y="398" class="component-text">One per shutter</text>
+  <text x="840" y="416" class="component-text">CH0, CH1, CH2, CH3</text>
+  <text x="840" y="438" class="component-text">Red (V+) ← +5.1V</text>
+  <text x="840" y="456" class="component-text">Black (GND) ← GND</text>
+  <text x="840" y="474" class="component-text">Yellow (PWM) ← PCA9685</text>
+  <text x="840" y="510" class="critical">⚙ Stagger startup!</text>
+
+  <!-- Power connections -->
+  <line x1="930" y1="350" x2="930" y2="310" class="power-rail"/>
+  <circle cx="930" cy="310" r="3" fill="#d63b3b"/>
+  <line x1="980" y1="530" x2="980" y2="260" class="gnd-rail"/>
+  <circle cx="980" cy="260" r="3" fill="#333"/>
+
+  <!-- PWM connection from PCA9685 -->
+  <path d="M 510 500 L 830 500" class="pwm-line"/>
+  <text x="665" y="495" class="wire-label" fill="#3f8a3f">PWM (CH0–CH3)</text>
+
+  <!-- ===== BULK CAPACITOR (between PCA9685 V+ and servo GND) ===== -->
+  <g transform="translate(1050, 370)">
+    <rect x="0" y="0" width="100" height="120" rx="6" class="component-box"/>
+    <text x="50" y="25" text-anchor="middle" class="component-title">Bulk Cap</text>
+    <text x="50" y="45" text-anchor="middle" class="component-text">1000–2200 µF</text>
+    <text x="50" y="60" text-anchor="middle" class="component-text">≥10V rated</text>
+    <text x="50" y="85" text-anchor="middle" class="critical">CRITICAL!</text>
+    <text x="50" y="105" text-anchor="middle" class="note">Place near</text>
+    <text x="50" y="115" text-anchor="middle" class="note">PCA9685 V+</text>
+  </g>
+
+  <!-- Bulk cap connections -->
+  <line x1="1050" y1="370" x2="1050" y2="310" class="power-rail"/>
+  <circle cx="1050" cy="310" r="3" fill="#d63b3b"/>
+  <line x1="1100" y1="490" x2="1100" y2="260" class="gnd-rail"/>
+  <circle cx="1100" cy="260" r="3" fill="#333"/>
+
+  <!-- ===== CRITICAL NOTES ===== -->
+  <text x="20" y="630" class="section-title" style="fill: #d63b3b;">⚠ CRITICAL WIRING CHECKLIST</text>
+
+  <rect x="20" y="650" width="1160" height="700" rx="8" style="fill: #fff3e8; stroke: #c07a2a; stroke-width: 2;"/>
+
+  <text x="40" y="680" class="component-title" style="font-size: 12px; fill: #d63b3b;">① XL4015 VOLTAGE ADJUSTMENT</text>
+  <text x="50" y="698" class="note">Set the XL4015 output to EXACTLY 5.1V with a digital multimeter BEFORE connecting any loads</text>
+  <text x="50" y="715" class="note">Use the feedback (FB) potentiometer on the XL4015 module to adjust. Default is ~3.3V.</text>
+
+  <text x="40" y="750" class="component-title" style="font-size: 12px; fill: #d63b3b;">② I2C PULL-UP RESISTORS (4.7kΩ each)</text>
+  <text x="50" y="768" class="note">Servo bus (GPIO21/22): Add 4.7kΩ resistors from SDA/SCL to +5.1V</text>
+  <text x="50" y="785" class="note">Sensor bus (GPIO25/26): Add 4.7kΩ resistors from SDA/SCL to +5.1V</text>
+  <text x="50" y="802" class="note">These pull-ups are essential for I2C communication reliability</text>
+
+  <text x="40" y="837" class="component-title" style="font-size: 12px; fill: #d63b3b;">③ BULK CAPACITOR PLACEMENT</text>
+  <text x="50" y="855" class="note">1000–2200 µF (rated ≥10V) must be connected:</text>
+  <text x="60" y="872" class="note">• Positive lead → PCA9685 V+ pin</text>
+  <text x="60" y="889" class="note">• Negative lead → GND rail</text>
+  <text x="50" y="906" class="critical">Place this capacitor as close as physically possible to PCA9685 V+ pins</text>
+
+  <text x="40" y="941" class="component-title" style="font-size: 12px; fill: #d63b3b;">④ DECOUPLING CAPACITORS (100nF each)</text>
+  <text x="50" y="959" class="note">Add 100nF ceramic capacitors across VDD–GND at each component:</text>
+  <text x="60" y="976" class="note">• ESP32-D: 100nF across VIN–GND</text>
+  <text x="60" y="993" class="note">• PCA9685: 100nF across V+–GND</text>
+  <text x="60" y="1010" class="note">• VEML7700: 100nF across VDD–GND</text>
+
+  <text x="40" y="1045" class="component-title" style="font-size: 12px; fill: #d63b3b;">⑤ SINGLE-POINT GROUND STAR</text>
+  <text x="50" y="1063" class="note">All GND return paths must converge at a single point (XL4015 GND output)</text>
+  <text x="50" y="1080" class="note">This prevents ground loops and noise coupling</text>
+
+  <text x="40" y="1115" class="component-title" style="font-size: 12px; fill: #d63b3b;">⑥ SERVO RAIL WIRING</text>
+  <text x="50" y="1133" class="note">Use wide copper/wire (1–2mm diameter on breadboard: use multiple parallel wires)</text>
+  <text x="50" y="1150" class="note">The servo rail must supply 2–3A peak without excessive voltage drop</text>
+  <text x="50" y="1167" class="note">Do NOT power servos through the ESP32 board — always from the buck output</text>
+
+  <text x="40" y="1202" class="component-title" style="font-size: 12px; fill: #d63b3b;">⑦ FIRMWARE: STAGGER SERVO STARTUP</text>
+  <text x="50" y="1220" class="note">Firmware must start servos sequentially (not all at once) to limit inrush current</text>
+  <text x="50" y="1237" class="note">The bulk capacitor and firmware stagger work together to keep voltage stable</text>
+
+  <!-- Footer -->
+  <text x="600" y="1380" text-anchor="middle" class="note" style="font-size: 11px;">Build this on a breadboard using 22AWG or 24AWG wire. All connections must be solid; loose wires cause intermittent failures.</text>
+
+</svg>
