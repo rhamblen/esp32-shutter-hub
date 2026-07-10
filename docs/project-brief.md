@@ -12,7 +12,15 @@ not a summary.
 > Decisions of record: [0001 hub vs nodes](decisions/0001-hub-vs-independent-nodes.md) ·
 > [0002 servo = MG90D](decisions/0002-servo-mg90d.md) ·
 > [0003 power chain + PCA9685](decisions/0003-power-chain-xl4015-pca9685.md) ·
-> [0004 custom firmware vs ESPHome](decisions/0004-custom-firmware-vs-esphome.md)
+> [0004 custom firmware vs ESPHome](decisions/0004-custom-firmware-vs-esphome.md) ·
+> [0005 MQTT command structure](decisions/0005-mqtt-command-structure.md) ·
+> [0006 HA via MQTT discovery](decisions/0006-ha-integration-mqtt-vs-custom.md) ·
+> [0007 HA Lovelace card](decisions/0007-ha-lovelace-card.md) ·
+> [0008 build variants](decisions/0008-build-variants.md) ·
+> [0009 servo position memory](decisions/0009-servo-position-memory.md) ·
+> [0010 concurrent servo drive](decisions/0010-concurrent-servo-drive.md) ·
+> [0011 dedicated sensor I2C bus](decisions/0011-dedicated-sensor-i2c-bus.md) ·
+> [0012 selectable sensor I2C bus](decisions/0012-selectable-sensor-i2c-bus.md)
 
 ---
 
@@ -278,8 +286,11 @@ HomeSpan + web-config + web-OTA design (we stay on Arduino Core rather than its 
   per-shutter calibration + OTA page.
 - **HomeKit:** HomeSpan configured as a **bridge**, one `Window Covering` accessory per shutter.
 - **HA:** MQTT discovery, one cover + sensors per shutter.
-- **OTA:** ElegantOTA browser upload (`/update`) + optional auto-update checking a `latest.json`.
-- **Config:** LittleFS JSON + Preferences.
+- **OTA:** custom browser uploader (core `Update.h`) — firmware and/or the LittleFS image, with an
+  installed-version display and upload log. (ElegantOTA served the v0.0.x scaffold and was replaced.)
+  Optional auto-update checking a `latest.json` remains deferred (plan D3).
+- **Config:** **all settings in NVS (Preferences)**; LittleFS holds only the web assets, so a
+  filesystem OTA never touches a setting (ADR 0005).
 - **Servo:** `ServoController` class exposing `moveTo(percent)` with soft-start / slow, stepped
   movement (not instant `write`), staggered start-up across channels to limit inrush.
 - **Discovery:** mDNS → `shutter-hub.local`.
@@ -382,9 +393,11 @@ possible.
 ## 14. Future Expansion
 
 - **I2C header** reserved (3V3 / GND / SDA / SCL) for extra sensors, current monitor, OLED.
-- **Remote WiFi actuator nodes** for *other rooms* later — the per-shutter MQTT/HomeSpan model and
-  config array already accommodate this without re-architecting the hub (deferred; see
-  [ADR 0001](decisions/0001-hub-vs-independent-nodes.md)).
+- **Independent single-servo nodes** for *other rooms* later — an ESP32-C3 driving one servo straight
+  off a GPIO (the `esp32c3-direct` variant), running this same firmware with a one-entry `shutters[]`
+  array. There is **no hub-to-node protocol**: each node is an independent MQTT peer and HomeSpan
+  bridge, and cross-room coordination is a Home Assistant automation or `cover` group. Deferred; see
+  [ADR 0001](decisions/0001-hub-vs-independent-nodes.md).
 
 ---
 

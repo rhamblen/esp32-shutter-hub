@@ -11,6 +11,9 @@ build/
 *.elf
 *.map
 
+# Release artifacts staged for upload — bins match *.bin above, the card .js does not
+firmware/dist/
+
 # KiCad backups / autosave / fabrication temp
 *-backups/
 *.kicad_pcb-bak

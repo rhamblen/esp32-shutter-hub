@@ -16,8 +16,8 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | 2     | v0.2.x–v0.3.0 | Shutters config + calibration; PCA9685 backend + build variants | ☑ |
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
 | 4b    | v0.4.x  | HA Lovelace operating card     | ☑      |
-| 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☑      |
-| 6     | v0.6.0  | Light sensor + solar logic     | ☑      |
+| 5     | v0.5.0–4| HomeKit (HomeSpan bridge)      | ◐ built, **pairing unresolved** |
+| 6     | v0.6.0–2| Light sensor + solar logic     | ◐ built, **sensor not yet wired** |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
 | 8     | —       | HA calibration card (optional) | ☐      |
 | 8b    | —       | HA-side threshold calibration from lux history (optional) | ☐ |
@@ -26,8 +26,9 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 forward — they all run on a bare ESP32 before servo hardware exists. So the old "Phase 2 Web UI" and
 "Phase 3 WiFiManager/OTA" are effectively **done** (Phase S + S2); Phase 3 is retired (WiFi
 provisioning now lives in the System > WiFi sub-tab). Per-shutter **calibration** (Phase 2) is now
-**done** on real PCA9685 hardware (v0.3.0); what remains hardware-coupled is MQTT **cover control**
-(Phase 4).
+**done** on real PCA9685 hardware (v0.3.0), and MQTT **cover control** (Phase 4) was verified on
+hardware on 2026-07-09. What remains unproven against physical hardware is the **VEML7700** (Phase 6,
+not yet wired) and **HomeKit pairing** (Phase 5, unresolved).
 
 **Build variants (v0.3.0):** the servo backend is now a compile-time choice — **direct GPIO** (one
 bench actuator) or **PCA9685** (I2C multi-channel) — with a `FW_VARIANT` id surfaced on the
@@ -140,22 +141,30 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 - The **calibration card** originally bundled in this phase is split out to **Phase 8 (optional)**
   together with the firmware commands it needs.
 
-## Phase 5 — HomeKit (v0.5.0)
+## Phase 5 — HomeKit (v0.5.0–v0.5.4) ◐
 - **Objective:** native Apple Home control.
 - **What we build:** HomeSpan bridge exposing one Window Covering per shutter; Siri.
-- **Status (v0.5.0):** ☑ built — HomeSpan bridge in [HomeKit.cpp](../firmware/src/HomeKit.cpp), one
-  Window Covering accessory per shutter, driving the same `ServoController` slots as MQTT. Pinned to
-  `HomeSpan @ ~1.9.1` (last line supporting arduino-esp32 core 2.0.9). Coexistence: HAP on port 1201
-  (web server keeps 80), mDNS hostname pinned to the device name, WiFi stays with WiFiManager, QR id
-  `SHUT`. Setup code default **748-88-377**. Uncalibrated shutters still operate via the servo
-  envelope (MVP). **All HomeKit settings apply at boot** — the tab has a *Reboot to apply* button.
-  Flash is now ~90 % of the app partition (HomeSpan pulls in HAP/SRP crypto) — Phase 6 must fit the
-  remaining headroom.
-- **Exit criteria:** shutters controllable from the Home app and Siri, alongside HA. *(Pairing is
-  verified on the owner's hardware + Apple device — the active setup code is echoed to the web Logs
-  page to cross-check against the tab.)*
+- **Status (v0.5.4):** ◐ **built but not paired.** The HomeSpan bridge in
+  [HomeKit.cpp](../firmware/src/HomeKit.cpp) runs — one Window Covering accessory per shutter,
+  driving the same `ServoController` slots as MQTT — and the hub stays fully functional with it
+  enabled (servos and HA are unaffected). **Pairing has never succeeded on the author's hardware:
+  the Home app does not complete *Add Accessory*.** Three fixes were attempted across v0.5.1–v0.5.4
+  (reliable reboot via `esp_timer`; HomeSpan on its own FreeRTOS task so HAP never stalls the servo
+  loop; single mDNS owner so `_hap._tcp` is actually announced) — each removed a real defect, none
+  produced a pairing. **The work is parked**, not abandoned; the bridge can be left disabled with no
+  loss of function.
+  Pinned to `HomeSpan @ ~1.9.1` (last line supporting arduino-esp32 core 2.0.9). Coexistence: HAP on
+  port 1201 (web server keeps 80), mDNS hostname pinned to the device name, WiFi stays with
+  WiFiManager, QR id `SHUT`. Setup code default **748-88-377**. Uncalibrated shutters still operate
+  via the servo envelope (MVP). **All HomeKit settings apply at boot** — the tab has a *Reboot to
+  apply* button. Flash is now ~90 % of the app partition (HomeSpan pulls in HAP/SRP crypto) —
+  Phase 6 had to fit the remaining headroom.
+- **Exit criteria:** ☐ shutters controllable from the Home app and Siri, alongside HA. **Not met.**
+  The bridge builds, boots, advertises, and logs its active setup code to the web Logs page (to
+  cross-check against the tab), but no controller has ever paired. Resuming this means starting from
+  the pairing handshake, not from the mDNS advertisement.
 
-## Phase 6 — Light sensor + solar logic (v0.6.0) ☑
+## Phase 6 — Light sensor + solar logic (v0.6.0–v0.6.2) ◐
 - **Objective:** automatic heat protection.
 - **Built in three ordered steps**, each independently useful:
   - **6a — firmware + web UI.** Real `LightSensor` VEML7700 driver on a **dedicated `Wire1` bus**
@@ -168,6 +177,16 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
     needs). Clear ≥ trip is rejected — inverted hysteresis oscillates.
   - **6c — Lovelace card.** Optional solar toggle + lux caption in the group header
     (`solar_switch` / `solar_lux` / `solar_state` config keys; absent ⇒ card unchanged).
+- **Follow-ups shipped in the same phase:**
+  - **v0.6.1 — the sensor bus became a setting** ([ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md)).
+    The VEML7700 can keep its dedicated `Wire1` (default) or **share the PCA9685's `Wire`**. A
+    dedicated bus needs a second I²C controller, so on a one-controller chip (the ESP32-C3) the
+    preference is clamped to shared — which is what made solar work on the C3 at all. Also added the
+    installation guide, user guide, and pinout reference.
+  - **v0.6.2 — Info-page hardware table** (every device, its bus, pins, address/channel) plus a
+    **Brightness (0–100 %)** sensor: `20 × log10(clamp(lux, 1, 100000))`, one lux decade per 20
+    points. **Display-only** — the state machine still trips on raw lux, which the log curve
+    compresses (30–60 k lx ⇒ 90–96 %).
 - **Actions are five-valued**, not four: **Open · Closed · Daylight · Privacy · Do nothing**.
   `Do nothing` advances the state but moves nothing — the default clear action, so a trip to
   Privacy isn't undone automatically; both set to `Do nothing` = pure sensor/reporter mode.
@@ -175,9 +194,9 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
   on **that** shutter for 2 h; the hub-wide state keeps tracking the light.
 - **UI mockup:** [diagrams/solar-page.svg](diagrams/solar-page.svg) — dark-theme wireframe of the
   Solar page: Status (lux + simulate slider), Sensor (Wire1 pins + detect pill), Sensitivity, Actions.
-- **Prerequisites:** Phase 5 HomeKit complete (flash budget), Phase 2 calibration (the presets the
-  targets recall).
-- **Exit criteria:** ☑ simulated high lux drives every calibrated shutter to the bright target and
+- **Prerequisites:** Phase 5's HomeSpan flash cost known and budgeted (the bridge is built, even
+  though pairing is unresolved), Phase 2 calibration (the presets the targets recall).
+- **Exit criteria:** ◐ simulated high lux drives every calibrated shutter to the bright target and
   the clear action applies per the dwell timers; lux + state reach HA; thresholds writable from HA.
   Verification against the **physical** VEML7700 is outstanding — the sensor is not yet wired.
 
@@ -222,7 +241,7 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
 | - | -------- | ----- |
 | D1 | Final horn/arm ratio | Resolved by Phase 0 force test; start 10 mm horn + 20 mm arm. **Assumption to bench-validate (2026-07-08):** the rod end appears to need ~36 mm of rise *and* ~36 mm of horizontal excursion over 0→90° — an effective crank radius of ~36 mm (tip travels a ~51 mm chord), not 20 mm. If confirmed, a 1:1 parallelogram linkage needs a ~36 mm servo horn, and MG90D torque at that radius (~2.2 kg·cm → ~0.6 kg force) must be rechecked against the measured slat load. Use the v0.2.1 speed slider to run 0→90° slowly and measure actual rod displacement. |
 | D2 | Servo connectors in hub | Grommet holes + strain relief (prototype) vs JST-XH (tidy/serviceable). [hardware-layout.md](hardware-layout.md) recommends grommets for the prototype, JST-XH panel breakout revisited at Phase 7. |
-| D3 | Auto-OTA vs web-OTA only | Web OTA (ElegantOTA) certain; `latest.json` auto-update optional. |
+| D3 | Auto-OTA vs web-OTA only | **Resolved for web OTA:** the custom firmware+LittleFS uploader (core `Update.h`) shipped in v0.0.3, replacing the ElegantOTA scaffold. **Open:** whether to add `latest.json` auto-update checking. |
 | D4 | Spare LM2596 | Superseded by XL4015; keep as spare or drop from BOM. |
 | D5 | Voltage monitoring | Whether to populate GPIO34 servo-rail ADC for brownout telemetry. |
 | D6 | Config editing UX | Resolved (ADR 0005): browser-owned web form, servos declared manually (no auto-scan); HA-side config is a later phase. |

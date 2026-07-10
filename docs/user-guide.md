@@ -104,15 +104,18 @@ beside a lux history graph and adjust while watching the room.
 
 ## Using Apple Home
 
-Each shutter is a **Window Covering** accessory. Ask Siri to "open the front room shutters", or drag
-the slider in the Home app. Because the hub bridges through HomeSpan, the accessories appear
-individually and can go in different rooms if that suits your layout.
+> **Not currently usable — pairing does not work.** The HomeSpan bridge builds, boots and
+> advertises, but no controller has ever completed *Add Accessory* on the author's hardware, and the
+> work is parked. Nothing else is affected: leave HomeKit disabled and the web UI, Home Assistant,
+> the Lovelace card and solar automation all work normally. See
+> [installation.md](installation.md#step-8--pair-with-apple-home-optional).
+
+Once pairing works, each shutter is a **Window Covering** accessory. You'd ask Siri to "open the
+front room shutters", or drag the slider in the Home app. Because the hub bridges through HomeSpan,
+the accessories appear individually and can go in different rooms if that suits your layout.
 
 Apple Home has no concept of your Daylight and Privacy presets — model them as Home app *scenes* that
 set specific percentages, or trigger the Home Assistant buttons instead.
-
-> Pairing is a known open issue on some networks. See
-> [installation.md](installation.md#step-8--pair-with-apple-home-optional).
 
 ---
 

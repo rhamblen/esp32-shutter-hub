@@ -36,6 +36,47 @@ The two button ids default to the cover id with `cover.` → `button.` and a
 `_daylight` / `_privacy` suffix; override per shutter with `daylight:` / `privacy:` if
 your naming differs.
 
+### Solar heat protection (optional)
+
+If the hub has a VEML7700 fitted, three more entities can be bound. Supply any of them and the
+group header grows a **live light caption** and an **automation toggle**; omit them all and the
+card renders exactly as before, so no-sensor installs are unaffected.
+
+| Config key | Entity | Role |
+| ---------- | ------ | ---- |
+| `solar_switch` | `switch.<hub>_solar_automation` | Turns the trip/clear automation on or off |
+| `solar_lux` | `sensor.<hub>_light_level` | Raw illuminance in lux — what the card's caption shows |
+| `solar_state` | `sensor.<hub>_solar_state` | `idle` · `counting-trip` · `tripped` · `counting-clear` |
+
+**Why the caption reads lux and not a percentage.** The hub also publishes
+`sensor.<hub>_brightness` (0–100 %), which is friendlier to read but is **display-only**, and this
+card does not use it. It is a logarithmic restatement of the same reading —
+`20 × log10(lux)`, one lux decade per 20 points:
+
+| Brightness | Lux | Roughly |
+| ---------- | --- | ------- |
+| 0 % | 1 | dark room |
+| 20 % | 10 | dim |
+| 40 % | 100 | lit room |
+| 54 % | ~500 | bright room |
+| 60 % | 1 000 | overcast, by a window |
+| 80 % | 10 000 | overcast daylight |
+| 100 % | 100 000 | full sun |
+
+A linear percentage of the sensor's 120 000 lx full scale was rejected: it reads 0 % at every
+indoor level and only moves in direct sun. The log curve fixes that, but it compresses the
+30 000–60 000 lx band where the trip and clear thresholds live — the defaults land at 96 % and
+90 %, six points apart — so it can't be used to set or reason about thresholds, and it isn't
+cleanly invertible. **The state machine trips on raw lux**; raw lux is what the caption shows and
+what Home Assistant's long-term statistics record. Treat brightness as a human-readable gauge,
+never as an automation input.
+
+```yaml
+solar_switch: switch.shutter_hub_solar_automation
+solar_lux: sensor.shutter_hub_light_level
+solar_state: sensor.shutter_hub_solar_state
+```
+
 ## Install
 
 Two paths — both end with the same dashboard card.

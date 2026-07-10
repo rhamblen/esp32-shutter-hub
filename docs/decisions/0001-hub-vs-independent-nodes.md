@@ -39,5 +39,18 @@ Adopt the **Shutter Hub** architecture.
 
 ## Deferred / future
 
-Distributed WiFi actuator nodes remain viable for **other rooms** later. The per-shutter MQTT and
-HomeSpan-accessory design already accommodates this without re-architecting the hub.
+The hub decision is scoped to **this room**. Its main argument — short servo runs — does not hold for
+shutters elsewhere in the house, so other rooms are expected to use **independent single-servo nodes**:
+an ESP32-C3 driving one servo directly from a GPIO (the `esp32c3-direct` variant of
+[ADR 0008](0008-build-variants.md)), running this same firmware with a one-entry `shutters[]` array.
+
+**There is no master/slave or hub-to-node protocol, and none is planned.** Each node is an independent
+MQTT peer publishing its own `<base>/cover/<id>/…` topics ([ADR 0005](0005-mqtt-command-structure.md))
+and its own HomeSpan bridge. Coordination across rooms is a Home Assistant automation or `cover` group,
+not firmware. A node therefore differs from the hub only in its PlatformIO env, its hostname and MQTT
+base topic, and the length of its config array — the hub is simply the instance where the servos are
+close enough together to share one board, one PCA9685, and one 5 A servo rail.
+
+Two things to check before relying on this: the C3 envs are defined but **deferred and unflashed**
+(built only at release), and HomeSpan already occupies ~90% of flash on the ESP32-D — the C3's
+partition layout needs verifying before assuming a HomeKit-enabled node fits.

@@ -41,11 +41,17 @@ Common ground single-point.
 
 ## Data sources / integration surfaces
 
-- **HomeKit:** HomeSpan bridge, one Window Covering accessory per shutter.
-- **Home Assistant:** MQTT discovery, one `cover.*` per shutter + lux/position sensors.
-- **Web:** ESPAsyncWebServer, single multi-shutter page at `shutter-hub.local` (status / control /
-  calibration / OTA).
-- **Config store:** LittleFS JSON (config + web files) + Preferences (calibration values).
+- **HomeKit:** HomeSpan bridge, one Window Covering accessory per shutter. **Built, but pairing is
+  unresolved — see [project-plan.md](project-plan.md) Phase 5.**
+- **Home Assistant:** MQTT discovery, one `cover.*` per shutter + six `button`s, plus lux,
+  brightness-%, solar-state, an automation switch and two writable lux thresholds.
+- **Web:** ESPAsyncWebServer serving a LittleFS single-page app at `shutter-hub.local` — sidebar
+  Info · MQTT · Servo test · Shutters · Solar · System (incl. WiFi + HomeKit) · OTA · Logs, over a
+  JSON/REST API plus a `/ws/logs` WebSocket.
+- **Config store:** **all settings live in NVS (Preferences)** — device identity, WiFi, MQTT, web
+  auth, shutter definitions, calibration, favourites, HomeKit, solar. **LittleFS holds only the web
+  assets.** The split is deliberate: a filesystem OTA reflashes the UI without touching a single
+  setting (ADR 0005).
 
 ## Known gotchas
 

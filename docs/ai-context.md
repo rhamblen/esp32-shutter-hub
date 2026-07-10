@@ -26,13 +26,21 @@ driving a **variable** number of **MG90D** servo actuators via a **PCA9685**, in
 | `docs/architecture.md` | Principles, trade-off table, topology, gotchas |
 | `docs/inventory.md` | Shutter facts + BOM + power budget |
 | `docs/hardware-layout.md` | Copper-breadboard build plan: placement, cuts, standoffs, cables, connectors |
+| `docs/installation.md` | End-user install guide: flash → WiFi → calibrate → HA → HomeKit → solar |
+| `docs/user-guide.md` | Everyday operation, solar behaviour, recalibration, troubleshooting |
+| `docs/pinout.md` | GPIO map: ESP32-D defaults, C3 proposal, pins `validGpio()` rejects |
+| `docs/ha-lovelace-card.md` | Lovelace card spec: entity model, config schema, layout |
 | `docs/decisions/0001–0012` | ADRs: hub, MG90D, XL4015+PCA9685, custom firmware, MQTT commands, MQTT-only HA, Lovelace card, build variants, position memory, concurrent drive, dedicated sensor I2C bus, selectable sensor bus |
-| `firmware/data/` | LittleFS web UI (index.html, style.css, app.js) served by `WebUI` |
+| `firmware/data/` | LittleFS web UI (index.html, style.css, app.js, qrcode.min.js) served by `WebUI` |
+| `ha-card/shutter-hub-card.js` | The shipped Lovelace card (plain custom element, no build step) |
 | `CHANGELOG.md` | Keep-a-Changelog; update every phase |
+| `RELEASE_NOTES.md` | Body of the **current** GitHub release (rewritten each release) |
 
 ## Locked facts
 
 - **Shutters:** 4 panels, ~450 mm wide, 11 slats, ~75 mm slat height, edge tilt rod, lightweight.
+  Count is configuration, but `Shutters::MAX` (`firmware/include/Shutters.h`) currently caps it at
+  **4** — iterate the array, never hard-code 4, and raise `MAX` if more are needed (Phase 8 wants 6).
 - **Servo:** MG90D (digital metal gear, ~2 kg·cm, ~13–14 g, 4.8–6 V).
 - **Driver:** PCA9685 (I2C 0x40, CH0–3).
 - **Sensor:** VEML7700 (I2C 0x10). Its bus is a **setting** ([ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md)):
@@ -91,20 +99,28 @@ persisted **speed slider** 5–120 °/s default 25, `POST /api/servo/speed?dps=N
 **S2** (v0.2.0 LittleFS web UI + WebSocket logs + MQTT/HA config), **2** (v0.2.2–v0.3.0 Shutters
 page + calibration; PCA9685 backend + build variants + position memory). Phase 3 retired (folded
 into S/S2), **4** (v0.4.0 MQTT/HA covers + buttons + discovery + concurrent drive; verified on
-hardware), **4b** (v0.4.2 Lovelace operating card). **5 HomeKit** done (v0.5.0): HomeSpan bridge
+hardware), **4b** (v0.4.2 Lovelace operating card). **5 HomeKit** ◐ **built, pairing unresolved**
+(v0.5.0–v0.5.4, released as v0.5.4): HomeSpan bridge
 (`firmware/src/HomeKit.cpp`), one Window Covering accessory per shutter driving the same
-`ServoController` slots as MQTT; config tab shipped in v0.4.4 (`/api/homekit`, NVS `hk*` keys,
-default setup code **748-88-377**, client-side `X-HM://` QR). **Pinned `HomeSpan @ ~1.9.1`** — last
+`ServoController` slots as MQTT; config tab (`/api/homekit`, NVS `hk*` keys,
+default setup code **748-88-377**, client-side `X-HM://` QR). **No controller has ever paired** —
+the bridge boots and advertises, the hub stays fully functional with it enabled, but *Add Accessory*
+never completes. v0.5.1–v0.5.4 each fixed a real defect (reboot via `esp_timer`; HomeSpan on its own
+FreeRTOS task; single mDNS owner) without producing a pairing. **Parked** — do not assume HomeKit
+works. **Pinned `HomeSpan @ ~1.9.1`** — last
 line supporting arduino-esp32 **core 2.0.9** (2.x needs core ≥3.3.0; do NOT bump the core, it would
 churn every other lib). Coexistence (all in HomeKit.cpp): HAP `setPortNum(1201)` (web keeps 80),
 `setHostNameSuffix("")` pins mDNS host to the device name + re-adds the `_http` service, WiFi stays
 with WiFiManager (HomeSpan sees `WL_CONNECTED`, never calls WiFi.begin), `setQRID("SHUT")` +
 `setPairingCode(code,false)`. **Gotcha: the pairing verifier is baked at boot** — a code/enable/name
 change needs a reboot (the tab has *Reboot to apply*; the active code is logged to the web Logs
-page). Uncalibrated shutters still operate via the servo envelope (MVP). **6 light/solar** done
-(v0.6.0): `LightSensor` + `SolarLogic` + Solar page + MQTT solar entities + card header toggle —
-see the Solar locked fact above and [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md).
-**Flash now 91.2 %** of the app partition — treat any new library as suspect; that's why the
+page). Uncalibrated shutters still operate via the servo envelope (MVP). **6 light/solar** ◐ built
+(v0.6.0–v0.6.2): `LightSensor` + `SolarLogic` + Solar page + MQTT solar entities + card header toggle
+(v0.6.0); selectable sensor bus (v0.6.1, [ADR 0012](decisions/0012-selectable-sensor-i2c-bus.md));
+Info-page hardware table + brightness-% sensor (v0.6.2) — see the Solar locked fact above and
+[ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md).
+**Flash now 91.3 %** of the app partition (`esp32d-pca9685`; 91.9 % `esp32d-direct`, C3 envs link at
+89.5 % / 90.1 %) — treat any new library as suspect; that's why the
 VEML7700 driver is hand-rolled rather than Adafruit's. Remaining: **7** production → **8** HA
 calibration card (optional) → **8b** HA-side threshold calibration from lux history (optional).
 **0** (mechanical force test) still open. **Not yet verified against the physical VEML7700** — the

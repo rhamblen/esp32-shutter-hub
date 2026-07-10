@@ -6,6 +6,41 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Documentation
+Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, no version change.**
+
+- **HomeKit status corrected everywhere.** Phase 5 is **built but unpaired** — the bridge boots and
+  advertises, but no controller has ever completed pairing, and the work is parked. `project-plan.md`
+  previously claimed pairing was *verified*, contradicting the README, `installation.md` and
+  `user-guide.md`. The plan's status table now shows Phase 5 as ◐ with its exit criteria unmet, and
+  `user-guide.md` leads its Apple Home section with the caveat rather than burying it.
+- **Phase 6 marked ◐, not ☑** — the solar logic is built and exercised through the simulate-lux
+  slider, but the physical VEML7700 is still not wired. The plan's own exit criteria already said so.
+- **Lovelace card solar options documented** in [ha-card/README.md](ha-card/README.md) and
+  [docs/ha-lovelace-card.md](docs/ha-lovelace-card.md) §2a — the `solar_switch` / `solar_lux` /
+  `solar_state` keys shipped in v0.6.0 but appeared in neither, though `installation.md` points users
+  at the card README for "the full option list". Includes the lux-vs-brightness distinction: the card
+  captions **raw lux** because the state machine trips on raw lux, while `sensor.<hub>_brightness`
+  (`20 × log10(lux)`, one decade per 20 points) is a display-only gauge that compresses the
+  30–60 k lx threshold band to 90–96 % and must never drive automation.
+- **`firmware/README.md` brought up to v0.6.2** — was still headed *"What this version does
+  (v0.4.0)"*, listed `HomeKit.cpp` and `LightSensor.cpp` as stubs, omitted `SolarLogic.cpp` and the
+  Solar page entirely, and named the filesystem image per-variant when one `esp32d-littlefs` image is
+  shared across variants.
+- **`architecture.md` config store corrected** — it described "LittleFS JSON (config + web files) +
+  Preferences (calibration values)". All settings live in NVS; LittleFS holds only web assets. That
+  split is what lets a filesystem OTA leave every setting intact (ADR 0005).
+- **`ai-context.md` refreshed** — file map gained `installation.md`, `user-guide.md`, `pinout.md`,
+  `ha-lovelace-card.md`, `ha-card/` and `RELEASE_NOTES.md`; flash figure corrected to 91.3 %
+  (`esp32d-pca9685`) from a stale 91.2 %; the HomeKit entry no longer implies pairing works; dropped
+  a reference to "v0.4.4", a changelog entry that was never tagged or released.
+- **Shutter count is 1–4, not "any number from 1 upward"** (README, ai-context) —
+  `Shutters::MAX` is 4; Phase 8 lists raising it to 6 as a prerequisite.
+- **`project-brief.md`** now lists all twelve ADRs as decisions of record, not just 0001–0004.
+- **`project-plan.md`** records v0.6.1 (selectable sensor bus, ADR 0012) and v0.6.2 (Info hardware
+  table, brightness sensor) under Phase 6, and drops a stale note calling Phase 4 hardware-unproven.
+- **`.gitignore`** now covers `firmware/dist/` — `*.bin` caught the images but not the card `.js`.
+
 ### Release checklist / notes
 - **Bins are per-variant from v0.3.0 on** (board × servo backend): a `full` (USB flash) and `ota`
   (firmware) bin **per variant** — `shutter-hub-<variant>-{full,ota}-vX.Y.Z.bin` — plus a **single

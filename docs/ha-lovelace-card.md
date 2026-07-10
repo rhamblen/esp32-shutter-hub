@@ -13,7 +13,7 @@ firmware that does not exist yet (see §4 and the plan).
 
 | Card | Type | Status | Depends on |
 | ---- | ---- | ------ | ---------- |
-| `shutter-hub-card` | Everyday control | **Shipped v0.4.2** (Phase 4b) | Phase 4 covers/buttons only |
+| `shutter-hub-card` | Everyday control | **Shipped v0.4.2** (Phase 4b); optional solar header added v0.6.0 (Phase 6c) | Phase 4 covers/buttons; solar keys optional (§2a) |
 | `shutter-hub-calibration-card` | Setup / calibration | **Phase 8 — optional** | Phase 4 **+** calibration transport (§4) |
 
 ---
@@ -39,6 +39,18 @@ Entity ids below are the **actual discovery names** (verified against a live hub
 The **default card never needs raw µs** — it works entirely in cover position % plus
 the four recall/open/close actions.
 
+**Hub-wide solar entities** (Phase 6, v0.6.0+) — one set per hub, not per shutter. Optional: the
+control card binds them only if configured (§2a).
+
+| Entity | Example | Used by | Purpose |
+| ------ | ------- | ------- | ------- |
+| `switch.<hub>_solar_automation` | `switch.shutter_hub_solar_automation` | control card | enable/disable trip-clear automation |
+| `sensor.<hub>_light_level` | `sensor.shutter_hub_light_level` | control card | **raw lux** — the value the card captions |
+| `sensor.<hub>_solar_state` | `sensor.shutter_hub_solar_state` | control card | `idle`/`counting-trip`/`tripped`/`counting-clear` |
+| `sensor.<hub>_brightness` | `sensor.shutter_hub_brightness` | — | 0–100 % human gauge; **display-only, not bound** |
+| `number.<hub>_solar_trip_lux` | — | (Phase 8b) | writable trip threshold, lux |
+| `number.<hub>_solar_clear_lux` | — | (Phase 8b) | writable clear threshold, lux |
+
 ---
 
 ## 2. Card config schema + editor
@@ -53,6 +65,11 @@ shutters:                          # 1–6 entries, order = display order
     entity: cover.shutter_hub_front_centre
   - name: Right
     entity: cover.shutter_hub_front_right
+
+# Solar heat protection — all optional; omit for a no-sensor install
+solar_switch: switch.shutter_hub_solar_automation
+solar_lux: sensor.shutter_hub_light_level
+solar_state: sensor.shutter_hub_solar_state
 ```
 
 **Visual editor** (`getConfigElement` + `getStubConfig`):
@@ -64,6 +81,37 @@ shutters:                          # 1–6 entries, order = display order
 
 The calibration card takes the **same `shutters` list** (so the picker/reorder logic is
 shared) plus per-shutter references to the calibration entities from §4.
+
+### 2a. Solar keys — the two values, and what they mean
+
+Three optional hub-wide keys. Supply any of them and the group header grows a **live light
+caption** plus an **automation toggle**; supply none and the card renders exactly as it did before
+Phase 6. `getStubConfig` auto-fills all three when the matching entities exist.
+
+| Key | Binds to | What it means |
+| --- | -------- | ------------- |
+| `solar_switch` | `switch.<hub>_solar_automation` | Master enable. Off ⇒ the hub keeps measuring and reporting, but moves nothing. |
+| `solar_lux` | `sensor.<hub>_light_level` | **Raw illuminance, lux.** The measured value; drives the state machine and the header caption. |
+| `solar_state` | `sensor.<hub>_solar_state` | Where the trip/clear machine is: `idle` → `counting-trip` → `tripped` → `counting-clear`. The `counting-*` states mean a threshold is currently being held and the dwell timer is running. |
+
+**Raw lux vs. the brightness percentage.** The hub publishes *two* light values, and the card binds
+only the first:
+
+- **`sensor.<hub>_light_level` — lux, 0…~120 000.** The physical measurement. The trip and clear
+  thresholds are set in lux, the state machine compares against lux, and Home Assistant's long-term
+  statistics record lux (which is what the Phase 8b calibration card reads back).
+- **`sensor.<hub>_brightness` — percent, 0…100.** A human-readable gauge added in v0.6.2, computed
+  as `20 × log10(clamp(lux, 1, 100000))` — **one lux decade per 20 points**. Anchors: 1 lx → 0 %,
+  10 → 20 %, 100 → 40 %, 1 000 → 60 %, 10 000 → 80 %, 100 000 → 100 %. So a dark room reads 0 %, a
+  lit room 40 %, a bright room ~54 %, overcast daylight 80 %, full sun 100 %.
+
+The log scale exists because a **linear** percentage of the sensor's 120 k lx full scale reads 0 %
+at every indoor level and only starts moving in direct sunlight — useless as a gauge. But the same
+compression makes brightness unusable for control: the default thresholds (trip 60 000 lx, clear
+30 000 lx) land just **six points apart at 96 % and 90 %**, and the curve isn't cleanly invertible.
+
+> **Never drive automation from `brightness`.** It is display-only. The card captions raw lux for
+> exactly this reason: the number a user sees should be the number the thresholds are set in.
 
 ---
 

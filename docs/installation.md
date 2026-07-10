@@ -242,15 +242,17 @@ naming differs, set `daylight:` and `privacy:` explicitly per shutter. See
 
 ---
 
-## Step 8 — Pair with Apple Home (optional)
+## Step 8 — Pair with Apple Home (optional, and currently not working)
 
 The hub runs a [HomeSpan](https://github.com/HomeSpan/HomeSpan) bridge: each shutter appears in the
 Home app as its own **Window Covering**, alongside — not instead of — the Home Assistant entities.
 
-> **Status:** the bridge runs correctly (servos and MQTT keep working with it enabled), but device
-> **discovery and pairing on the author's own network remain unresolved** and the work is parked. If
-> the Home app does not find the bridge, that is the known open issue, not a mistake on your part.
-> See [CHANGELOG.md](../CHANGELOG.md).
+> **Status: pairing does not work.** The bridge builds, boots and advertises, and the hub stays fully
+> functional with it enabled — but **no controller has ever completed pairing** on the author's
+> hardware, and the work is parked. If the Home app never finds the bridge, or finds it and fails to
+> add it, that is the known open issue, not a mistake on your part. **You can skip this step
+> entirely** — everything else works without it. See [CHANGELOG.md](../CHANGELOG.md) and
+> [project-plan.md](project-plan.md) Phase 5.
 
 1. **System → HomeKit.** Set a **Bridge name** and an 8-digit **Setup code** (default `748-88-377`;
    **⟳ Random code** generates a fresh one).

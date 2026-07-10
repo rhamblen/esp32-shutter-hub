@@ -9,7 +9,7 @@ Zemismart JM36/JC601.
 ## Features
 
 - **Hub architecture** — one ESP32 drives all shutters via a PCA9685; simple MG90D actuator modules.
-- **Variable shutter count** — any number from 1 upward, by configuration only (no firmware change).
+- **Variable shutter count** — 1 to 4, by configuration only (no firmware change).
 - **Apple HomeKit** — HomeSpan bridge exposes each shutter as its own Window Covering accessory.
 - **Home Assistant** — one `cover.*` per shutter via MQTT discovery, plus lux/position sensors.
 - **Local web UI** — control, per-shutter calibration, and OTA at `http://shutter-hub.local`.
@@ -78,8 +78,11 @@ calibration, and pairings are untouched.
 
 ## Status
 
-Design complete on paper; **Home Assistant cover control over MQTT** plus a **custom Lovelace
-operating card** (`v0.4.2`). Every shutter
+**Current release `v0.6.2`.** In daily use: the web UI, per-shutter calibration, Home Assistant
+control over MQTT, and the Lovelace card. Two things are built but unproven — **HomeKit pairing does
+not work** and the **light sensor is not yet wired**; both are detailed below.
+
+Every shutter
 defined in the web UI appears in HA as a native **`cover`** (open/close/stop + position 0–100) plus
 six **`button`** entities (jog open/close, Daylight/Privacy recall + save) via MQTT discovery —
 commands drive each shutter's own PCA9685 channel, **several simultaneously**, and retained
@@ -97,9 +100,11 @@ with group + per-shutter Open/Close/Daylight/Privacy and a manual position slide
 **Phase 5 (`v0.5.x`)** adds an **Apple HomeKit** bridge (HomeSpan): each shutter also appears in the
 Home app as a **Window Covering**, configured on a new **System › HomeKit** tab (bridge name, setup
 code, pairing QR). The bridge runs on its own task so it never interferes with servo control, and
-reboot/OTA are driven by a reliable timer. **Status:** the bridge is functional (servos and HA keep
-working with it enabled), but Apple Home **device discovery/pairing on the author's own network is
-still unresolved** and parked — see [CHANGELOG.md](CHANGELOG.md). Everything else is in daily use.
+reboot/OTA are driven by a reliable timer. **Status: incomplete — pairing does not work.** The bridge
+builds, boots and advertises, and the hub stays fully functional with it enabled (servos and HA are
+unaffected), but **no controller has ever completed pairing** on the author's hardware. Three rounds
+of fixes (v0.5.1–v0.5.4) each removed a real defect without producing a pairing; the work is parked
+and the bridge can be left disabled with no loss of function — see [CHANGELOG.md](CHANGELOG.md).
 **Phase 6 (`v0.6.0`)** adds **solar heat protection**: a **VEML7700** light sensor on its own I²C
 bus drives a trip/clear state machine — when the sun stays above a threshold for a set dwell the
 shutters move to a chosen preset, and a second threshold releases them. Both actions can be set to
@@ -126,6 +131,8 @@ firmware (OTA), plus one shared LittleFS filesystem image.
 | [docs/project-plan.md](docs/project-plan.md) | Phased roadmap + status + open decisions |
 | [docs/architecture.md](docs/architecture.md) | Principles, trade-offs, topology |
 | [docs/inventory.md](docs/inventory.md) | Bill of materials + shutter facts |
+| [docs/hardware-layout.md](docs/hardware-layout.md) | Breadboard build plan — placement, cuts, standoffs, cables |
+| [docs/ha-lovelace-card.md](docs/ha-lovelace-card.md) | Lovelace card spec — entity model, config schema, layout |
 | [docs/ai-context.md](docs/ai-context.md) | Cold-start map for the next AI session |
 | [docs/decisions/](docs/decisions/) | Architecture Decision Records |
 | [docs/diagrams/](docs/diagrams/) | Architecture, wiring, and linkage SVGs |

@@ -4,12 +4,14 @@ PlatformIO project (Arduino Core, `esp32dev`). Structural reference:
 [HomeKey-ESP32](https://github.com/rednblkx/HomeKey-ESP32). See
 [../docs/project-plan.md](../docs/project-plan.md) for the phased roadmap.
 
-## What this version does (v0.4.0 — Home Assistant cover control over MQTT)
+## What this version does (v0.6.2)
 
 On-device WiFi setup, advertises `shutter-hub.local` over mDNS, and serves a
 **single-page web UI from LittleFS** (sidebar: Info · MQTT · Servo test · Shutters ·
-System · OTA · Logs) over a JSON/REST API. A **live log stream** runs over WebSocket
-(`/ws/logs`). **MQTT (Phase 4)**: every shutter defined on the Shutters page becomes a
+Solar · System · OTA · Logs) over a JSON/REST API. A **live log stream** runs over
+WebSocket (`/ws/logs`). The **Info** page carries a **Hardware & wiring** table (v0.6.2)
+— every device, its I²C bus, pins, and address or channel — a read-only mirror of
+settings made on the other pages. **MQTT (Phase 4)**: every shutter defined on the Shutters page becomes a
 native **Home Assistant `cover`** (open/close/stop + position 0–100) plus **six
 `button` entities** (jog open/close, Daylight/Privacy recall, save Daylight/Privacy)
 via MQTT discovery — commands drive each shutter's own PCA9685 channel, **several
@@ -23,6 +25,19 @@ closed/open endpoints and Daylight/Privacy favourites, all persisted in NVS (sur
 filesystem OTA). The servo backend is a **build variant** — `-direct` (one servo off a
 GPIO, bare ESP32) or `-pca9685` (I2C multi-channel); the web UI adapts to whichever
 it's running.
+
+**Solar heat protection (Phase 6, v0.6.0–v0.6.2)**: a **VEML7700** drives a trip/clear
+state machine that moves the shutters to a chosen preset in strong sun. Its I²C bus is a
+setting — its own `Wire1` (default) or shared with the PCA9685 (ADR 0011/0012). The
+**Solar** page has a **simulate-lux slider**, so the whole feature is exercisable with no
+sensor fitted. Lux, a 0–100 % brightness figure, solar state, an automation switch and two
+writable lux thresholds are published to Home Assistant.
+
+**Apple HomeKit (Phase 5, v0.5.x)**: a HomeSpan bridge exposes each shutter as a Window
+Covering, configured under **System → HomeKit**. It runs on its own FreeRTOS task, so HAP
+never stalls the servo loop. **Pairing is unresolved** — the bridge advertises but no
+controller has completed pairing; leave it disabled unless you're working on it. See
+[../docs/project-plan.md](../docs/project-plan.md) Phase 5.
 
 ## WiFi setup (on-device — no credentials in the binary)
 
@@ -67,11 +82,11 @@ pio run -e esp32c3-pca9685         # ESP32-C3 (deferred; build explicitly if nee
 Prebuilt bins are collected in [`dist/`](dist/). From **v0.2.0** a release ships
 **three bins per variant** (the web UI now lives in `data/`):
 
-| Per variant | File | Use | Since |
-| ----------- | ---- | --- | ----- |
-| Full image | `shutter-hub-<variant>-full-vX.Y.Z.bin` | first USB flash, merged at `0x0` | now |
-| Firmware  | `shutter-hub-<variant>-ota-vX.Y.Z.bin` | OTA page → **Upload Firmware** | now |
-| Filesystem | `shutter-hub-<variant>-littlefs-vX.Y.Z.bin` | OTA page → **Upload LittleFS** | **v0.2.0** |
+| Scope | File | Use | Since |
+| ----- | ---- | --- | ----- |
+| Per variant | `shutter-hub-<variant>-full-vX.Y.Z.bin` | first USB flash, merged at `0x0` | now |
+| Per variant | `shutter-hub-<variant>-ota-vX.Y.Z.bin` | OTA page → **Upload Firmware** | now |
+| Per **board** | `shutter-hub-esp32d-littlefs-vX.Y.Z.bin` | OTA page → **Upload LittleFS** | **v0.2.0** |
 
 Build the filesystem image with `pio run -e <variant> -t buildfs` →
 `.pio/build/<variant>/littlefs.bin`. **Flash it alongside the firmware** — without it
@@ -93,7 +108,7 @@ pio run -e esp32d-pca9685 -t upload   # auto-detects the port; monitor with:  pi
 **Option B — single merged image (NodeMCU-PyFlasher / esptool):**
 Flash the `-full-` image for your variant at offset `0x0`:
 ```
-esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.4.0.bin
+esptool --chip esp32 write_flash 0x0 dist/shutter-hub-esp32d-pca9685-full-v0.6.2.bin
 ```
 In NodeMCU-PyFlasher: select the `...-full-...bin`, address `0x0`, flash.
 
@@ -119,20 +134,21 @@ installed version, chip, last flash, and two uploaders — **Firmware** and
 firmware/
 ├─ platformio.ini              board targets + libraries + build flags
 ├─ include/                    module headers (*.h)
-├─ data/                       LittleFS web UI (index.html, style.css, app.js)
+├─ data/                       LittleFS web UI (index.html, style.css, app.js, qrcode.min.js)
 ├─ src/
 │  ├─ main.cpp                 thin entry point — wires the modules together
-│  ├─ AppConfig.cpp            persisted settings: device, servo, MQTT, auth (NVS) [real]
-│  ├─ Diagnostics.cpp          logging + log ring buffer + WS sink, /info      [real]
-│  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal                 [real]
-│  ├─ WebUI.cpp                static SPA + JSON API + /ws/logs + mDNS         [real]
-│  ├─ Ota.cpp                  custom firmware + LittleFS OTA                  [real]
-│  ├─ ServoController.cpp      multi-slot µs driver, backend = GPIO | PCA9685   [real]
-│  ├─ Shutters.cpp             per-blind definitions + calibration (NVS) [Phase 2 real]
-│  ├─ Mqtt.cpp                 HA covers/buttons + discovery + state   [Phase 4 real, v0.4.0]
-│  ├─ HomeKit.cpp              HomeSpan bridge            [stub, Phase 5]
-│  └─ LightSensor.cpp          VEML7700 solar protection  [stub, Phase 6]
-├─ dist/                       prebuilt bins (gitignored; attached to releases)
+│  ├─ AppConfig.cpp            persisted settings: device, servo, MQTT, auth, HomeKit, solar (NVS)
+│  ├─ Diagnostics.cpp          logging + log ring buffer + WS sink, /info
+│  ├─ WiFiSetup.cpp            WiFiManager AP + captive portal
+│  ├─ WebUI.cpp                static SPA + JSON API + /ws/logs + mDNS
+│  ├─ Ota.cpp                  custom firmware + LittleFS OTA
+│  ├─ ServoController.cpp      multi-slot µs driver, backend = GPIO | PCA9685
+│  ├─ Shutters.cpp             per-blind definitions + calibration (NVS)      [Phase 2]
+│  ├─ Mqtt.cpp                 HA covers/buttons/solar + discovery + state    [Phase 4/6]
+│  ├─ HomeKit.cpp              HomeSpan bridge         [Phase 5 — pairing unresolved]
+│  ├─ LightSensor.cpp          VEML7700 driver (selectable I²C bus)           [Phase 6]
+│  └─ SolarLogic.cpp           trip/clear state machine + manual override     [Phase 6]
+├─ dist/                       prebuilt release artifacts (bins gitignored; attached to releases)
 └─ README.md
 ```
 
