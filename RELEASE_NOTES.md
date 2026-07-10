@@ -24,7 +24,8 @@ watchdog, and the HomeSpan-state DEBUG log. Full detail in [CHANGELOG.md](CHANGE
 
 ## Download
 
-All four variants are attached; the LittleFS image is shared across every variant.
+All four variants are attached. The LittleFS image is the same for every variant — it's attached
+under both board names so each variant has a matching filename.
 
 | File | Use |
 | ---- | --- |
@@ -36,7 +37,8 @@ All four variants are attached; the LittleFS image is shared across every varian
 | `shutter-hub-esp32c3-pca9685-ota-v0.7.1.bin` | Firmware OTA — ESP32-C3, PCA9685 *(untested)* |
 | `shutter-hub-esp32c3-direct-full-v0.7.1.bin` | First USB flash — ESP32-C3, direct-GPIO, at `0x0` *(untested)* |
 | `shutter-hub-esp32c3-direct-ota-v0.7.1.bin`  | Firmware OTA — ESP32-C3, direct-GPIO *(untested)* |
-| `shutter-hub-esp32d-littlefs-v0.7.1.bin`     | Filesystem image (web UI) — shared by all variants |
+| `shutter-hub-esp32d-littlefs-v0.7.1.bin`     | Filesystem image (web UI) — for the ESP32-D variants |
+| `shutter-hub-esp32c3-littlefs-v0.7.1.bin`    | Filesystem image (web UI) — for the ESP32-C3 variants (identical to the ESP32-D image) |
 
 > **The ESP32-C3 bins are untested engineering builds** — they compile and carry the HomeKit fix, but
 > the C3 pinout/servo-GPIO/solar bus still need work ([docs/pinout.md](docs/pinout.md)). Use the
