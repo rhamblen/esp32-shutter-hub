@@ -75,11 +75,18 @@ int   usToAngle(int u) { return map(constrain(u, MIN_US, MAX_US), MIN_US, MAX_US
 int   clampUs(int u)   { return constrain(u, MIN_US, MAX_US); }
 int   clampSlot(int s) { return constrain(s, 0, NSLOTS - 1); }
 
-// A GPIO that can act as a servo signal / I2C line on the ESP32-D: excludes
-// input-only 34–39, flash 6–11 and non-existent pins. Reused to validate the
-// I2C SDA/SCL pins on the PCA9685 build (I2C needs bidirectional-capable pins).
+// A GPIO that can act as a servo signal / I2C line on this board. Chip-aware at compile time so the
+// ESP32-C3 builds can't offer a pin that doesn't exist — or, worse, a SPI-flash pin that HANGS/BRICKS
+// the board when driven. Reused to validate the PCA9685 I2C SDA/SCL pins (I2C needs bidi-capable pins).
 bool validGpio(uint8_t g) {
+#if defined(CONFIG_IDF_TARGET_ESP32C3)
+  // ESP32-C3 has GPIO0–21. Exclude 11 (VDD_SPI) and 12–17 (SPI flash) — driving those bricks boot.
+  // 18/19 (USB) and 20/21 (UART0) are allowed but will disturb USB-JTAG / the serial console.
+  static const uint8_t ok[] = {0,1,2,3,4,5,6,7,8,9,10,18,19,20,21};
+#else
+  // ESP32-D (WROOM): excludes input-only 34–39, flash 6–11 and non-existent pins.
   static const uint8_t ok[] = {0,1,2,3,4,5,12,13,14,15,16,17,18,19,21,22,23,25,26,27,32,33};
+#endif
   for (uint8_t p : ok) if (p == g) return true;
   return false;
 }

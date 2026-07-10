@@ -51,6 +51,23 @@ Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, n
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.7.2] — 2026-07-10
+
+### Fixed
+- **Dashboard/HomeKit tab showed "not paired" when the device was paired.** `HomeKit::paired()`
+  returned a transient flag set only by the pairing *event* callback, which doesn't fire at boot for
+  pairings already stored in NVS — so after a reboot or an OTA update (pairing survives both) the
+  status read false even though Apple Home was still connected. It now derives from the authoritative
+  controller list (`controllers() > 0`). Web UI unchanged — firmware-only fix.
+
+### Changed
+- **`ServoController::validGpio()` is now chip-aware — closes an ESP32-C3 bricking footgun.** It was a
+  hard-coded ESP32-D whitelist; on a C3 it accepted GPIO25/26/27/32/33 (which don't exist) and
+  GPIO12–17 (the SPI flash — driving them **bricks boot**). It's now `#if CONFIG_IDF_TARGET_ESP32C3`
+  and the C3 build offers only `{0–10, 18–21}`, refusing the flash pins for both the servo signal pin
+  and the PCA9685 I²C pins. The C3 is still an untested engineering build (LEDC channel cap, unverified
+  hardware), but a servo/I²C pin can no longer be set to a value that bricks the board.
+
 ## [0.7.1] — 2026-07-10
 
 Tidy-up of the v0.7.0 HomeKit fix. **No behavioural change** — same fix, cleaned up. The `%m`

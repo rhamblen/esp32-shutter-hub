@@ -104,15 +104,17 @@ All four envs compile clean today (`esp32c3-pca9685` links at 89.5 % flash, `esp
    The sensor bus is now a **setting**: on a one-controller chip the dedicated preference is clamped
    to **shared** (the VEML7700 rides the PCA9685's `Wire`), and the Solar page disables the dedicated
    option and says why. Solar works on the C3 — at the cost of the fault isolation ADR 0011 bought.
-2. **The GPIO whitelist is still ESP32-D's.** `validGpio()` hard-codes the WROOM's valid pins. On a
-   C3 it would happily accept GPIO25/26/27/32/33 — **which do not exist** — and GPIO12–17, which are
-   the flash. Nothing stops a user configuring a pin that bricks the boot. **This is why the C3 is
-   still not shippable**, and why no C3 binaries are attached to releases.
+2. **The GPIO whitelist is now chip-aware (fixed v0.7.2).** `validGpio()` was an ESP32-D whitelist
+   that, on a C3, accepted GPIO25/26/27/32/33 (which **don't exist**) and GPIO12–17 (the **SPI flash**
+   → driving them bricks boot). It's now `#if CONFIG_IDF_TARGET_ESP32C3`: the C3 build offers only
+   `{0–10, 18–21}` and refuses the flash pins, so a servo/I²C pin can no longer be set to a bricking
+   GPIO. The remaining C3 caveat is the LEDC channel count below.
 
 Also worth knowing: the C3 has **6 LEDC channels** to the ESP32-D's 16, capping a `-direct` build's
 servo count; and at ~90 % flash there is little headroom left for HomeSpan to grow into.
 
-Until those are addressed, treat `esp32c3-*` bins as **untested engineering builds**, not releases.
+The C3 bricking footgun is closed, but the C3 is still **not verified on real hardware** — its bins
+ship attached to releases as clearly-flagged **untested engineering builds**, not proven firmware.
 
 ---
 

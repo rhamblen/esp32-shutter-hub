@@ -240,7 +240,10 @@ void loop() {
 }
 
 bool running() { return g_started; }
-bool paired()  { return g_paired; }
+// Authoritative: read the actual controller list (persisted in NVS), NOT the g_paired event flag.
+// setPairCallback only fires on a pairing *change*, so after a reboot/OTA g_paired is false even
+// though the device is still paired — which made the dashboard show "not paired" when it wasn't.
+bool paired()  { return controllers() > 0; }
 
 int controllers() {
   if (!g_started) return 0;
