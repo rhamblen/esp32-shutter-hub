@@ -7,6 +7,8 @@ Circuit design source and fabrication outputs for the Shutter Hub.
 | File | Purpose |
 | ---- | ------- |
 | `shutter-hub.kicad_sch` | KiCad schematic — complete ESP32-D circuit (power chain, I2C, servo driver, sensor) |
+| `shutter-hub-schematic.svg` | Visual schematic — power chain, loads, wiring, critical build checklist |
+| `shutter-hub-breadboard-layout.svg` | KiCad-style breadboard layout (plan view) — component placement, jumper/wire schedule W1–W13, connectors J1–J3, raised modules |
 
 ## Status
 

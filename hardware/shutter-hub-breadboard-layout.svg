@@ -1,0 +1,487 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 1180" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <pattern id="holesA" width="30" height="30" patternUnits="userSpaceOnUse">
+      <circle cx="15" cy="15" r="2.6" fill="#6b5a2a"/>
+      <circle cx="15" cy="15" r="1.2" fill="#0d1520"/>
+    </pattern>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <style>
+    .silk  { stroke:#e6e9ec; fill:none; stroke-width:1.6; }
+    .body  { fill:#263238; stroke:#e6e9ec; stroke-width:1.6; }
+    .court { stroke:#d05ad0; fill:none; stroke-width:1.2; stroke-dasharray:6 4; }
+    .fcu   { stroke:#d64545; stroke-width:3; fill:none; }
+    .bcu   { stroke:#4d8fdc; stroke-width:3; fill:none; }
+    .pwr18r{ stroke:#ff5555; stroke-width:6; fill:none; stroke-linecap:round; }
+    .pwr18k{ stroke:#9aa0a6; stroke-width:6; fill:none; stroke-linecap:round; }
+    .spurR { stroke:#ff5555; stroke-width:2.5; fill:none; }
+    .spurK { stroke:#9aa0a6; stroke-width:2.5; fill:none; }
+    .cable { stroke:#58a6ff; stroke-width:4.5; fill:none; stroke-linecap:round; }
+    .pad   { fill:#c9a227; stroke:#8f7418; stroke-width:1; }
+    .via   { fill:#0d1520; stroke:#4d8fdc; stroke-width:2; }
+    .used  { fill:none; stroke:#39d353; stroke-width:2; }
+    .opt   { fill:none; stroke:#e0a030; stroke-width:1.6; stroke-dasharray:4 3; }
+    .strip { fill:#c9a227; opacity:0.32; }
+    .t     { fill:#e6e9ec; font-size:12px; }
+    .tb    { fill:#e6e9ec; font-size:13px; font-weight:bold; }
+    .tt    { fill:#b0bac4; font-size:10px; }
+    .pin   { fill:#b0bac4; font-size:10px; }
+    .pinU  { fill:#39d353; font-size:10px; font-weight:bold; }
+    .pinO  { fill:#e0a030; font-size:10px; font-weight:bold; }
+    .wl    { fill:#8ecbff; font-size:9.5px; }
+    .wlr   { fill:#ff9a9a; font-size:9.5px; }
+    .net   { fill:#e0d060; font-size:10px; font-weight:bold; }
+    .mono  { fill:#cfd8dc; font-size:11.5px; font-family:Consolas,'Courier New',monospace; }
+    .monoB { fill:#e0d060; font-size:12px; font-weight:bold; font-family:Consolas,'Courier New',monospace; }
+    .warn  { fill:#ffb84d; font-size:11.5px; }
+    .head  { fill:#e6e9ec; font-size:17px; font-weight:bold; }
+  </style>
+
+  <!-- sheet -->
+  <rect x="0" y="0" width="1560" height="1180" fill="#0d1520"/>
+  <rect x="14" y="14" width="1532" height="1152" fill="none" stroke="#5a6672" stroke-width="2"/>
+  <rect x="26" y="26" width="1508" height="1128" fill="none" stroke="#39434e" stroke-width="1"/>
+
+  <text x="42" y="54" class="head">SHUTTER HUB — hub baseboard layout · plan view (KiCad-style)</text>
+
+  <!-- ======================= RAISED MODULES (top zone) ======================= -->
+
+  <!-- AITRIP PD trigger -->
+  <rect x="42" y="95" width="123" height="85" rx="4" class="body"/>
+  <rect x="30" y="118" width="14" height="26" rx="2" fill="#90a4ae"/>
+  <text x="103" y="118" text-anchor="middle" class="tb">AITRIP</text>
+  <text x="103" y="134" text-anchor="middle" class="tt">USB-C PD trigger</text>
+  <text x="103" y="149" text-anchor="middle" class="tt">set to 12 V</text>
+  <text x="103" y="170" text-anchor="middle" class="tt">USB-C ← wall cutout</text>
+
+  <!-- 12V pair -->
+  <path class="spurR" d="M165,115 L205,115" marker-end="url(#arr)"/>
+  <path class="spurK" d="M165,152 L205,152" marker-end="url(#arr)"/>
+  <text x="170" y="108" class="wlr">12 V+</text>
+  <text x="170" y="168" class="tt">12 V−</text>
+
+  <!-- XL4015 -->
+  <rect x="205" y="80" width="215" height="112" rx="4" class="body"/>
+  <circle cx="216" cy="91" r="4" fill="none" stroke="#e6e9ec" stroke-width="1.2"/>
+  <circle cx="409" cy="91" r="4" fill="none" stroke="#e6e9ec" stroke-width="1.2"/>
+  <text x="312" y="102" text-anchor="middle" class="tb">XL4015 buck (≈5 A)</text>
+  <rect x="252" y="118" width="76" height="52" fill="none" stroke="#9aa0a6" stroke-width="1.2"/>
+  <line x1="258" y1="118" x2="258" y2="170" stroke="#9aa0a6" stroke-width="1"/>
+  <line x1="270" y1="118" x2="270" y2="170" stroke="#9aa0a6" stroke-width="1"/>
+  <line x1="282" y1="118" x2="282" y2="170" stroke="#9aa0a6" stroke-width="1"/>
+  <line x1="294" y1="118" x2="294" y2="170" stroke="#9aa0a6" stroke-width="1"/>
+  <line x1="306" y1="118" x2="306" y2="170" stroke="#9aa0a6" stroke-width="1"/>
+  <line x1="318" y1="118" x2="318" y2="170" stroke="#9aa0a6" stroke-width="1"/>
+  <text x="290" y="184" text-anchor="middle" class="tt">heatsink → lid vent</text>
+  <circle cx="212" cy="115" r="5" class="pad"/>
+  <circle cx="212" cy="152" r="5" class="pad"/>
+  <circle cx="413" cy="112" r="5" class="pad"/>
+  <circle cx="413" cy="155" r="5" class="pad"/>
+  <text x="224" y="112" class="tt">IN+</text>
+  <text x="224" y="160" class="tt">IN−</text>
+  <text x="380" y="106" class="tt">OUT+</text>
+  <text x="378" y="170" class="tt">OUT−</text>
+  <text x="312" y="207" class="warn">★ set OUT = 5.10 V with a meter, unloaded, BEFORE connecting anything</text>
+
+  <!-- PCA9685 (raised, shown displaced) -->
+  <rect x="450" y="62" width="500" height="176" rx="0" class="court"/>
+  <rect x="455" y="68" width="490" height="164" rx="4" class="body"/>
+  <circle cx="466" cy="79" r="5" fill="none" stroke="#d05ad0" stroke-width="1.4"/>
+  <circle cx="934" cy="79" r="5" fill="none" stroke="#d05ad0" stroke-width="1.4"/>
+  <circle cx="466" cy="221" r="5" fill="none" stroke="#d05ad0" stroke-width="1.4"/>
+  <circle cx="934" cy="221" r="5" fill="none" stroke="#d05ad0" stroke-width="1.4"/>
+
+  <!-- 16-ch servo header -->
+  <rect x="478" y="84" width="450" height="36" fill="#1b2530" stroke="#e6e9ec" stroke-width="1.2"/>
+  <text x="700" y="133" text-anchor="middle" class="tt">16-channel servo header — V+ · GND · SIG rows · native 0.1" servo plugs</text>
+  <!-- channel pads CH0..CH15 -->
+  <g fill="#c9a227">
+    <circle cx="489" cy="92" r="2.6"/><circle cx="489" cy="102" r="2.6"/><circle cx="489" cy="112" r="2.6"/>
+    <circle cx="517" cy="92" r="2.6"/><circle cx="517" cy="102" r="2.6"/><circle cx="517" cy="112" r="2.6"/>
+    <circle cx="545" cy="92" r="2.6"/><circle cx="545" cy="102" r="2.6"/><circle cx="545" cy="112" r="2.6"/>
+    <circle cx="573" cy="92" r="2.6"/><circle cx="573" cy="102" r="2.6"/><circle cx="573" cy="112" r="2.6"/>
+    <circle cx="601" cy="92" r="2.6"/><circle cx="601" cy="102" r="2.6"/><circle cx="601" cy="112" r="2.6"/>
+    <circle cx="629" cy="92" r="2.6"/><circle cx="629" cy="102" r="2.6"/><circle cx="629" cy="112" r="2.6"/>
+    <circle cx="657" cy="92" r="2.6"/><circle cx="657" cy="102" r="2.6"/><circle cx="657" cy="112" r="2.6"/>
+    <circle cx="685" cy="92" r="2.6"/><circle cx="685" cy="102" r="2.6"/><circle cx="685" cy="112" r="2.6"/>
+    <circle cx="713" cy="92" r="2.6"/><circle cx="713" cy="102" r="2.6"/><circle cx="713" cy="112" r="2.6"/>
+    <circle cx="741" cy="92" r="2.6"/><circle cx="741" cy="102" r="2.6"/><circle cx="741" cy="112" r="2.6"/>
+    <circle cx="769" cy="92" r="2.6"/><circle cx="769" cy="102" r="2.6"/><circle cx="769" cy="112" r="2.6"/>
+    <circle cx="797" cy="92" r="2.6"/><circle cx="797" cy="102" r="2.6"/><circle cx="797" cy="112" r="2.6"/>
+    <circle cx="825" cy="92" r="2.6"/><circle cx="825" cy="102" r="2.6"/><circle cx="825" cy="112" r="2.6"/>
+    <circle cx="853" cy="92" r="2.6"/><circle cx="853" cy="102" r="2.6"/><circle cx="853" cy="112" r="2.6"/>
+    <circle cx="881" cy="92" r="2.6"/><circle cx="881" cy="102" r="2.6"/><circle cx="881" cy="112" r="2.6"/>
+    <circle cx="909" cy="92" r="2.6"/><circle cx="909" cy="102" r="2.6"/><circle cx="909" cy="112" r="2.6"/>
+  </g>
+  <!-- servo plugs CH0-CH3 -->
+  <rect x="480" y="38" width="19" height="48" rx="2" fill="#37474f" stroke="#e6e9ec" stroke-width="1"/>
+  <rect x="508" y="38" width="19" height="48" rx="2" fill="#37474f" stroke="#e6e9ec" stroke-width="1"/>
+  <rect x="536" y="38" width="19" height="48" rx="2" fill="#37474f" stroke="#e6e9ec" stroke-width="1"/>
+  <rect x="564" y="38" width="19" height="48" rx="2" fill="#37474f" stroke="#e6e9ec" stroke-width="1"/>
+  <text x="489" y="150" text-anchor="middle" class="net">CH0</text>
+  <text x="517" y="150" text-anchor="middle" class="net">CH1</text>
+  <text x="545" y="150" text-anchor="middle" class="net">CH2</text>
+  <text x="573" y="150" text-anchor="middle" class="net">CH3</text>
+  <path d="M499,44 C560,40 600,42 640,44" stroke="#e08a1e" stroke-width="2" fill="none"/>
+  <path d="M527,50 C575,46 610,48 640,49" stroke="#e08a1e" stroke-width="2" fill="none"/>
+  <path d="M555,56 C590,53 618,54 640,55" stroke="#e08a1e" stroke-width="2" fill="none"/>
+  <path d="M583,62 C605,60 625,60 640,61" stroke="#e08a1e" stroke-width="2" fill="none"/>
+  <text x="648" y="56" class="t">→ MG90D servo loom, shutters 1–4</text>
+
+  <text x="700" y="168" text-anchor="middle" class="tb">PCA9685 · I2C 0x40 · logic 3V3 via J2</text>
+
+  <!-- V+ screw terminal + bulk cap -->
+  <rect x="459" y="152" width="46" height="58" fill="#1b3a1b" stroke="#3f8a3f" stroke-width="1.6"/>
+  <circle cx="482" cy="167" r="7" class="pad"/>
+  <circle cx="482" cy="194" r="7" class="pad"/>
+  <line x1="477" y1="167" x2="487" y2="167" stroke="#0d1520" stroke-width="2"/>
+  <line x1="477" y1="194" x2="487" y2="194" stroke="#0d1520" stroke-width="2"/>
+  <text x="510" y="164" class="tt">V+ screw</text>
+  <text x="510" y="197" class="tt">GND screw</text>
+  <circle cx="588" cy="185" r="16" fill="#1b2530" stroke="#e0d060" stroke-width="2"/>
+  <text x="588" y="181" text-anchor="middle" class="net">C</text>
+  <text x="588" y="192" text-anchor="middle" class="tt">bulk</text>
+  <text x="662" y="182" class="t">1000–2200 µF ≥10 V</text>
+  <text x="662" y="197" class="tt">right at V+ · mind polarity</text>
+
+  <!-- logic header -->
+  <rect x="852" y="206" width="90" height="22" fill="#1b2530" stroke="#e6e9ec" stroke-width="1.2"/>
+  <circle cx="862" cy="217" r="3" class="pad"/>
+  <circle cx="880" cy="217" r="3" class="pad"/>
+  <circle cx="898" cy="217" r="3" class="pad"/>
+  <circle cx="916" cy="217" r="3" class="pad"/>
+  <circle cx="934" cy="217" r="3" class="pad"/>
+  <text x="897" y="202" text-anchor="middle" class="tt">VCC·GND·SDA·SCL·OE</text>
+
+  <text x="640" y="222" class="tt">shown displaced ↑ — mounts on M2.5×15 nylon standoffs overhanging the top board edge</text>
+
+  <!-- JST lead PCA -> J2 -->
+  <path class="cable" d="M898,228 C888,300 855,420 822,498"/>
+  <text x="842" y="368" class="t" fill="#58a6ff">J2 lead — JST-XH 5-wire</text>
+
+  <!-- VEML7700 on case lid -->
+  <rect x="1150" y="80" width="185" height="118" rx="4" fill="#1b2530" stroke="#e6e9ec" stroke-width="1.4" stroke-dasharray="7 4"/>
+  <text x="1242" y="104" text-anchor="middle" class="tb">VEML7700</text>
+  <text x="1242" y="122" text-anchor="middle" class="tt">light sensor · I2C 0x10 · 3V3</text>
+  <text x="1242" y="140" text-anchor="middle" class="tt">fixes to CASE LID behind a</text>
+  <text x="1242" y="155" text-anchor="middle" class="tt">clear window · M2×6 nylon</text>
+  <text x="1242" y="176" text-anchor="middle" class="tt">detachable lead + service loop</text>
+
+  <!-- JST lead J3 -> VEML -->
+  <path class="cable" d="M1013,512 C1090,430 1120,260 1150,150"/>
+  <text x="1072" y="330" class="t" fill="#58a6ff">J3 lead — XH-4</text>
+  <text x="1072" y="346" class="tt">SDA/SCL/GND twisted · ≤ 20 cm</text>
+
+  <!-- 18AWG power runs XL4015 -> PCA V+ -->
+  <path class="pwr18r" d="M413,112 C435,120 448,145 459,167"/>
+  <path class="pwr18k" d="M413,155 C432,165 445,180 459,194"/>
+  <text x="330" y="228" class="wlr">18 AWG point-to-point — servo current NEVER via breadboard ⚠</text>
+
+  <!-- spur XL4015 -> J1 -->
+  <circle cx="428" cy="117" r="3" fill="#ff5555"/>
+  <circle cx="426" cy="159" r="3" fill="#9aa0a6"/>
+  <path class="spurR" d="M428,117 C440,190 440,240 460,241 L930,241 C940,241 940,300 940,318" marker-end="url(#arr)"/>
+  <path class="spurK" d="M426,159 C444,210 448,247 465,247 L995,247 C1002,247 1000,290 1000,318" marker-end="url(#arr)"/>
+  <text x="965" y="260" class="tt">5.1 V logic spur → J1</text>
+
+  <!-- ======================= BREADBOARD ======================= -->
+
+  <rect x="105" y="252" width="925" height="460" rx="6" fill="#132030" stroke="#d4d422" stroke-width="2"/>
+
+  <!-- column numbers -->
+  <text x="130" y="266" text-anchor="middle" class="tt">1</text>
+  <text x="250" y="266" text-anchor="middle" class="tt">5</text>
+  <text x="400" y="266" text-anchor="middle" class="tt">10</text>
+  <text x="550" y="266" text-anchor="middle" class="tt">15</text>
+  <text x="700" y="266" text-anchor="middle" class="tt">20</text>
+  <text x="850" y="266" text-anchor="middle" class="tt">25</text>
+  <text x="1000" y="266" text-anchor="middle" class="tt">30</text>
+  <text x="1036" y="345" class="tt">a</text>
+  <text x="1036" y="465" class="tt">e</text>
+  <text x="1036" y="520" class="tt">f</text>
+  <text x="1036" y="640" class="tt">j</text>
+
+  <!-- rails -->
+  <line x1="120" y1="272" x2="1015" y2="272" stroke="#9aa0a6" stroke-width="3"/>
+  <line x1="120" y1="294" x2="1015" y2="294" stroke="#d64545" stroke-width="3"/>
+  <line x1="120" y1="665" x2="1015" y2="665" stroke="#a06ce0" stroke-width="3"/>
+  <line x1="120" y1="687" x2="1015" y2="687" stroke="#9aa0a6" stroke-width="3"/>
+  <text x="60" y="276" class="tt" fill="#9aa0a6" font-weight="bold">GND</text>
+  <text x="52" y="298" class="tt" fill="#ff8080" font-weight="bold">+5.1 V</text>
+  <text x="62" y="669" class="tt" fill="#c9a1f0" font-weight="bold">3V3</text>
+  <text x="60" y="691" class="tt" fill="#9aa0a6" font-weight="bold">GND</text>
+
+  <!-- hole fields -->
+  <rect x="115" y="325" width="900" height="150" fill="url(#holesA)"/>
+  <rect x="115" y="500" width="900" height="150" fill="url(#holesA)"/>
+  <text x="228" y="492" class="tt">centre gap — strips do not cross</text>
+
+  <!-- strip highlights (fan-out columns) -->
+  <rect class="strip" x="158" y="340" width="4" height="120"/>
+  <rect class="strip" x="758" y="517" width="4" height="120"/>
+  <rect class="strip" x="788" y="517" width="4" height="120"/>
+  <rect class="strip" x="818" y="517" width="4" height="120"/>
+  <rect class="strip" x="848" y="517" width="4" height="120"/>
+  <rect class="strip" x="878" y="517" width="4" height="120"/>
+  <rect class="strip" x="908" y="517" width="4" height="120"/>
+  <rect class="strip" x="938" y="517" width="4" height="120"/>
+  <rect class="strip" x="968" y="517" width="4" height="120"/>
+  <rect class="strip" x="998" y="517" width="4" height="120"/>
+
+  <!-- ======================= B.Cu routes (underside) — drawn before module ======================= -->
+  <!-- W12 GND tie -->
+  <path class="bcu" d="M1020,272 L1020,687"/>
+  <text x="1024" y="480" class="wl" transform="rotate(-90 1024 480)">W12 GND tie</text>
+
+  <!-- ======================= ESP32 module ======================= -->
+  <rect x="70" y="407" width="72" height="160" rx="4" fill="#455a64" stroke="#e6e9ec" stroke-width="1.2"/>
+  <text x="106" y="492" text-anchor="middle" fill="#e6e9ec" font-size="11" transform="rotate(-90 106 492)">antenna</text>
+  <text x="70" y="398" class="tt">antenna overhangs the board edge — keep off copper</text>
+
+  <rect x="142" y="330" width="574" height="315" rx="5" fill="#22303c" opacity="0.88" stroke="#e6e9ec" stroke-width="1.6"/>
+  <text x="429" y="480" text-anchor="middle" fill="#e6e9ec" font-size="15" font-weight="bold">ESP32-D DevKitC-38 — socketed</text>
+  <text x="429" y="500" text-anchor="middle" fill="#90a4ae" font-size="11">2 × 19-pin female headers, cols 2–20 · pins land in rows a &amp; j</text>
+  <text x="429" y="516" text-anchor="middle" fill="#90a4ae" font-size="11">wire by pin LABEL — clone pin order varies · 30-pin DevKit: cols 2–16</text>
+  <rect x="716" y="455" width="28" height="66" rx="2" fill="#90a4ae"/>
+  <text x="730" y="488" text-anchor="middle" fill="#22303c" font-size="10" font-weight="bold" transform="rotate(-90 730 488)">USB</text>
+
+  <!-- row a pads -->
+  <circle class="pad" cx="160" cy="340" r="4.5"/><circle class="pad" cx="190" cy="340" r="4.5"/><circle class="pad" cx="220" cy="340" r="4.5"/><circle class="pad" cx="250" cy="340" r="4.5"/><circle class="pad" cx="280" cy="340" r="4.5"/><circle class="pad" cx="310" cy="340" r="4.5"/><circle class="pad" cx="340" cy="340" r="4.5"/><circle class="pad" cx="370" cy="340" r="4.5"/><circle class="pad" cx="400" cy="340" r="4.5"/><circle class="pad" cx="430" cy="340" r="4.5"/><circle class="pad" cx="460" cy="340" r="4.5"/><circle class="pad" cx="490" cy="340" r="4.5"/><circle class="pad" cx="520" cy="340" r="4.5"/><circle class="pad" cx="550" cy="340" r="4.5"/><circle class="pad" cx="580" cy="340" r="4.5"/><circle class="pad" cx="610" cy="340" r="4.5"/><circle class="pad" cx="640" cy="340" r="4.5"/><circle class="pad" cx="670" cy="340" r="4.5"/><circle class="pad" cx="700" cy="340" r="4.5"/>
+  <!-- row j pads -->
+  <circle class="pad" cx="160" cy="635" r="4.5"/><circle class="pad" cx="190" cy="635" r="4.5"/><circle class="pad" cx="220" cy="635" r="4.5"/><circle class="pad" cx="250" cy="635" r="4.5"/><circle class="pad" cx="280" cy="635" r="4.5"/><circle class="pad" cx="310" cy="635" r="4.5"/><circle class="pad" cx="340" cy="635" r="4.5"/><circle class="pad" cx="370" cy="635" r="4.5"/><circle class="pad" cx="400" cy="635" r="4.5"/><circle class="pad" cx="430" cy="635" r="4.5"/><circle class="pad" cx="460" cy="635" r="4.5"/><circle class="pad" cx="490" cy="635" r="4.5"/><circle class="pad" cx="520" cy="635" r="4.5"/><circle class="pad" cx="550" cy="635" r="4.5"/><circle class="pad" cx="580" cy="635" r="4.5"/><circle class="pad" cx="610" cy="635" r="4.5"/><circle class="pad" cx="640" cy="635" r="4.5"/><circle class="pad" cx="670" cy="635" r="4.5"/><circle class="pad" cx="700" cy="635" r="4.5"/>
+
+  <!-- used-pin rings -->
+  <circle class="used" cx="160" cy="340" r="7.5"/>
+  <circle class="used" cx="400" cy="340" r="7.5"/>
+  <circle class="used" cx="430" cy="340" r="7.5"/>
+  <circle class="used" cx="550" cy="340" r="7.5"/>
+  <circle class="used" cx="700" cy="340" r="7.5"/>
+  <circle class="used" cx="160" cy="635" r="7.5"/>
+  <circle class="used" cx="220" cy="635" r="7.5"/>
+  <circle class="used" cx="310" cy="635" r="7.5"/>
+  <circle class="used" cx="340" cy="635" r="7.5"/>
+  <circle class="opt"  cx="280" cy="340" r="7.5"/>
+
+  <!-- row a labels -->
+  <text class="pinU" transform="translate(164,418) rotate(-90)">3V3</text>
+  <text class="pin"  transform="translate(194,418) rotate(-90)">EN</text>
+  <text class="pin"  transform="translate(224,418) rotate(-90)">VP</text>
+  <text class="pin"  transform="translate(254,418) rotate(-90)">VN</text>
+  <text class="pinO" transform="translate(284,418) rotate(-90)">34</text>
+  <text class="pin"  transform="translate(314,418) rotate(-90)">35</text>
+  <text class="pin"  transform="translate(344,418) rotate(-90)">32</text>
+  <text class="pin"  transform="translate(374,418) rotate(-90)">33</text>
+  <text class="pinU" transform="translate(404,418) rotate(-90)">25</text>
+  <text class="pinU" transform="translate(434,418) rotate(-90)">26</text>
+  <text class="pin"  transform="translate(464,418) rotate(-90)">27</text>
+  <text class="pin"  transform="translate(494,418) rotate(-90)">14</text>
+  <text class="pin"  transform="translate(524,418) rotate(-90)">12</text>
+  <text class="pinU" transform="translate(554,418) rotate(-90)">GND</text>
+  <text class="pin"  transform="translate(584,418) rotate(-90)">13</text>
+  <text class="pin"  transform="translate(614,418) rotate(-90)">SD2</text>
+  <text class="pin"  transform="translate(644,418) rotate(-90)">SD3</text>
+  <text class="pin"  transform="translate(674,418) rotate(-90)">CMD</text>
+  <text class="pinU" transform="translate(704,418) rotate(-90)">VIN</text>
+
+  <!-- row j labels -->
+  <text class="pinU" transform="translate(164,626) rotate(-90)">GND</text>
+  <text class="pin"  transform="translate(194,626) rotate(-90)">23</text>
+  <text class="pinU" transform="translate(224,626) rotate(-90)">22</text>
+  <text class="pin"  transform="translate(254,626) rotate(-90)">TX0</text>
+  <text class="pin"  transform="translate(284,626) rotate(-90)">RX0</text>
+  <text class="pinU" transform="translate(314,626) rotate(-90)">21</text>
+  <text class="pinU" transform="translate(344,626) rotate(-90)">GND</text>
+  <text class="pin"  transform="translate(374,626) rotate(-90)">19</text>
+  <text class="pin"  transform="translate(404,626) rotate(-90)">18</text>
+  <text class="pin"  transform="translate(434,626) rotate(-90)">5</text>
+  <text class="pin"  transform="translate(464,626) rotate(-90)">17</text>
+  <text class="pin"  transform="translate(494,626) rotate(-90)">16</text>
+  <text class="pin"  transform="translate(524,626) rotate(-90)">4</text>
+  <text class="pin"  transform="translate(554,626) rotate(-90)">0</text>
+  <text class="pin"  transform="translate(584,626) rotate(-90)">2</text>
+  <text class="pin"  transform="translate(614,626) rotate(-90)">15</text>
+  <text class="pin"  transform="translate(644,626) rotate(-90)">SD1</text>
+  <text class="pin"  transform="translate(674,626) rotate(-90)">SD0</text>
+  <text class="pin"  transform="translate(704,626) rotate(-90)">CLK</text>
+
+  <!-- ======================= routes ======================= -->
+
+  <!-- W1 VIN -> 5.1V rail (top jumper, F.Cu) -->
+  <path class="fcu" d="M700,340 L700,294"/>
+  <circle cx="700" cy="294" r="3.5" fill="#d64545"/>
+  <text x="706" y="318" class="wlr">W1 VIN</text>
+
+  <!-- W2 GND a15 -> top GND rail -->
+  <path class="bcu" d="M550,340 L550,272"/>
+  <circle class="via" cx="550" cy="272" r="3.5"/>
+  <text x="556" y="316" class="wl">W2 GND</text>
+
+  <!-- W3 3V3 strip col2 -> 3V3 rail -->
+  <path class="bcu" d="M160,460 L160,665"/>
+  <circle class="via" cx="160" cy="460" r="3.5"/>
+  <circle class="via" cx="160" cy="665" r="3.5"/>
+  <text x="166" y="576" class="wl">W3 3V3</text>
+
+  <!-- W4 GND j2 -> bottom GND rail -->
+  <path class="bcu" d="M160,635 L152,644 L152,687"/>
+  <circle class="via" cx="152" cy="687" r="3.5"/>
+  <text x="126" y="656" class="wl">W4</text>
+
+  <!-- W5 GND j8 -> bottom GND rail -->
+  <path class="bcu" d="M340,635 L340,687"/>
+  <circle class="via" cx="340" cy="687" r="3.5"/>
+  <text x="346" y="660" class="wl">W5 GND</text>
+
+  <!-- W6 GPIO21 -> J2 SDA col24 -->
+  <path class="bcu" d="M310,635 L310,649 L820,649 L820,635"/>
+  <circle class="via" cx="820" cy="635" r="3.5"/>
+  <text x="540" y="646" class="wl">W6 · SDA1 (GPIO21 → J2·SDA)</text>
+
+  <!-- W7 GPIO22 -> J2 SCL col25 -->
+  <path class="bcu" d="M220,635 L220,657 L850,657 L850,637"/>
+  <circle class="via" cx="850" cy="637" r="3.5"/>
+  <text x="360" y="670" class="wl">W7 · SCL1 (GPIO22 → J2·SCL)</text>
+
+  <!-- W8 GPIO25 -> J3 SDA col29 -->
+  <path class="bcu" d="M400,340 L400,486 L970,486 L970,575"/>
+  <circle class="via" cx="970" cy="575" r="3.5"/>
+  <text x="590" y="482" class="wl">W8 · SDA2 (GPIO25 → J3·SDA)</text>
+
+  <!-- W9 GPIO26 -> J3 SCL col30 -->
+  <path class="bcu" d="M430,340 L430,496 L1000,496 L1000,575"/>
+  <circle class="via" cx="1000" cy="575" r="3.5"/>
+  <text x="590" y="510" class="wl">W9 · SCL2 (GPIO26 → J3·SCL)</text>
+
+  <!-- W10 3V3 rail -> J2/J3 pin1 -->
+  <path class="bcu" d="M760,637 L760,665"/>
+  <path class="bcu" d="M910,637 L910,665"/>
+  <circle class="via" cx="760" cy="665" r="3.5"/>
+  <circle class="via" cx="910" cy="665" r="3.5"/>
+  <text x="718" y="660" class="wl">W10</text>
+
+  <!-- W11 GND rail -> J2/J3 pin2 -->
+  <path class="bcu" d="M790,637 L796,646 L796,687"/>
+  <path class="bcu" d="M940,637 L946,646 L946,687"/>
+  <circle class="via" cx="796" cy="687" r="3.5"/>
+  <circle class="via" cx="946" cy="687" r="3.5"/>
+  <text x="800" y="682" class="wl">W11</text>
+
+  <!-- optional D5 divider -->
+  <rect x="752" y="356" width="80" height="92" rx="3" class="opt"/>
+  <text x="792" y="374" text-anchor="middle" class="pinO">D5 (opt.)</text>
+  <text x="792" y="390" text-anchor="middle" class="tt">R1 R2 100k</text>
+  <text x="792" y="404" text-anchor="middle" class="tt">+ C2 100n</text>
+  <text x="792" y="420" text-anchor="middle" class="tt">rail-sense</text>
+  <text x="792" y="434" text-anchor="middle" class="tt">divider</text>
+  <path class="opt" d="M752,412 L280,412 L280,349"/>
+  <text x="452" y="408" class="pinO">optional: divider mid-point → GPIO34</text>
+
+  <!-- ======================= connectors ======================= -->
+
+  <!-- J1 -->
+  <rect x="920" y="316" width="98" height="56" rx="3" fill="#1b3a1b" stroke="#3f8a3f" stroke-width="1.8"/>
+  <circle cx="940" cy="340" r="7" class="pad"/>
+  <circle cx="1000" cy="340" r="7" class="pad"/>
+  <line x1="935" y1="340" x2="945" y2="340" stroke="#0d1520" stroke-width="2"/>
+  <line x1="995" y1="340" x2="1005" y2="340" stroke="#0d1520" stroke-width="2"/>
+  <text x="969" y="364" text-anchor="middle" class="tb" font-size="12">J1 · 5.08 screw</text>
+  <path class="fcu" d="M940,333 L940,294"/>
+  <path class="bcu" d="M1000,333 L1000,272"/>
+  <circle class="via" cx="1000" cy="272" r="3.5"/>
+  <text x="946" y="310" class="wlr">W13 +5.1V</text>
+  <text x="962" y="288" class="wl">GND</text>
+
+  <!-- C1 -->
+  <rect x="866" y="262" width="30" height="42" rx="4" fill="#1b2530" stroke="#e0d060" stroke-width="1.6"/>
+  <text x="881" y="288" text-anchor="middle" class="net">C1</text>
+  <text x="881" y="316" text-anchor="middle" class="tt">470µ + 100n</text>
+
+  <!-- J2 -->
+  <rect x="745" y="498" width="150" height="62" rx="3" fill="#12253a" stroke="#4d8fdc" stroke-width="1.8"/>
+  <path d="M752,504 L762,504 L757,512 Z" fill="#4d8fdc"/>
+  <circle class="pad" cx="760" cy="515" r="4.5"/>
+  <circle class="pad" cx="790" cy="515" r="4.5"/>
+  <circle class="pad" cx="820" cy="515" r="4.5"/>
+  <circle class="pad" cx="850" cy="515" r="4.5"/>
+  <circle class="pad" cx="880" cy="515" r="4.5"/>
+  <text class="pin" transform="translate(764,554) rotate(-90)">3V3</text>
+  <text class="pin" transform="translate(794,554) rotate(-90)">GND</text>
+  <text class="pinU" transform="translate(824,554) rotate(-90)">SDA</text>
+  <text class="pinU" transform="translate(854,554) rotate(-90)">SCL</text>
+  <text class="pin" transform="translate(884,554) rotate(-90)">OE</text>
+  <text x="820" y="578" text-anchor="middle" class="tb" font-size="12">J2 · XH-5 → PCA9685</text>
+
+  <!-- J3 -->
+  <rect x="899" y="498" width="116" height="62" rx="3" fill="#12253a" stroke="#4d8fdc" stroke-width="1.8"/>
+  <path d="M904,504 L914,504 L909,512 Z" fill="#4d8fdc"/>
+  <circle class="pad" cx="910" cy="515" r="4.5"/>
+  <circle class="pad" cx="940" cy="515" r="4.5"/>
+  <circle class="pad" cx="970" cy="515" r="4.5"/>
+  <circle class="pad" cx="1000" cy="515" r="4.5"/>
+  <text class="pin" transform="translate(914,554) rotate(-90)">3V3</text>
+  <text class="pin" transform="translate(944,554) rotate(-90)">GND</text>
+  <text class="pinU" transform="translate(974,554) rotate(-90)">SDA</text>
+  <text class="pinU" transform="translate(1004,554) rotate(-90)">SCL</text>
+  <text x="955" y="592" text-anchor="middle" class="tb" font-size="12">J3 · XH-4 → VEML7700</text>
+
+  <!-- bottom column numbers -->
+  <text x="130" y="706" text-anchor="middle" class="tt">1</text>
+  <text x="400" y="706" text-anchor="middle" class="tt">10</text>
+  <text x="700" y="706" text-anchor="middle" class="tt">20</text>
+  <text x="1000" y="706" text-anchor="middle" class="tt">30</text>
+
+  <!-- ======================= bottom: legend / schedule / notes ======================= -->
+
+  <text x="42" y="752" class="monoB">LAYER KEY</text>
+  <line x1="42" y1="770" x2="76" y2="770" class="fcu"/>          <text x="86" y="774" class="mono">F.Cu — top-side jumper (solid core)</text>
+  <line x1="42" y1="792" x2="76" y2="792" class="bcu"/>          <text x="86" y="796" class="mono">B.Cu — underside bus wire</text>
+  <rect x="42" y="808" width="34" height="8" class="strip"/>      <text x="86" y="818" class="mono">copper strip (5-hole column) in use</text>
+  <circle cx="59" cy="838" r="5" class="pad"/>                    <text x="86" y="842" class="mono">solder pad</text>
+  <circle cx="59" cy="860" r="6.5" class="used"/>                 <text x="86" y="864" class="mono">ESP32 pin used by this build</text>
+  <line x1="42" y1="884" x2="76" y2="884" class="court"/>         <text x="86" y="888" class="mono">courtyard — module RAISED on standoffs</text>
+  <line x1="42" y1="906" x2="76" y2="906" class="pwr18r"/>        <text x="86" y="910" class="mono">18 AWG off-board power run</text>
+  <line x1="42" y1="928" x2="76" y2="928" class="cable"/>         <text x="86" y="932" class="mono">JST-XH cable lead</text>
+  <line x1="42" y1="950" x2="76" y2="950" class="opt"/>           <text x="86" y="954" class="mono">optional (plan D5)</text>
+
+  <text x="430" y="752" class="monoB">WIRE SCHEDULE — solder BEFORE fitting the ESP32 sockets</text>
+  <text x="430" y="774" class="mono">W1   VIN (a,20)    → +5.1 V top rail            top</text>
+  <text x="430" y="793" class="mono">W2   GND (a,15)    → GND top rail               under</text>
+  <text x="430" y="812" class="mono">W3   3V3 (a,2)     → 3V3 bottom rail            under</text>
+  <text x="430" y="831" class="mono">W4   GND (j,2)     → GND bottom rail            under</text>
+  <text x="430" y="850" class="mono">W5   GND (j,8)     → GND bottom rail            under</text>
+  <text x="430" y="869" class="mono">W6   GPIO21 (j,7)  → J2·SDA  servo-bus SDA      under</text>
+  <text x="430" y="888" class="mono">W7   GPIO22 (j,4)  → J2·SCL  servo-bus SCL      under</text>
+  <text x="430" y="907" class="mono">W8   GPIO25 (a,10) → J3·SDA  sensor-bus SDA     under</text>
+  <text x="430" y="926" class="mono">W9   GPIO26 (a,11) → J3·SCL  sensor-bus SCL     under</text>
+  <text x="430" y="945" class="mono">W10  3V3 rail      → J2·1 and J3·1              under</text>
+  <text x="430" y="964" class="mono">W11  GND rail      → J2·2 and J3·2              under</text>
+  <text x="430" y="983" class="mono">W12  GND tie — top ↔ bottom GND rails, right edge</text>
+  <text x="430" y="1002" class="mono">W13  J1 pads → +5.1 V rail (red) / GND rail (blue)</text>
+
+  <text x="950" y="752" class="monoB">BUILD NOTES</text>
+  <text x="950" y="774" class="warn">• Servo current (2–3 A peak) never touches breadboard copper —</text>
+  <text x="962" y="790" class="warn">18 AWG runs XL4015 OUT → PCA9685 V+ terminal; bulk cap at V+.</text>
+  <text x="950" y="812" class="mono">• Breadboard carries logic only (~300 mA): J1 → top 5.1 V rail →</text>
+  <text x="962" y="828" class="mono">ESP32 VIN. The ESP32 3V3 pin feeds the bottom 3V3 rail → J2/J3,</text>
+  <text x="962" y="844" class="mono">so the whole I2C side runs at 3.3 V (no level shifting).</text>
+  <text x="950" y="866" class="mono">• Both breakout boards carry their own I2C pull-ups — add none.</text>
+  <text x="950" y="888" class="mono">• Rail checks first: ✂ cut any factory top↔bottom red-rail link</text>
+  <text x="962" y="904" class="mono">(they carry DIFFERENT voltages); ⌒ bridge mid-board rail splits.</text>
+  <text x="950" y="926" class="mono">• Default firmware pins shown: servo bus GPIO21/22 → PCA9685 0x40;</text>
+  <text x="962" y="942" class="mono">sensor bus GPIO25/26 → VEML7700 0x10 (dedicated, ADR 0011).</text>
+  <text x="950" y="964" class="mono">• Power-up: 5.10 V set unloaded → boot with no servos → I2C scan</text>
+  <text x="962" y="980" class="mono">finds 0x40 + 0x10 → add one MG90D on CH0 and re-test.</text>
+  <text x="950" y="1002" class="mono">• J2·OE spare — PCA9685 output-enable, works left n/c.</text>
+
+  <!-- title block -->
+  <rect x="1150" y="1030" width="396" height="136" fill="none" stroke="#5a6672" stroke-width="2"/>
+  <line x1="1150" y1="1062" x2="1546" y2="1062" stroke="#5a6672" stroke-width="1"/>
+  <line x1="1150" y1="1112" x2="1546" y2="1112" stroke="#5a6672" stroke-width="1"/>
+  <text x="1162" y="1052" class="tb">ESP32 SHUTTER HUB — breadboard layout (plan view)</text>
+  <text x="1162" y="1082" class="tt">Board: 30-column solderable copper breadboard (SB-400 style)</text>
+  <text x="1162" y="1100" class="tt">ESP32-D DevKitC-38 · PCA9685 @0x40 · VEML7700 @0x10 · default pins</text>
+  <text x="1162" y="1132" class="tt">Rev 1.0 · 2026-07-11 · Sheet 1/1</text>
+  <text x="1162" y="1150" class="tt">Companion: docs/hardware-layout.md · standoff-mounting.svg · cable-loom.svg</text>
+</svg>
