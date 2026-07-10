@@ -17,7 +17,7 @@ const fmtKB = b => (b / 1024).toFixed(1) + " KB";
 const rssiTxt = r => r + " dBm" + (r >= -60 ? " (good)" : r >= -75 ? " (ok)" : " (poor)");
 
 // ---- Routing ----------------------------------------------------------------
-const routes = ["info", "mqtt", "actions", "shutters", "system", "ota", "logs"];
+const routes = ["info", "mqtt", "actions", "shutters", "solar", "system", "ota", "logs"];
 function go(route) {
   if (!routes.includes(route)) route = "info";
   $$(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.route === route));
@@ -27,6 +27,7 @@ function go(route) {
   if (route === "mqtt")    loadMqtt();
   if (route === "actions") svRefresh();
   if (route === "shutters") shOnShow();
+  if (route === "solar")   loadSolar();
   if (route === "system")  loadSystem();
   if (route === "ota")     loadOta();
   if (route === "logs")    logsOnShow();
@@ -92,6 +93,12 @@ function renderTopics() {
   $("#t_none").classList.toggle("hidden", mqShutters.length > 0);
   const row = (label, dir, topic, hint) =>
     `<div class="kv"><span>${label} <i class="tdir">${dir}</i>${hint ? `<small class="thint">${hint}</small>` : ""}</span><b class="mono">${topic}</b></div>`;
+  $("#t_solar").innerHTML =
+    row("Light level", "hub →", `${base}/solar/lux`, "lux, retained") +
+    row("Solar state", "hub →", `${base}/solar/state`, "disabled · idle · counting-trip · tripped · counting-clear") +
+    row("Automation on/off", "→ hub", `${base}/solar/enable/set`, "ON · OFF") +
+    row("Trip threshold", "→ hub", `${base}/solar/trip_lux/set`, "lux — must stay above clear") +
+    row("Clear threshold", "→ hub", `${base}/solar/clear_lux/set`, "lux — must stay below trip");
   $("#t_shutters").innerHTML = mqShutters.map(s => {
     const b = `${base}/cover/${s.id}`;
     return `<div class="tsh"><div class="tsh-name">${esc(s.name)} <span class="muted">· ${s.id}</span></div>` +
@@ -481,6 +488,87 @@ setInterval(() => {   // live position poll while the page is visible
   if ($("#page-shutters").offsetParent === null) return;
   if (shBusy || ++shTick % 3 === 0) calRefresh();
 }, 500);
+
+// ---- Solar (light sensor + heat protection) ---------------------------------
+// Target codes must match AppConfig::SolarTarget — the array index IS the stored value.
+const SOLAR_TARGETS = ["Open", "Closed", "Daylight", "Privacy", "Do nothing"];
+const STATE_TEXT = { disabled: "automation off", idle: "idle", tripped: "tripped",
+  "counting-trip": "counting to trip…", "counting-clear": "counting to clear…" };
+const luxTxt = v => Math.round(v).toLocaleString();
+const durTxt = s => s >= 60 ? Math.round(s / 60) + " min" : s + " s";
+let soFilled = false;
+
+function soDetPill(s) {
+  const p = $("#so_detpill");
+  p.style.color = s.present ? "var(--green)" : s.enabled ? "var(--amber)" : "var(--muted)";
+  p.querySelector(".dot").classList.toggle("off", !s.present);
+  p.querySelector("span:last-child").textContent =
+    s.present ? "detected @0x10" : s.enabled ? "not detected" : "disabled";
+}
+function soRenderStatus(d) {
+  $("#so_lux").textContent = luxTxt(d.sensor.lux);
+  $("#so_state").textContent = STATE_TEXT[d.state] || d.state;
+  const bits = [];
+  if (d.state === "counting-trip" || d.state === "counting-clear") bits.push("in " + durTxt(d.remaining));
+  else if (d.state === "tripped") bits.push("bright → " + SOLAR_TARGETS[d.brightTarget]);
+  if (d.suspended > 0) bits.push(d.suspended + " on manual hold");
+  if (d.sensor.simulated) bits.push("simulated");
+  $("#so_detail").textContent = bits.join(" · ") || "—";
+  soDetPill(d.sensor);
+}
+async function loadSolar() {
+  if (!soFilled) {
+    const opts = SOLAR_TARGETS.map((l, v) => `<option value="${v}">${l}</option>`).join("");
+    $("#so_bright").innerHTML = opts; $("#so_clear").innerHTML = opts;
+    soFilled = true;
+  }
+  try {
+    const d = await apiGet("/api/solar");
+    $("#so_type").value = d.sensor.type;
+    $("#so_sda").value = d.sensor.sda; $("#so_scl").value = d.sensor.scl;
+    $("#so_lsen").checked = d.sensor.enabled;
+    $("#so_triplux").value  = d.trip.lux;  $("#so_tripmin").value  = Math.round(d.trip.secs / 60);
+    $("#so_clearlux").value = d.clear.lux; $("#so_clearmin").value = Math.round(d.clear.secs / 60);
+    $("#so_bright").value = d.brightTarget; $("#so_clear").value = d.clearTarget;
+    $("#so_solen").checked = d.enabled;
+    if (d.sensor.simulated && document.activeElement !== $("#so_sim")) {
+      $("#so_sim").value = Math.round(d.sensor.lux);
+      $("#so_simv").textContent = luxTxt(d.sensor.lux) + " lx";
+    } else if (!d.sensor.simulated) $("#so_simv").textContent = "off";
+    soRenderStatus(d);
+  } catch (e) { $("#so_msg").textContent = "Load failed: " + e.message; }
+}
+async function soRefresh() { try { soRenderStatus(await apiGet("/api/solar")); } catch (e) {} }
+
+$("#so_save").addEventListener("click", async () => {
+  const tl = +$("#so_triplux").value, cl = +$("#so_clearlux").value;
+  if (cl >= tl) { $("#so_msg").textContent = "Clear lux must be below trip lux (that gap is the hysteresis)."; return; }
+  $("#so_msg").textContent = "Saving…";
+  try {
+    soRenderStatus(await apiPost("/api/solar", {
+      lsEnabled: $("#so_lsen").checked, lsType: $("#so_type").value,
+      sda: $("#so_sda").value, scl: $("#so_scl").value,
+      enabled: $("#so_solen").checked,
+      tripLux: tl, tripMin: $("#so_tripmin").value,
+      clearLux: cl, clearMin: $("#so_clearmin").value,
+      brightTarget: $("#so_bright").value, clearTarget: $("#so_clear").value }));
+    $("#so_msg").textContent = "Saved — applied without a reboot.";
+    setTimeout(loadSolar, 1200);
+  } catch (e) { $("#so_msg").textContent = "Failed: " + e.message; }
+});
+$("#so_reset").addEventListener("click", loadSolar);
+$("#so_sim").addEventListener("input", () => $("#so_simv").textContent = luxTxt(+$("#so_sim").value) + " lx");
+async function soSim(body, note) {
+  try { soRenderStatus(await apiPost("/api/solar/simulate", body)); $("#so_smsg").textContent = note; }
+  catch (e) { $("#so_smsg").textContent = "Failed: " + e.message; }
+}
+$("#so_simon").addEventListener("click", () =>
+  soSim({ lux: $("#so_sim").value }, "Simulating " + luxTxt(+$("#so_sim").value) + " lx."));
+$("#so_live").addEventListener("click", () => {
+  $("#so_simv").textContent = "off"; soSim({ live: 1 }, "Using the live sensor.");
+});
+
+setInterval(() => { if ($("#page-solar").offsetParent !== null) soRefresh(); }, 1500);
 
 // ---- OTA --------------------------------------------------------------------
 async function loadOta() {

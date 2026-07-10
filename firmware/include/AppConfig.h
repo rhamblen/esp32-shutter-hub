@@ -64,13 +64,40 @@ String   hkBridgeName();                        // resolved (never blank)
 String   hkSetupCode();                         // digits only, e.g. "74888377"
 void     setHomeKit(bool enabled, const String &name, const String &code);
 
+// ---- Light sensor + solar heat protection (Phase 6, v0.6.0) ----
+// The VEML7700 sits on its own I2C bus (Wire1) so a sensor-lead fault can never wedge
+// the PCA9685 servo bus — see ADR 0011. Pins default to SDA 25 / SCL 26 (any normal
+// GPIO; not 34–39, which are input-only and can't drive I2C). `type` reserves an analog
+// LDR fallback (0 = VEML7700, 1 = analog) though only the VEML7700 path is built today.
+enum SolarTarget : uint8_t { TGT_OPEN = 0, TGT_CLOSED = 1, TGT_DAYLIGHT = 2, TGT_PRIVACY = 3, TGT_NONE = 4 };
+
+bool     lsEnabled();
+uint8_t  lsType();                             // 0 = VEML7700, 1 = analog LDR (reserved)
+uint8_t  lsSda();                              // Wire1 SDA, default 25
+uint8_t  lsScl();                              // Wire1 SCL, default 26
+void     setLightSensor(bool enabled, uint8_t type, uint8_t sda, uint8_t scl);
+
+// Solar automation: trip to the bright target when lux stays above tripLux for tripSecs;
+// return to the clear target when lux stays below clearLux for clearSecs. Targets are a
+// SolarTarget; TGT_NONE = "do nothing" (on clear that means release the suspend but leave
+// slats put). Defaults: 60000 lx / 10 min → Privacy, 30000 lx / 20 min → do nothing.
+bool     solarEnabled();
+uint32_t solarTripLux();
+uint16_t solarTripSecs();
+uint32_t solarClearLux();
+uint16_t solarClearSecs();
+uint8_t  solarBrightTarget();                  // SolarTarget applied on trip
+uint8_t  solarClearTarget();                   // SolarTarget applied on clear
+void     setSolar(bool enabled, uint32_t tripLux, uint16_t tripSecs,
+                  uint32_t clearLux, uint16_t clearSecs, uint8_t brightTarget, uint8_t clearTarget);
+
 // ---- Web interface authentication (Security tab) ----
 bool     authEnabled();
 String   authUser();
 String   authPass();
 void     setAuth(bool enabled, const String &user, const String &pass);
 
-// Clear all app settings (device name, servo pin, MQTT, HomeKit, auth) back to defaults.
+// Clear all app settings (device name, servo pin, MQTT, HomeKit, light/solar, auth) to defaults.
 // Does NOT touch WiFi credentials (WiFiManager's own NVS namespace). Caller reboots.
 void     factoryReset();
 }

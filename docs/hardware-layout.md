@@ -139,6 +139,24 @@ against the 60000 / 30000 solar thresholds.
 **Don't** run 5 V or servo current through JST-XH shells rated 3 A only at a pinch, and don't use
 unpolarised Dupont pairs for anything permanent — one reversed 3V3/GND on the VEML7700 kills it.
 
+### VEML7700 light sensor — its own bus (v0.6.0, [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md))
+
+The sensor does **not** join the PCA9685 on GPIO21/22. It runs on a second I²C bus, `Wire1`, so a
+damaged sensor lead can never wedge the servo driver. Pins are set on the web UI's **Solar** page —
+default **SDA GPIO25 / SCL GPIO26**.
+
+| Do | Why |
+| -- | --- |
+| **4-pin JST-XH** (3V3 / GND / SDA / SCL) at the sensor end | polarised + serviceable; the sensor sits at the enclosure light window, not next to the PCA9685 |
+| Run **SDA / SCL / GND as a twisted trio** | I²C tolerates length poorly because of cable *capacitance*; twisting with ground is the cheap fix |
+| Keep the lead **short — ideally < 20 cm** | a second bus buys fault isolation, **not** reach. It does not license a long run |
+| **0.1 µF decoupling cap right at the sensor**, own clean 3V3 feed | don't daisy-chain its supply off the servo-side rail — servo inrush is noisy |
+| Use normal GPIOs (25/26, or 32/33, 16/17) | **GPIO34–39 are input-only** and physically cannot drive an open-drain I²C line |
+| Avoid strapping pins 0 / 2 / 12 / 15 and the servo pin (13) | boot-mode pins misbehave when pulled by a bus |
+
+The VEML7700 breakout carries its own pull-ups, so on a dedicated bus there is nothing to remove
+(unlike sharing, where two boards' pull-ups end up in parallel).
+
 ---
 
 ## Build order

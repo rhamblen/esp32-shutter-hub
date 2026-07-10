@@ -3,6 +3,8 @@
 #include "Diagnostics.h"
 #include "Shutters.h"
 #include "ServoController.h"
+#include "LightSensor.h"
+#include "SolarLogic.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 
@@ -27,11 +29,18 @@ String        g_state     = "disabled";
 unsigned long g_nextTry   = 0;         // next reconnect attempt (millis)
 unsigned long g_nextStat  = 0;         // next periodic hub-state publish (millis)
 unsigned long g_nextShPub = 0;         // next shutter position/state publish check (millis)
+unsigned long g_nextSolPub = 0;        // next solar lux/state publish check (millis)
 volatile bool g_shDirty   = false;     // shutter config mutated — refresh discovery/state
                                        // (set from the web task, consumed in loop())
+volatile bool g_solDirty  = false;     // solar config mutated — re-publish the solar topics
 
 const int      JOG_STEP_US    = 25;    // one HA jog press (ADR 0005 "incremental jog")
 const uint32_t SHUTTER_PUB_MS = 250;   // shutter position/state publish cadence while moving
+const uint32_t SOLAR_PUB_MS   = 5000;  // solar lux/state publish cadence
+const int      SOLAR_LUX_EPS  = 25;    // don't re-publish lux for jitter smaller than this
+
+int    g_lastLux      = -1;            // last published lux / solar state (publish on change only)
+String g_lastSolState = "";
 
 // Last published per shutter index, so state topics only publish on change.
 int    g_lastPct[Shutters::MAX];
@@ -47,6 +56,7 @@ String cmdTopic()    { return g_base + "/cmd"; }
 String coverTopic(const String &id, const char *leaf) {
   return g_base + "/cover/" + id + "/" + leaf;
 }
+String solarTopic(const String &leaf) { return g_base + "/solar/" + leaf; }
 
 // Sanitise a string into an MQTT/HA-safe id (alnum + underscore).
 String slug(const String &s) {
@@ -255,6 +265,101 @@ void publishState() {
   publish(stateTopic(), s, false);
 }
 
+// ---- Solar heat protection (Phase 6) -------------------------------------------
+
+// A writable lux threshold as an HA `number` — this is the write-back hook a future
+// HA-side calibration card uses to push a recommended threshold onto the hub.
+void publishSolarNumber(const char *object, const char *name, const char *leaf, const char *icon) {
+  String cfg = "homeassistant/number/" + g_node + "/" + object + "/config";
+  String p = "{\"name\":\"" + String(name) + "\",\"uniq_id\":\"" + g_node + "_" + object + "\",";
+  p += "\"cmd_t\":\"" + solarTopic(String(leaf) + "/set") + "\",";
+  p += "\"stat_t\":\"" + solarTopic(leaf) + "\",";
+  p += "\"min\":0,\"max\":130000,\"step\":500,\"unit_of_meas\":\"lx\",\"mode\":\"box\",";
+  p += "\"ic\":\"" + String(icon) + "\",\"ent_cat\":\"config\",";
+  p += "\"avty_t\":\"" + statusTopic() + "\"," + deviceBlock() + "}";
+  publish(cfg, p, true);
+}
+
+void publishSolarDiscovery() {
+  if (!g_haDisc) return;
+  {   // live light level
+    String cfg = "homeassistant/sensor/" + g_node + "/solar_lux/config";
+    String p = "{\"name\":\"Light level\",\"uniq_id\":\"" + g_node + "_solar_lux\",";
+    p += "\"stat_t\":\"" + solarTopic("lux") + "\",\"avty_t\":\"" + statusTopic() + "\",";
+    p += "\"dev_cla\":\"illuminance\",\"unit_of_meas\":\"lx\",\"stat_cla\":\"measurement\",";
+    p += deviceBlock() + "}";
+    publish(cfg, p, true);
+  }
+  {   // state machine position
+    String cfg = "homeassistant/sensor/" + g_node + "/solar_state/config";
+    String p = "{\"name\":\"Solar state\",\"uniq_id\":\"" + g_node + "_solar_state\",";
+    p += "\"stat_t\":\"" + solarTopic("state") + "\",\"avty_t\":\"" + statusTopic() + "\",";
+    p += "\"ic\":\"mdi:weather-sunny\"," + deviceBlock() + "}";
+    publish(cfg, p, true);
+  }
+  {   // automation on/off
+    String cfg = "homeassistant/switch/" + g_node + "/solar_enable/config";
+    String p = "{\"name\":\"Solar automation\",\"uniq_id\":\"" + g_node + "_solar_enable\",";
+    p += "\"cmd_t\":\"" + solarTopic("enable/set") + "\",\"stat_t\":\"" + solarTopic("enable") + "\",";
+    p += "\"pl_on\":\"ON\",\"pl_off\":\"OFF\",\"avty_t\":\"" + statusTopic() + "\",";
+    p += "\"ic\":\"mdi:sun-thermometer\"," + deviceBlock() + "}";
+    publish(cfg, p, true);
+  }
+  publishSolarNumber("solar_trip_lux",  "Solar trip lux",  "trip_lux",  "mdi:brightness-7");
+  publishSolarNumber("solar_clear_lux", "Solar clear lux", "clear_lux", "mdi:brightness-4");
+  LOGI("mqtt", "HA discovery: solar sensor/state/switch + 2 threshold numbers published");
+}
+
+// lux + state publish on change (lux ignores sub-EPS jitter); `force` also echoes config.
+void publishSolarStates(bool force) {
+  int    lux = (int)lroundf(LightSensor::lux());
+  String st  = SolarLogic::stateText();
+  if (force || abs(lux - g_lastLux) >= SOLAR_LUX_EPS) {
+    publish(solarTopic("lux"), String(lux), true);
+    g_lastLux = lux;
+  }
+  if (force || st != g_lastSolState) {
+    publish(solarTopic("state"), st, true);
+    g_lastSolState = st;
+  }
+  if (force) {
+    publish(solarTopic("enable"),    AppConfig::solarEnabled() ? "ON" : "OFF", true);
+    publish(solarTopic("trip_lux"),  String(AppConfig::solarTripLux()),  true);
+    publish(solarTopic("clear_lux"), String(AppConfig::solarClearLux()), true);
+  }
+}
+
+// <base>/solar/{enable,trip_lux,clear_lux}/set. Thresholds must keep clear < trip, or the
+// hysteresis inverts and the machine oscillates — reject rather than accept a bad config.
+void handleSolar(const String &leaf, const String &msg) {
+  bool     en    = AppConfig::solarEnabled();
+  uint32_t trip  = AppConfig::solarTripLux();
+  uint32_t clear = AppConfig::solarClearLux();
+
+  if (leaf == "enable/set") {
+    en = (msg == "ON" || msg == "on" || msg == "1");
+    LOGI("mqtt", "solar automation → %s", en ? "on" : "off");
+  } else if (leaf == "trip_lux/set" || leaf == "clear_lux/set") {
+    long v = msg.toInt();
+    if (v < 0 || v > 130000) { LOGW("mqtt", "solar: lux %ld out of range", v); return; }
+    if (leaf == "trip_lux/set") trip = (uint32_t)v; else clear = (uint32_t)v;
+    if (clear >= trip) {
+      LOGW("mqtt", "solar: rejected — clear (%lu) must stay below trip (%lu)",
+           (unsigned long)clear, (unsigned long)trip);
+      return;
+    }
+    LOGI("mqtt", "solar thresholds → trip %lu lx / clear %lu lx",
+         (unsigned long)trip, (unsigned long)clear);
+  } else {
+    LOGW("mqtt", "solar: unknown topic leaf '%s'", leaf.c_str());
+    return;
+  }
+  AppConfig::setSolar(en, trip, AppConfig::solarTripSecs(), clear,
+                      AppConfig::solarClearSecs(), AppConfig::solarBrightTarget(),
+                      AppConfig::solarClearTarget());
+  publishSolarStates(true);
+}
+
 // ---- Command handling ----------------------------------------------------------
 
 void handleCover(const String &id, const String &sub, const String &msg) {
@@ -273,6 +378,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
       }
       LOGI("mqtt", "%s: %s → %d µs", id.c_str(), msg.c_str(), us);
       ServoController::moveSlotUs(s.slot, us);
+      SolarLogic::notifyManualMove(id);
     } else if (msg == "STOP") {
       LOGI("mqtt", "%s: STOP", id.c_str());
       ServoController::stopSlot(s.slot);
@@ -288,6 +394,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
     int us  = pctToUs(s, pct);
     LOGI("mqtt", "%s: position %d%% → %d µs", id.c_str(), pct, us);
     ServoController::moveSlotUs(s.slot, us);
+    SolarLogic::notifyManualMove(id);
     return;
   }
 
@@ -301,6 +408,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
         tgt = constrain(tgt, min(s.openUs, s.closedUs), max(s.openUs, s.closedUs));
       LOGI("mqtt", "%s: %s → %d µs", id.c_str(), msg.c_str(), tgt);
       ServoController::moveSlotUs(s.slot, tgt);
+      SolarLogic::notifyManualMove(id);
     } else if (msg.startsWith("recall:")) {
       String fav = msg.substring(7);
       int us = Shutters::UNSET;
@@ -313,6 +421,7 @@ void handleCover(const String &id, const String &sub, const String &msg) {
       }
       LOGI("mqtt", "%s: recall:%s → %d µs", id.c_str(), fav.c_str(), us);
       ServoController::moveSlotUs(s.slot, us);
+      SolarLogic::notifyManualMove(id);
     } else if (msg.startsWith("save:")) {
       String fav = msg.substring(5);
       if (fav != "daylight" && fav != "privacy") {
@@ -338,6 +447,8 @@ void onMessage(char *topic, byte *payload, unsigned int len) {
     if (sl > 0) handleCover(rest.substring(0, sl), rest.substring(sl + 1), msg);
     return;
   }
+  String spfx = g_base + "/solar/";
+  if (t.startsWith(spfx)) { handleSolar(t.substring(spfx.length()), msg); return; }
   // <base>/cmd — hub-wide commands reserved; logged only for now.
 }
 
@@ -381,12 +492,21 @@ bool tryConnect() {
     client.subscribe(w.c_str());
     LOGI("mqtt", "subscribed %s", w.c_str());
   }
+  for (const char *leaf : {"enable/set", "trip_lux/set", "clear_lux/set"}) {
+    String w = solarTopic(leaf);
+    client.subscribe(w.c_str());
+    LOGI("mqtt", "subscribed %s", w.c_str());
+  }
   publishDiscovery();            // hub diagnostic sensors
   publishShutterDiscovery();     // per-shutter cover + button entities
+  publishSolarDiscovery();       // solar sensor/state/switch + threshold numbers
   publishState();
   resetStateCache();
   publishShutterStates(true);
+  g_lastLux = -1; g_lastSolState = "";
+  publishSolarStates(true);
   g_shDirty  = false;
+  g_solDirty = false;
   g_nextStat = millis() + 30000;
   return true;
 }
@@ -420,7 +540,12 @@ void loop() {
     resetStateCache();
     publishShutterStates(true);
   }
+  if (g_solDirty) {                      // solar config changed (web task) — echo it to HA
+    g_solDirty = false;
+    publishSolarStates(true);
+  }
   if (millis() >= g_nextShPub) { g_nextShPub = millis() + SHUTTER_PUB_MS; publishShutterStates(false); }
+  if (millis() >= g_nextSolPub) { g_nextSolPub = millis() + SOLAR_PUB_MS; publishSolarStates(false); }
   if (millis() >= g_nextStat)  { g_nextStat  = millis() + 30000; publishState(); }
 }
 
@@ -436,6 +561,7 @@ void reconfigure() {
 }
 
 void shuttersChanged() { g_shDirty = true; }
+void solarChanged()    { g_solDirty = true; }
 
 bool   connected() { return client.connected(); }
 String stateText() { return g_state; }

@@ -22,6 +22,7 @@
       <a class="nav-item" data-route="mqtt"><span class="ni">((•))</span>MQTT</a>
       <a class="nav-item" data-route="actions"><span class="ni">⚡</span>Servo test</a>
       <a class="nav-item" data-route="shutters"><span class="ni">⧉</span>Shutters</a>
+      <a class="nav-item" data-route="solar"><span class="ni">☀</span>Solar</a>
       <a class="nav-item" data-route="system"><span class="ni">⚙</span>System</a>
       <a class="nav-item" data-route="ota"><span class="ni">⬆</span>OTA Update</a>
       <a class="nav-item" data-route="logs"><span class="ni">▤</span>Logs</a>
@@ -96,9 +97,11 @@
         <p class="sub">Live topic map, derived from the base topic. The hub subscribes to the <b>→ hub</b> topics; <b>hub →</b> topics are published retained.</p>
         <div class="kv"><span>Availability (LWT) <i class="tdir">hub →</i></span><b class="mono" id="t_status">–</b></div>
         <div class="kv"><span>Hub state (JSON) <i class="tdir">hub →</i></span><b class="mono" id="t_state">–</b></div>
+        <div class="tsh"><div class="tsh-name">Solar <span class="muted">· heat protection</span></div></div>
+        <div id="t_solar"></div>
         <div id="t_shutters"></div>
         <p class="msg" id="t_none">No shutters defined yet — per-shutter cover topics appear here once you add one on the <b>Shutters</b> page.</p>
-        <p class="msg">With HA discovery on, entity configs are also published retained under <b>homeassistant/{cover,button,sensor}/…</b> — one cover + six buttons per shutter.</p>
+        <p class="msg">With HA discovery on, entity configs are also published retained under <b>homeassistant/{cover,button,sensor,switch,number}/…</b> — one cover + six buttons per shutter, plus the hub-wide solar sensor, state, automation switch and two writable lux thresholds.</p>
       </div>
     </section>
 
@@ -242,6 +245,78 @@
           <b id="pos_close">– µs</b>
           <span class="fav-btns"><button class="btn ghost" id="pos_close_go">Go</button><button class="btn ghost" id="pos_close_set">Save current</button></span>
         </div>
+      </div>
+    </section>
+
+    <!-- SOLAR (light sensor + heat protection) -->
+    <section class="page hidden" id="page-solar">
+      <h1>Solar</h1><p class="sub">Automatic heat protection — drive the shutters when the sun bakes the room, release when it passes. Test it any time with the simulate slider, even before the sensor is wired.</p>
+
+      <!-- Status (at-a-glance, first) -->
+      <div class="card">
+        <div class="card-head"><span class="ic teal">◫</span><div><h2>Status</h2><p>Live light level and automation state</p></div></div>
+        <div class="cal-readout">
+          <div class="cal-us"><b id="so_lux">–</b><small>lx</small></div>
+          <div class="cal-pct" id="so_state">–</div>
+          <div class="cal-state" id="so_detail">–</div>
+        </div>
+        <label>Simulate lux <b id="so_simv">off</b></label>
+        <input type="range" id="so_sim" class="range" min="0" max="120000" step="500" value="0">
+        <div class="actions">
+          <button class="btn ghost" id="so_simon">Use simulated</button>
+          <button class="btn ghost" id="so_live">Use live sensor</button>
+          <span class="msg" id="so_smsg"></span>
+        </div>
+      </div>
+
+      <!-- Sensor -->
+      <div class="card">
+        <div class="card-head"><span class="ic pink">☀</span><div><h2>Sensor</h2><p>VEML7700 on its own I²C bus (Wire1)</p></div></div>
+        <div class="form2">
+          <label>Sensor type
+            <select id="so_type"><option value="0">VEML7700 (I²C)</option><option value="1" disabled>Analog LDR — later</option></select>
+          </label>
+          <div class="endbtn"><span class="pill" id="so_detpill"><span class="dot"></span><span>unknown</span></span></div>
+        </div>
+        <div class="form2">
+          <label>Wire1 SDA GPIO<input id="so_sda" type="number" min="0" max="39" value="25"></label>
+          <label>Wire1 SCL GPIO<input id="so_scl" type="number" min="0" max="39" value="26"></label>
+        </div>
+        <p class="msg">Its own bus — a sensor-lead fault can't disturb the PCA9685 servo bus on GPIO21/22. Avoid GPIO34–39 (input-only, can't drive I²C).</p>
+        <div class="toggle-row">
+          <div><b>Enable sensor</b><p>Power up the VEML7700 and read light on Wire1</p></div>
+          <label class="switch"><input type="checkbox" id="so_lsen"><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Sensitivity -->
+      <div class="card">
+        <div class="card-head"><span class="ic teal">◑</span><div><h2>Sensitivity</h2><p>When to trip, and when to clear</p></div></div>
+        <div class="form2">
+          <label>Trip when lux above<input id="so_triplux" type="number" min="0" max="130000" value="60000"></label>
+          <label>…held for (minutes)<input id="so_tripmin" type="number" min="0" max="240" value="10"></label>
+        </div>
+        <div class="form2">
+          <label>Clear when lux below<input id="so_clearlux" type="number" min="0" max="130000" value="30000"></label>
+          <label>…held for (minutes)<input id="so_clearmin" type="number" min="0" max="240" value="20"></label>
+        </div>
+        <p class="msg">The gap between trip and clear is hysteresis — it stops passing clouds from flapping the shutters. Keep clear below trip.</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="card">
+        <div class="card-head"><span class="ic pink">⇅</span><div><h2>Actions</h2><p>Where the shutters go on trip and on clear</p></div></div>
+        <div class="form2">
+          <label>When bright →<select id="so_bright"></select></label>
+          <label>When clear →<select id="so_clear"></select></label>
+        </div>
+        <p class="msg"><b>Do nothing</b> drives no servos — the default clear leaves the slats where the trip put them; set both to <b>Do nothing</b> to just monitor and report. A manual move pauses automation on that shutter for 2 hours.</p>
+        <div class="toggle-row">
+          <div><b>Solar automation</b><p>Move the shutters automatically on trip / clear</p></div>
+          <label class="switch"><input type="checkbox" id="so_solen"><span class="slider"></span></label>
+        </div>
+        <div class="actions"><button class="btn primary" id="so_save">Save &amp; Apply changes</button>
+          <button class="btn ghost" id="so_reset">Reset</button><span class="msg" id="so_msg"></span></div>
       </div>
     </section>
 

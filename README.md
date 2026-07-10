@@ -68,6 +68,13 @@ code, pairing QR). The bridge runs on its own task so it never interferes with s
 reboot/OTA are driven by a reliable timer. **Status:** the bridge is functional (servos and HA keep
 working with it enabled), but Apple Home **device discovery/pairing on the author's own network is
 still unresolved** and parked — see [CHANGELOG.md](CHANGELOG.md). Everything else is in daily use.
+**Phase 6 (`v0.6.0`)** adds **solar heat protection**: a **VEML7700** light sensor on its own I²C
+bus drives a trip/clear state machine — when the sun stays above a threshold for a set dwell the
+shutters move to a chosen preset, and a second threshold releases them. Both actions can be set to
+**Do nothing**, a manual move suspends automation on that blind for 2 h, and a **simulate-lux
+slider** lets the whole thing be exercised before the sensor is even wired. Lux, state, an
+automation switch and two writable thresholds are published to Home Assistant. **Status:** built and
+compiling; **not yet verified against physical sensor hardware.**
 See [docs/project-plan.md](docs/project-plan.md) for the phased roadmap and [firmware/](firmware/)
 to build/flash. Prebuilt ESP32-D bins ship on each
 [release](https://github.com/rhamblen/esp32-shutter-hub/releases) — per variant: full (USB) and

@@ -33,8 +33,8 @@ Design principles, key trade-offs, and topology. Companion to
 USB-C PD → AITRIP trigger (12V) → XL4015 (5.1V) ─┬─ ESP32-D VIN
                                                  ├─ PCA9685 V+
                                                  └─ servo rail (+ 1000–2200µF) → MG90D ×N
-ESP32-D I2C (GPIO21/22) ── PCA9685 (0x40) ── CH0..CHn → servos
-                        └─ VEML7700 (0x10)
+ESP32-D I2C  Wire  (GPIO21/22) ── PCA9685 (0x40) ── CH0..CHn → servos
+ESP32-D I2C  Wire1 (GPIO25/26) ── VEML7700 (0x10)   ← own bus, ADR 0011
 Common ground single-point.
 ```
 
@@ -51,6 +51,9 @@ Common ground single-point.
 - **Servo inrush.** All 4 MG90D moving together spike current; stagger start-up in firmware, keep
   the bulk cap, keep ESP32 on the buck rail (not through the board), vent the XL4015.
 - **Set XL4015 to 5.1 V before connecting anything** — measure with a meter first.
-- **I2C sharing** — PCA9685 (0x40) and VEML7700 (0x10) coexist on one bus; no address clash.
+- **Two I2C buses, deliberately.** PCA9685 (0x40) and VEML7700 (0x10) *could* coexist on one bus —
+  distinct addresses, no clash — but the sensor gets its own `Wire1` (GPIO25/26) so a damaged sensor
+  lead can't wedge the servo driver. See [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md);
+  don't merge them back. GPIO34–39 are input-only and can never carry I2C.
 - **Smooth motion** — use stepped `moveTo`, never instant `write`, to protect linkage and gears.
 - **Calibration is per-shutter** — panels differ; never assume one set of µs limits fits all.

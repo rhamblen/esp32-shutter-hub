@@ -16,6 +16,59 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.6.0] — 2026-07-10
+
+**Phase 6 — light sensor + solar heat protection.** The hub now watches the sun and moves the
+shutters before the room bakes. A **VEML7700** ambient-light sensor feeds a trip/clear state
+machine with dwell timers; the whole feature is configurable from a new **Solar** page, exposed to
+Home Assistant over MQTT, and surfaced on the Lovelace card. It can be built, driven and tested
+**before the sensor physically exists** via a simulate-lux slider.
+
+### Added
+- **`LightSensor`** — real VEML7700 driver (was a stub) on its **own I²C bus, `Wire1`**, pins
+  configurable (default **SDA 25 / SCL 26**). Lean vendored register driver, no new library
+  dependencies. Fixed gain 1/8 + 25 ms integration → full scale ≈ 120 k lx.
+- **`SolarLogic`** — `idle → counting-trip → tripped → counting-clear → idle` state machine.
+  Trips when lux stays **above** the trip threshold for its dwell; clears when it stays **below**
+  the clear threshold for its dwell. The gap between the two is the hysteresis that stops passing
+  clouds flapping the shutters.
+- **Five-option actions.** The bright and clear targets are each one of **Open · Closed ·
+  Daylight · Privacy · Do nothing**. `Do nothing` advances the state but drives no servos — so the
+  default clear leaves the slats where the trip put them, and setting *both* to `Do nothing` makes
+  the hub a pure sensor/reporter.
+- **Manual override.** A user move on a shutter (web recall, or an MQTT `set` / `position/set` /
+  jog / recall from Home Assistant) suspends solar automation **on that shutter for 2 hours**. The
+  hub-wide state still tracks the light; suspended shutters are simply skipped when an action fires.
+- **Solar page** in the web UI — Status (live lux, state, countdown, **simulate-lux slider** +
+  "Use live sensor"), Sensor (type, Wire1 pins, live `detected @0x10` pill, enable), Sensitivity
+  (four numbers: trip lux/dwell, clear lux/dwell), Actions (the two target selectors + automation
+  switch). New `/api/solar` (GET/POST) and `/api/solar/simulate` routes.
+- **MQTT / Home Assistant** — new hub-wide entities via discovery: an **illuminance sensor**
+  (`<base>/solar/lux`), a **solar state sensor**, a **`Solar automation` switch**, and two writable
+  **`number`** entities for the trip and clear lux thresholds. The two numbers are the write-back
+  hook a future HA-side calibration card will use. Threshold writes that would put clear ≥ trip are
+  rejected (inverted hysteresis oscillates). Topics documented on the MQTT ▸ Topics tab.
+- **`shutter-hub-card` v0.6.0** — optional solar toggle + live lux caption in the group header,
+  driven by three **optional** config keys (`solar_switch`, `solar_lux`, `solar_state`). Omit them
+  and the card renders exactly as before, so no-sensor installs are unaffected.
+
+### Changed
+- **The light sensor no longer shares the PCA9685 I²C bus** — see
+  [ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md), which supersedes the "one shared
+  bus, no clash" line in `architecture.md` / `ai-context.md`. A shorted sensor lead can no longer
+  wedge the servo driver.
+- `AppConfig` gained the sensor (enable/type/SDA/SCL) and solar (enable, thresholds, dwells, both
+  targets) settings; all persist in NVS and are covered by **Reset config**.
+
+### Notes
+- **Reported lux is approximate.** The driver reports the linear `counts × resolution`; the Vishay
+  high-lux correction polynomial is deliberately skipped because it diverges across the 60–120 k lx
+  band the sensor exists to watch. Thresholds are calibrated against what *this* sensor reports —
+  which is exactly what the planned HA-history calibration does anyway. Rationale in ADR 0011.
+- **Solar config applies without a reboot** (unlike HomeKit) — saving re-inits the bus in place.
+- Flash use is now **91.2%** on `esp32d-pca9685`. The lean driver choice was load-bearing: the
+  Adafruit VEML7700 library (plus BusIO + Unified Sensor) would very likely not have fit.
+
 ## [0.5.4] — 2026-07-09
 
 **HomeKit discovery, take 2 — single mDNS owner.** The Home app still couldn't discover the bridge

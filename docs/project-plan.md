@@ -17,9 +17,10 @@ Phased roadmap. Phases map loosely to minor versions (Phase 1 → v0.1.0). See
 | 4     | v0.4.0  | MQTT / Home Assistant covers   | ☑      |
 | 4b    | v0.4.x  | HA Lovelace operating card     | ☑      |
 | 5     | v0.5.0  | HomeKit (HomeSpan bridge)      | ☑      |
-| 6     | v0.6.0  | Light sensor + solar logic     | ☐      |
+| 6     | v0.6.0  | Light sensor + solar logic     | ☑      |
 | 7     | v1.0.0  | Enclosures, PCB, all 4 shutters, diagnostics | ☐ |
 | 8     | —       | HA calibration card (optional) | ☐      |
+| 8b    | —       | HA-side threshold calibration from lux history (optional) | ☐ |
 
 **Sequence note (post-v0.1.0):** the polished web UI, live logs, and MQTT/HA *config* were pulled
 forward — they all run on a bare ESP32 before servo hardware exists. So the old "Phase 2 Web UI" and
@@ -154,11 +155,42 @@ single-page app (sidebar shell, WebSocket logs, MQTT/HA discovery config) — se
   verified on the owner's hardware + Apple device — the active setup code is echoed to the web Logs
   page to cross-check against the tab.)*
 
-## Phase 6 — Light sensor + solar logic (v0.6.0)
+## Phase 6 — Light sensor + solar logic (v0.6.0) ☑
 - **Objective:** automatic heat protection.
-- **What we build:** VEML7700 driver on shared I2C; trip/clear state machine; lux sensor to HA;
-  manual-override 2 h suspend.
-- **Exit criteria:** simulated high lux moves shutters to Privacy and returns to Daylight per timers.
+- **Built in three ordered steps**, each independently useful:
+  - **6a — firmware + web UI.** Real `LightSensor` VEML7700 driver on a **dedicated `Wire1` bus**
+    (pins configurable, default SDA 25 / SCL 26 — [ADR 0011](decisions/0011-dedicated-sensor-i2c-bus.md),
+    which reverses the old "shared bus" assumption); `SolarLogic` trip/clear state machine with
+    dwell timers; a new **Solar** page (`/api/solar`, `/api/solar/simulate`) with a **simulate-lux
+    slider** so the whole feature is testable before the sensor exists.
+  - **6b — MQTT/HA.** Illuminance sensor, solar-state sensor, `Solar automation` switch, and two
+    **writable `number`** entities for the trip/clear lux thresholds (the write-back hook Phase 8b
+    needs). Clear ≥ trip is rejected — inverted hysteresis oscillates.
+  - **6c — Lovelace card.** Optional solar toggle + lux caption in the group header
+    (`solar_switch` / `solar_lux` / `solar_state` config keys; absent ⇒ card unchanged).
+- **Actions are five-valued**, not four: **Open · Closed · Daylight · Privacy · Do nothing**.
+  `Do nothing` advances the state but moves nothing — the default clear action, so a trip to
+  Privacy isn't undone automatically; both set to `Do nothing` = pure sensor/reporter mode.
+- **Manual override:** a user move (web recall, MQTT set/position/jog/recall) suspends automation
+  on **that** shutter for 2 h; the hub-wide state keeps tracking the light.
+- **UI mockup:** [diagrams/solar-page.svg](diagrams/solar-page.svg) — dark-theme wireframe of the
+  Solar page: Status (lux + simulate slider), Sensor (Wire1 pins + detect pill), Sensitivity, Actions.
+- **Prerequisites:** Phase 5 HomeKit complete (flash budget), Phase 2 calibration (the presets the
+  targets recall).
+- **Exit criteria:** ☑ simulated high lux drives every calibrated shutter to the bright target and
+  the clear action applies per the dwell timers; lux + state reach HA; thresholds writable from HA.
+  Verification against the **physical** VEML7700 is outstanding — the sensor is not yet wired.
+
+## Phase 8b — HA-side threshold calibration (optional)
+- **Objective:** stop guessing the trip/clear lux — recommend them from what the room actually saw.
+- **Approach (no firmware work):** the lux sensor already records to Home Assistant's long-term
+  statistics. A calibration card reads ~7–14 days via `recorder/statistics_during_period`, finds
+  the sunny-day peak, and proposes **trip ≈ 75%** and **clear ≈ 40%** of it. *Apply* writes the two
+  `number` entities shipped in 6b, which push straight into hub NVS.
+- **Why HA-side:** the history, the statistics API and the charting already exist there; the ESP32
+  has neither the flash nor the storage to keep 14 days of samples.
+- **Exit criteria:** a card shows the observed daily light profile and one click adopts the
+  recommended thresholds.
 
 ## Phase 7 — Production (v1.0.0)
 - **Objective:** permanent install.

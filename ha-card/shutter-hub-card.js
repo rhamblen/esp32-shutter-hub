@@ -10,17 +10,33 @@
  *   button.<hub>_<id>_daylight|_privacy  recall the saved preset
  * The daylight/privacy button ids are derived from the cover id unless given.
  *
+ * Solar heat protection (Phase 6, v0.6.0) is OPTIONAL — supply any of
+ *   solar_switch: switch.<hub>_solar_automation
+ *   solar_lux:    sensor.<hub>_light_level
+ *   solar_state:  sensor.<hub>_solar_state
+ * and the header grows a live lux caption plus an automation toggle. Omit them
+ * and the card renders exactly as before, so no-sensor installs are unaffected.
+ *
  * Calibration (raw µs, full-open/close endpoints, save-to-preset) is a
  * separate future card gated on firmware — see docs/ha-lovelace-card.md.
  * No build step: plain custom element, registered as a Lovelace resource.
  */
 class ShutterHubCard extends HTMLElement {
   static getStubConfig(hass) {
-    const shutters = Object.keys((hass && hass.states) || {})
+    const ids = Object.keys((hass && hass.states) || {});
+    const shutters = ids
       .filter((e) => e.startsWith("cover.") && e.includes("shutter_hub"))
       .sort()
       .map((entity) => ({ entity }));
-    return { title: "Shutters", shutters };
+    const pick = (p, m) => ids.find((e) => e.startsWith(p) && e.includes(m));
+    const cfg = { title: "Shutters", shutters };
+    const sw = pick("switch.", "solar_automation");
+    const lux = pick("sensor.", "light_level");
+    const state = pick("sensor.", "solar_state");
+    if (sw) cfg.solar_switch = sw;
+    if (lux) cfg.solar_lux = lux;
+    if (state) cfg.solar_state = state;
+    return cfg;
   }
 
   setConfig(config) {
@@ -41,6 +57,12 @@ class ShutterHubCard extends HTMLElement {
         privacy: (s && s.privacy) || base + "_privacy",
       };
     });
+    // Solar is opt-in: any key absent simply hides that part of the header.
+    this._solar = {
+      sw: config.solar_switch || null,
+      lux: config.solar_lux || null,
+      state: config.solar_state || null,
+    };
     this._selected = null; // null = all shutters
     this._dragging = false;
     this._built = false;
@@ -95,6 +117,29 @@ class ShutterHubCard extends HTMLElement {
     );
   }
 
+  // ---- Solar (optional) ----
+  _solarSt(key) {
+    const id = this._solar[key];
+    return id && this._hass ? this._hass.states[id] : null;
+  }
+
+  _solarOn() {
+    const st = this._solarSt("sw");
+    return st ? st.state === "on" : null;
+  }
+
+  _solarLux() {
+    const st = this._solarSt("lux");
+    const v = st ? parseFloat(st.state) : NaN;
+    return isNaN(v) ? null : Math.round(v);
+  }
+
+  _toggleSolar() {
+    if (this._solar.sw && this._hass) {
+      this._hass.callService("switch", "toggle", { entity_id: this._solar.sw });
+    }
+  }
+
   _glyph(pos, selected) {
     const open = (pos == null ? 0 : pos) / 100;
     const th = (6 - open * 4).toFixed(1); // slat thickness: 6px closed → 2px open
@@ -117,6 +162,13 @@ class ShutterHubCard extends HTMLElement {
         .sh-wrap { padding: 12px 14px 14px; }
         .sh-head { display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:16px; font-weight:500; }
         .sh-head ha-icon { color: var(--secondary-text-color); }
+        .sh-sp { margin-left:auto; }
+        .sh-solarwrap { display:flex; align-items:center; gap:8px; }
+        .sh-lux { font-size:12px; font-weight:400; color:var(--secondary-text-color); }
+        .sh-solar { display:flex; background:none; border:none; padding:2px; border-radius:6px;
+          cursor:pointer; color:var(--secondary-text-color); }
+        .sh-solar.on { color:var(--primary-color); }
+        .sh-solar ha-icon { --mdc-icon-size:20px; color:inherit; }
         .sh-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); gap:8px; margin-bottom:12px; }
         .sh-tile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 4px;
           background:var(--secondary-background-color); border:1px solid var(--divider-color);
@@ -142,7 +194,13 @@ class ShutterHubCard extends HTMLElement {
         .sh-btn span { font-size:12px; }
       </style>
       <div class="sh-wrap">
-        <div class="sh-head"><ha-icon icon="mdi:window-shutter"></ha-icon><span class="sh-title"></span></div>
+        <div class="sh-head"><ha-icon icon="mdi:window-shutter"></ha-icon><span class="sh-title"></span>
+          <span class="sh-sp"></span>
+          <span class="sh-solarwrap" style="display:none">
+            <span class="sh-lux"></span>
+            <button class="sh-solar" aria-label="Toggle solar automation"><ha-icon icon="mdi:sun-thermometer"></ha-icon></button>
+          </span>
+        </div>
         <div class="sh-tiles"></div>
         <div class="sh-target"><span class="sh-tlabel"></span><button class="sh-all" style="display:none">Select all</button></div>
         <div class="sh-slider"><input type="range" min="0" max="100" step="1" value="0"><span class="sh-pct">0%</span></div>
@@ -164,7 +222,11 @@ class ShutterHubCard extends HTMLElement {
       all: card.querySelector(".sh-all"),
       slider: card.querySelector(".sh-slider input"),
       pct: card.querySelector(".sh-pct"),
+      solarWrap: card.querySelector(".sh-solarwrap"),
+      solarBtn: card.querySelector(".sh-solar"),
+      lux: card.querySelector(".sh-lux"),
     };
+    this._els.solarBtn.addEventListener("click", () => this._toggleSolar());
 
     card.querySelectorAll(".sh-btn").forEach((b) =>
       b.addEventListener("click", () => this._preset(b.dataset.k))
@@ -190,6 +252,7 @@ class ShutterHubCard extends HTMLElement {
   _update() {
     if (!this._built || !this._hass) return;
     this._els.title.textContent = this._config.title || "Shutters";
+    this._updateSolar();
 
     const tiles = this._els.tiles;
     if (tiles.childElementCount !== this._shutters.length) tiles.innerHTML = "";
@@ -228,11 +291,28 @@ class ShutterHubCard extends HTMLElement {
       this._els.pct.textContent = avg + "%";
     }
   }
+
+  _updateSolar() {
+    const hasSolar = !!(this._solar.sw || this._solar.lux);
+    this._els.solarWrap.style.display = hasSolar ? "" : "none";
+    if (!hasSolar) return;
+
+    const lux = this._solarLux();
+    this._els.lux.textContent = lux == null ? "" : lux.toLocaleString() + " lx";
+
+    const on = this._solarOn();
+    this._els.solarBtn.style.display = this._solar.sw ? "" : "none";
+    this._els.solarBtn.classList.toggle("on", on === true);
+    const st = this._solarSt("state");
+    this._els.solarBtn.title =
+      "Solar automation " + (on == null ? "—" : on ? "on" : "off") +
+      (st && st.state ? " · " + st.state : "");
+  }
 }
 
 // Version tracks the project release tag (single SemVer stream — see docs/ai-context.md).
 // HA caches card JS hard, so this console banner is how you tell which card is actually loaded.
-const CARD_VERSION = "0.5.4";
+const CARD_VERSION = "0.6.0";
 
 customElements.define("shutter-hub-card", ShutterHubCard);
 window.customCards = window.customCards || [];

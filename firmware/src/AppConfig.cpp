@@ -31,6 +31,19 @@ bool     g_hkEn       = false;
 String   g_hkName     = "";       // blank => fall back to the device name
 String   g_hkCode     = "74888377";
 
+// Light sensor + solar (Phase 6)
+bool     g_lsEn       = false;
+uint8_t  g_lsType     = 0;        // 0 = VEML7700, 1 = analog LDR (reserved)
+uint8_t  g_lsSda      = 25;       // Wire1 SDA (own bus, distinct from the PCA9685 21/22)
+uint8_t  g_lsScl      = 26;       // Wire1 SCL
+bool     g_solEn      = false;
+uint32_t g_solTripLux = 60000;
+uint16_t g_solTripS   = 600;      // 10 min
+uint32_t g_solClrLux  = 30000;
+uint16_t g_solClrS    = 1200;     // 20 min
+uint8_t  g_solBright  = AppConfig::TGT_PRIVACY;
+uint8_t  g_solClear   = AppConfig::TGT_NONE;
+
 // Web auth
 bool     g_authEn     = false;
 String   g_authUser   = "admin";
@@ -63,6 +76,18 @@ void begin() {
   g_hkEn       = prefs.getBool("hkEn", false);
   g_hkName     = prefs.getString("hkName", "");
   g_hkCode     = prefs.getString("hkCode", "74888377");
+
+  g_lsEn       = prefs.getBool("lsEn", false);
+  g_lsType     = prefs.getUChar("lsType", 0);
+  g_lsSda      = prefs.getUChar("lsSda", 25);
+  g_lsScl      = prefs.getUChar("lsScl", 26);
+  g_solEn      = prefs.getBool("solEn", false);
+  g_solTripLux = prefs.getUInt("solTripLux", 60000);
+  g_solTripS   = prefs.getUShort("solTripS", 600);
+  g_solClrLux  = prefs.getUInt("solClrLux", 30000);
+  g_solClrS    = prefs.getUShort("solClrS", 1200);
+  g_solBright  = prefs.getUChar("solBright", TGT_PRIVACY);
+  g_solClear   = prefs.getUChar("solClear", TGT_NONE);
 
   g_authEn     = prefs.getBool("authEn", false);
   g_authUser   = prefs.getString("authUser", "admin");
@@ -178,6 +203,45 @@ void setHomeKit(bool enabled, const String &name, const String &code) {
   prefs.putBool("hkEn", g_hkEn);
   prefs.putString("hkName", g_hkName);
   prefs.putString("hkCode", g_hkCode);
+}
+
+// ---- Light sensor + solar heat protection ----
+
+bool     lsEnabled() { return g_lsEn; }
+uint8_t  lsType()    { return g_lsType; }
+uint8_t  lsSda()     { return g_lsSda; }
+uint8_t  lsScl()     { return g_lsScl; }
+
+void setLightSensor(bool enabled, uint8_t type, uint8_t sda, uint8_t scl) {
+  g_lsEn = enabled; g_lsType = type; g_lsSda = sda; g_lsScl = scl;
+  prefs.putBool("lsEn", g_lsEn);
+  prefs.putUChar("lsType", g_lsType);
+  prefs.putUChar("lsSda", g_lsSda);
+  prefs.putUChar("lsScl", g_lsScl);
+}
+
+bool     solarEnabled()      { return g_solEn; }
+uint32_t solarTripLux()      { return g_solTripLux; }
+uint16_t solarTripSecs()     { return g_solTripS; }
+uint32_t solarClearLux()     { return g_solClrLux; }
+uint16_t solarClearSecs()    { return g_solClrS; }
+uint8_t  solarBrightTarget() { return g_solBright > TGT_NONE ? (uint8_t)TGT_NONE : g_solBright; }
+uint8_t  solarClearTarget()  { return g_solClear  > TGT_NONE ? (uint8_t)TGT_NONE : g_solClear; }
+
+void setSolar(bool enabled, uint32_t tripLux, uint16_t tripSecs,
+              uint32_t clearLux, uint16_t clearSecs, uint8_t brightTarget, uint8_t clearTarget) {
+  g_solEn = enabled;
+  g_solTripLux = tripLux; g_solTripS = tripSecs;
+  g_solClrLux = clearLux; g_solClrS = clearSecs;
+  g_solBright = brightTarget > TGT_NONE ? (uint8_t)TGT_NONE : brightTarget;
+  g_solClear  = clearTarget  > TGT_NONE ? (uint8_t)TGT_NONE : clearTarget;
+  prefs.putBool("solEn", g_solEn);
+  prefs.putUInt("solTripLux", g_solTripLux);
+  prefs.putUShort("solTripS", g_solTripS);
+  prefs.putUInt("solClrLux", g_solClrLux);
+  prefs.putUShort("solClrS", g_solClrS);
+  prefs.putUChar("solBright", g_solBright);
+  prefs.putUChar("solClear", g_solClear);
 }
 
 // ---- Web interface authentication ----

@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 760" font-family="Segoe UI, system-ui, Arial, sans-serif">
+  <!-- ESP32 Shutter Hub — web UI mockup: Solar (light sensor + heat protection) page, v0.6.0.
+       Four cards: Status (live lux + simulate slider), Sensor (Wire1 pins), Sensitivity
+       (trip/clear thresholds + dwells), Actions (five-valued targets). Colours mirror
+       firmware/data/style.css. See docs/decisions/0011-dedicated-sensor-i2c-bus.md. -->
+  <rect width="1040" height="760" fill="#0e1017"/>
+  <defs>
+    <linearGradient id="logo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#232836"/><stop offset="1" stop-color="#171a24"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .txt{fill:#e7e9f0}.mut{fill:#8b90a2}.pink{fill:#ec4899}.teal{fill:#2dd4bf}
+    .green{fill:#22c55e}.amber{fill:#f59e0b}
+    .h1{fill:#ffffff;font-size:26px;font-weight:700}.sub{fill:#8b90a2;font-size:13px}
+    .card{fill:#171a24;stroke:#2a2f3d;stroke-width:1}
+    .row{fill:#1e222e;stroke:#2a2f3d;stroke-width:1}
+    .navtxt{fill:#8b90a2;font-size:14px;font-weight:500}
+    .cardh{fill:#e7e9f0;font-size:15px;font-weight:600}.cardp{fill:#8b90a2;font-size:11px}
+    .lbl{fill:#8b90a2;font-size:11px}.val{fill:#e7e9f0;font-size:14px}
+    .btnt{fill:#e7e9f0;font-size:12px;font-weight:600}.btntp{fill:#ffffff;font-size:12px;font-weight:600}
+  </style>
+
+  <!-- ===== Sidebar ===== -->
+  <rect x="0" y="0" width="230" height="760" fill="#0b0d13"/>
+  <line x1="230" y1="0" x2="230" y2="760" stroke="#2a2f3d"/>
+  <rect x="18" y="22" width="40" height="40" rx="11" fill="url(#logo)" stroke="#2a2f3d"/>
+  <text x="38" y="48" text-anchor="middle" class="teal" font-size="15" font-weight="700">SH</text>
+  <text x="70" y="40" class="txt" font-size="15" font-weight="600">Shutter Hub</text>
+  <circle cx="74" cy="54" r="4" fill="#22c55e"/>
+  <text x="84" y="58" class="mut" font-size="11">online</text>
+
+  <text x="24" y="110" class="navtxt">ⓘ  Info</text>
+  <text x="24" y="146" class="navtxt">((•))  MQTT</text>
+  <text x="24" y="182" class="navtxt">⚡  Servo test</text>
+  <text x="24" y="218" class="navtxt">⧉  Shutters</text>
+  <rect x="10" y="234" width="210" height="34" rx="8" fill="#1e222e" stroke="#2a2f3d"/>
+  <text x="24" y="256" class="txt" font-size="14" font-weight="600">☀  Solar</text>
+  <text x="24" y="292" class="navtxt">⚙  System</text>
+  <text x="24" y="328" class="navtxt">⬆  OTA Update</text>
+  <text x="24" y="364" class="navtxt">▤  Logs</text>
+  <text x="24" y="730" class="mut" font-size="11">firmware v0.6.0</text>
+
+  <!-- ===== Header ===== -->
+  <text x="262" y="52" class="h1">Solar</text>
+  <text x="262" y="76" class="sub">Automatic heat protection — drive the shutters when the sun bakes the room, release when it passes.</text>
+
+  <!-- ===== Status card ===== -->
+  <rect x="262" y="96" width="750" height="176" rx="12" class="card"/>
+  <text x="284" y="126" class="teal" font-size="15">◫</text>
+  <text x="306" y="126" class="cardh">Status</text>
+  <text x="306" y="143" class="cardp">Live light level and automation state</text>
+
+  <text x="286" y="188" class="txt" font-size="34" font-weight="700">62,400</text>
+  <text x="410" y="188" class="mut" font-size="14">lx</text>
+  <text x="286" y="210" class="green" font-size="12">tripped · bright → Privacy · simulated</text>
+
+  <rect x="286" y="226" width="440" height="6" rx="3" fill="#1e222e"/>
+  <rect x="286" y="226" width="308" height="6" rx="3" fill="#f59e0b"/>
+  <text x="286" y="252" class="lbl">Simulate lux — 0 … 120 000  (test with no sensor fitted)</text>
+
+  <rect x="770" y="164" width="106" height="30" rx="7" class="row"/>
+  <text x="823" y="184" text-anchor="middle" class="btnt">Use simulated</text>
+  <rect x="886" y="164" width="106" height="30" rx="7" class="row"/>
+  <text x="939" y="184" text-anchor="middle" class="btnt">Use live sensor</text>
+
+  <!-- ===== Sensor card ===== -->
+  <rect x="262" y="288" width="366" height="212" rx="12" class="card"/>
+  <text x="284" y="318" class="pink" font-size="15">☀</text>
+  <text x="306" y="318" class="cardh">Sensor</text>
+  <text x="306" y="335" class="cardp">VEML7700 on its own I²C bus (Wire1)</text>
+
+  <text x="284" y="366" class="lbl">Sensor type</text>
+  <rect x="284" y="374" width="200" height="30" rx="7" class="row"/>
+  <text x="296" y="394" class="val" font-size="12">VEML7700 (I²C)  ▾</text>
+  <rect x="496" y="374" width="112" height="30" rx="15" fill="#132a1e" stroke="#22c55e"/>
+  <circle cx="514" cy="389" r="4" fill="#22c55e"/>
+  <text x="526" y="393" class="green" font-size="11">detected @0x10</text>
+
+  <text x="284" y="428" class="lbl">Wire1 SDA GPIO</text>
+  <rect x="284" y="436" width="140" height="30" rx="7" class="row"/>
+  <text x="296" y="456" class="val" font-size="12">25</text>
+  <text x="440" y="428" class="lbl">Wire1 SCL GPIO</text>
+  <rect x="440" y="436" width="140" height="30" rx="7" class="row"/>
+  <text x="452" y="456" class="val" font-size="12">26</text>
+  <text x="284" y="484" class="cardp">Own bus — a sensor fault can't disturb the servo bus. Not GPIO34–39.</text>
+
+  <!-- ===== Sensitivity card ===== -->
+  <rect x="646" y="288" width="366" height="212" rx="12" class="card"/>
+  <text x="668" y="318" class="teal" font-size="15">◑</text>
+  <text x="690" y="318" class="cardh">Sensitivity</text>
+  <text x="690" y="335" class="cardp">When to trip, and when to clear</text>
+
+  <text x="668" y="366" class="lbl">Trip when lux above</text>
+  <rect x="668" y="374" width="140" height="30" rx="7" class="row"/>
+  <text x="680" y="394" class="val" font-size="12">60000</text>
+  <text x="824" y="366" class="lbl">…held for (minutes)</text>
+  <rect x="824" y="374" width="140" height="30" rx="7" class="row"/>
+  <text x="836" y="394" class="val" font-size="12">10</text>
+
+  <text x="668" y="428" class="lbl">Clear when lux below</text>
+  <rect x="668" y="436" width="140" height="30" rx="7" class="row"/>
+  <text x="680" y="456" class="val" font-size="12">30000</text>
+  <text x="824" y="428" class="lbl">…held for (minutes)</text>
+  <rect x="824" y="436" width="140" height="30" rx="7" class="row"/>
+  <text x="836" y="456" class="val" font-size="12">20</text>
+  <text x="668" y="484" class="cardp">The gap between them is hysteresis — clouds won't flap the shutters.</text>
+
+  <!-- ===== Actions card ===== -->
+  <rect x="262" y="516" width="750" height="208" rx="12" class="card"/>
+  <text x="284" y="546" class="pink" font-size="15">⇅</text>
+  <text x="306" y="546" class="cardh">Actions</text>
+  <text x="306" y="563" class="cardp">Where the shutters go on trip and on clear</text>
+
+  <text x="284" y="594" class="lbl">When bright →</text>
+  <rect x="284" y="602" width="320" height="30" rx="7" class="row"/>
+  <text x="296" y="622" class="val" font-size="12">Privacy  ▾</text>
+  <text x="640" y="594" class="lbl">When clear →</text>
+  <rect x="640" y="602" width="320" height="30" rx="7" class="row"/>
+  <text x="652" y="622" class="val" font-size="12">Do nothing  ▾</text>
+
+  <text x="284" y="654" class="cardp">Open · Closed · Daylight · Privacy · Do nothing.  “Do nothing” drives no servos — set both to monitor only.</text>
+  <text x="284" y="671" class="cardp">A manual move pauses automation on that shutter for 2 hours.</text>
+
+  <rect x="284" y="684" width="46" height="24" rx="12" fill="#2dd4bf"/>
+  <circle cx="318" cy="696" r="9" fill="#0e1017"/>
+  <text x="342" y="700" class="val" font-size="12">Solar automation</text>
+
+  <rect x="758" y="682" width="130" height="30" rx="7" fill="#ec4899"/>
+  <text x="823" y="702" text-anchor="middle" class="btntp">Save &amp; Apply</text>
+  <rect x="900" y="682" width="92" height="30" rx="7" class="row"/>
+  <text x="946" y="702" text-anchor="middle" class="btnt">Reset</text>
+</svg>

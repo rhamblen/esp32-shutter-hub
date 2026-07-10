@@ -1,34 +1,51 @@
-# v0.5.4 — Apple HomeKit bridge (Phase 5)
+# v0.6.0 — Light sensor + solar heat protection (Phase 6)
 
-Phase 5 lands the **Apple HomeKit** integration on top of the existing Home Assistant support: each
-configured shutter is exposed to the Home app as a **Window Covering**, driven by the same servo
-engine as HA/MQTT. This release also carries a run of reliability fixes shaken out on real hardware.
+Phase 6 teaches the hub to watch the sun. A **VEML7700** ambient-light sensor feeds a trip/clear
+state machine: when the light stays above a threshold for a set dwell, every calibrated shutter
+moves to a preset you choose; when it stays below a second threshold, a second action runs. The gap
+between the two thresholds is hysteresis, so a passing cloud never flaps the blinds.
 
-> **HomeKit status — read this.** The bridge is built and runs: it advertises on the network, servos
-> and Home Assistant keep working with it enabled, and the pairing code is configurable. **But Apple
-> Home device discovery/pairing on the author's own network is still unresolved** — the iPhone
-> doesn't find the accessory yet. It's **parked** here as a checkpoint so the rest of the project can
-> move on. Everything non-HomeKit is in daily use.
+> **Build it before the sensor arrives.** The Solar page carries a **simulate-lux slider** — drive
+> the whole state machine, watch the shutters move, and tune the thresholds with no sensor fitted.
+> Everything in this release was exercised that way; **it has not yet been verified against physical
+> VEML7700 hardware.**
 
-## What's new since v0.4.3
+## What's new since v0.5.4
 
-- **Apple HomeKit bridge (HomeSpan)** — one Window Covering accessory per shutter, on HAP port 1201
-  alongside the web UI. New **System › HomeKit** tab: enable toggle, bridge name, 8-digit setup code
-  (default `748-88-377`) with a random-code generator, live bridge/pairing status, a pairing QR, and
-  *Reset pairings*. Uncalibrated shutters are still operable (servo-envelope default). `[v0.5.0]`
-- **Reliable reboot** — the web *Reboot* buttons and OTA now restart via a high-priority `esp_timer`
-  instead of a main-loop flag that could be starved, so a flashed image actually activates. OTA
-  flashing is decoupled from restarting (flash firmware and/or filesystem in any order, then Reboot).
-  `[v0.5.1]`
-- **HomeKit no longer freezes the servos** — HomeSpan now runs on its own FreeRTOS task; previously
-  sharing the main loop, its HAP/pairing work starved servo slewing and MQTT while the bridge ran.
-  `[v0.5.3]`
-- **Single mDNS owner** — HomeSpan is now the sole Bonjour responder when HomeKit is on (matching the
-  proven HomeKey-ESP32 design), so `_hap._tcp` is announced cleanly. `[v0.5.2, v0.5.4]`
-- **UI polish** — icons on the System and MQTT sub-tabs; SSL/TLS deliberately skipped (local-LAN
-  broker). `[v0.4.4]`
+- **Solar heat protection** — new `LightSensor` (real VEML7700 driver, replacing the stub) and
+  `SolarLogic` (`idle → counting-trip → tripped → counting-clear`) with independent dwell timers.
+  Defaults: trip above **60 000 lx for 10 min → Privacy**; clear below **30 000 lx for 20 min →
+  do nothing**.
+- **The sensor gets its own I²C bus.** It runs on **`Wire1`** (default **SDA 25 / SCL 26**, editable
+  in the UI), *not* the PCA9685's bus — so a damaged sensor lead can never wedge the servo driver.
+  This reverses an earlier design assumption; the reasoning is in
+  [ADR 0011](docs/decisions/0011-dedicated-sensor-i2c-bus.md).
+- **Five-valued actions.** The bright and clear targets are each **Open · Closed · Daylight ·
+  Privacy · Do nothing**. `Do nothing` advances the state but moves nothing — so a trip to Privacy
+  isn't automatically undone, and setting *both* to `Do nothing` turns the hub into a pure
+  sensor/reporter.
+- **Manual override** — a move you make yourself (web recall, or an HA cover/position/jog/recall
+  command) suspends automation on **that shutter for 2 hours**. The hub keeps tracking the light.
+- **New Solar page** — Status (live lux, state, dwell countdown, simulate slider), Sensor (type,
+  `Wire1` pins, live *detected @0x10* pill), Sensitivity (four numbers), Actions (both targets +
+  automation switch). Applies **without a reboot**.
+- **Home Assistant** — discovery now publishes an **illuminance sensor**, a **solar-state sensor**, a
+  **Solar automation switch**, and two **writable `number`** entities for the trip and clear lux
+  thresholds. Writing a clear ≥ trip is rejected (inverted hysteresis oscillates).
+- **`shutter-hub-card` v0.6.0** — optional solar toggle + live lux caption in the group header, via
+  the new `solar_switch` / `solar_lux` / `solar_state` config keys. Omit them and the card is
+  unchanged, so installs without a sensor are unaffected.
 
 Full detail per version in [CHANGELOG.md](CHANGELOG.md).
+
+### Notes
+
+- **Reported lux is approximate.** The driver reports a linear `counts × resolution` at a fixed
+  sun-range setting (gain 1/8, 25 ms integration, full scale ≈ 120 k lx); the vendor's high-lux
+  correction polynomial is deliberately skipped because it diverges across the 60–120 k lx band the
+  sensor exists to watch. Thresholds are calibrated against what *this* sensor reports.
+- **Flash is now 91.2%** of the app partition on `esp32d-pca9685`. The VEML7700 driver is hand-rolled
+  rather than pulled from Adafruit precisely to stay inside that budget.
 
 ## Download (ESP32-D / WROOM)
 
@@ -36,11 +53,14 @@ Two servo-backend variants; the LittleFS image is shared across both.
 
 | File | Use |
 | ---- | --- |
-| `shutter-hub-esp32d-pca9685-full-v0.5.4.bin` | First USB flash — PCA9685 (I2C multi-channel) build, at `0x0` |
-| `shutter-hub-esp32d-pca9685-ota-v0.5.4.bin`  | Firmware OTA — PCA9685 build |
-| `shutter-hub-esp32d-direct-full-v0.5.4.bin`  | First USB flash — direct-GPIO (single bench servo) build, at `0x0` |
-| `shutter-hub-esp32d-direct-ota-v0.5.4.bin`   | Firmware OTA — direct-GPIO build |
-| `shutter-hub-esp32d-littlefs-v0.5.4.bin`     | Filesystem image (web UI) — shared by both variants |
+| `shutter-hub-esp32d-pca9685-full-v0.6.0.bin` | First USB flash — PCA9685 (I2C multi-channel) build, at `0x0` |
+| `shutter-hub-esp32d-pca9685-ota-v0.6.0.bin`  | Firmware OTA — PCA9685 build |
+| `shutter-hub-esp32d-direct-full-v0.6.0.bin`  | First USB flash — direct-GPIO (single bench servo) build, at `0x0` |
+| `shutter-hub-esp32d-direct-ota-v0.6.0.bin`   | Firmware OTA — direct-GPIO build |
+| `shutter-hub-esp32d-littlefs-v0.6.0.bin`     | Filesystem image (web UI) — shared by both variants |
+
+**The filesystem image is mandatory this time** — the Solar page lives in it. Flash firmware alone
+and you'll get the old UI with no Solar tab.
 
 ## Flash it
 
@@ -49,6 +69,13 @@ Two servo-backend variants; the LittleFS image is shared across both.
 - **OTA (update):** on the OTA page, flash the `…-ota-…` firmware and the `…-littlefs-…` filesystem
   (any order), then click **Reboot**.
 - WiFi is set on-device via the `Shutter-Hub-Setup` captive portal — the bins carry no credentials.
+
+## Wiring the sensor
+
+Four wires to the VEML7700 breakout: **3V3 · GND · SDA → GPIO25 · SCL → GPIO26** (change the pins on
+the Solar page if you prefer others — but never GPIO34–39, which are input-only and cannot drive
+I²C). Keep the lead short, twist SDA/SCL with GND, and put a 0.1 µF cap at the sensor. Details in
+[docs/hardware-layout.md](docs/hardware-layout.md).
 
 ## Build from source
 

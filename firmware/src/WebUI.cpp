@@ -7,6 +7,8 @@
 #include "ServoController.h"
 #include "Shutters.h"
 #include "HomeKit.h"
+#include "LightSensor.h"
+#include "SolarLogic.h"
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <LittleFS.h>
@@ -106,6 +108,29 @@ static String hkConfigJson() {
   j += "\"running\":" + String(HomeKit::running() ? "true" : "false") + ",";
   j += "\"paired\":" + String(HomeKit::paired() ? "true" : "false") + ",";
   j += "\"controllers\":" + String(HomeKit::controllers());
+  j += "}";
+  return j;
+}
+
+static String solarConfigJson() {
+  String j = "{";
+  j += "\"enabled\":" + String(AppConfig::solarEnabled() ? "true" : "false") + ",";
+  j += "\"sensor\":{";
+  j +=   "\"enabled\":" + String(AppConfig::lsEnabled() ? "true" : "false") + ",";
+  j +=   "\"type\":"    + String(AppConfig::lsType()) + ",";
+  j +=   "\"sda\":"     + String(AppConfig::lsSda()) + ",";
+  j +=   "\"scl\":"     + String(AppConfig::lsScl()) + ",";
+  j +=   "\"present\":" + String(LightSensor::present() ? "true" : "false") + ",";
+  j +=   "\"lux\":"     + String(LightSensor::lux(), 0) + ",";
+  j +=   "\"simulated\":" + String(LightSensor::simulated() ? "true" : "false");
+  j += "},";
+  j += "\"trip\":{\"lux\":"  + String(AppConfig::solarTripLux())  + ",\"secs\":" + String(AppConfig::solarTripSecs())  + "},";
+  j += "\"clear\":{\"lux\":" + String(AppConfig::solarClearLux()) + ",\"secs\":" + String(AppConfig::solarClearSecs()) + "},";
+  j += "\"brightTarget\":" + String(AppConfig::solarBrightTarget()) + ",";
+  j += "\"clearTarget\":"  + String(AppConfig::solarClearTarget()) + ",";
+  j += "\"state\":\""    + String(SolarLogic::stateText()) + "\",";
+  j += "\"remaining\":"  + String(SolarLogic::secondsRemaining()) + ",";
+  j += "\"suspended\":"  + String(SolarLogic::suspendedCount());
   j += "}";
   return j;
 }
@@ -306,6 +331,45 @@ void begin() {
     r->send(200, "application/json", "{\"ok\":true,\"msg\":\"pairings cleared — re-pair from the Home app\"}");
   });
 
+  // ---- Solar (light sensor + heat protection, Phase 6) ----
+  server.on("/api/solar", HTTP_GET, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    r->send(200, "application/json", solarConfigJson());
+  });
+  server.on("/api/solar", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    auto p = [&](const char *k, const String &d) {
+      return r->hasParam(k, true) ? r->getParam(k, true)->value() : d;
+    };
+    auto b = [&](const char *k) { return p(k, "") == "true" || p(k, "") == "1"; };
+    // Sensor (Wire1 bus + type + enable). Minutes in the form → seconds in NVS.
+    bool     lsEn    = b("lsEnabled");
+    uint8_t  lsType  = (uint8_t) p("lsType", String(AppConfig::lsType())).toInt();
+    uint8_t  sda     = (uint8_t) p("sda", String(AppConfig::lsSda())).toInt();
+    uint8_t  scl     = (uint8_t) p("scl", String(AppConfig::lsScl())).toInt();
+    // Solar thresholds + targets.
+    bool     solEn   = b("enabled");
+    uint32_t tripLux = (uint32_t) p("tripLux",  String(AppConfig::solarTripLux())).toInt();
+    uint16_t tripS   = (uint16_t)(p("tripMin",  String(AppConfig::solarTripSecs()  / 60)).toInt() * 60);
+    uint32_t clrLux  = (uint32_t) p("clearLux", String(AppConfig::solarClearLux())).toInt();
+    uint16_t clrS    = (uint16_t)(p("clearMin", String(AppConfig::solarClearSecs() / 60)).toInt() * 60);
+    uint8_t  bright  = (uint8_t) p("brightTarget", String(AppConfig::solarBrightTarget())).toInt();
+    uint8_t  clear   = (uint8_t) p("clearTarget",  String(AppConfig::solarClearTarget())).toInt();
+    AppConfig::setLightSensor(lsEn, lsType, sda, scl);
+    AppConfig::setSolar(solEn, tripLux, tripS, clrLux, clrS, bright, clear);
+    LightSensor::reconfigure();          // apply bus pins / enable without a reboot
+    Mqtt::solarChanged();                // echo the new thresholds/switch state to HA
+    LOGI("solar", "config saved: sensor=%d bus SDA%u/SCL%u, automation=%d", lsEn, sda, scl, solEn);
+    r->send(200, "application/json", solarConfigJson());
+  });
+  // Force an effective lux for testing (?lux=N) or drop back to the live sensor (?live=1).
+  server.on("/api/solar/simulate", HTTP_POST, [](AsyncWebServerRequest *r) {
+    if (!guard(r)) return;
+    if (r->hasParam("live", true))     LightSensor::useLive();
+    else if (r->hasParam("lux", true)) LightSensor::simulate(r->getParam("lux", true)->value().toFloat());
+    r->send(200, "application/json", solarConfigJson());
+  });
+
   // ---- WiFi (feeds the System > WiFi sub-tab) ----
   server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *r) {
     if (!guard(r)) return;
@@ -499,6 +563,7 @@ void begin() {
                                                  : Shutters::favUs(id, fav == "privacy");
     if (us == Shutters::UNSET) { r->send(400, "application/json", "{\"error\":\"position not set yet\"}"); return; }
     ServoController::writeUs(us);
+    SolarLogic::notifyManualMove(id);   // a user recall pauses solar automation on this shutter for 2 h
     r->send(200, "application/json", ServoController::statusJson());
   });
 

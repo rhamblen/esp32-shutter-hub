@@ -11,6 +11,16 @@
 //   publish    <base>/cover/<id>/position      0–100                       (retained)
 //   publish    <base>/cover/<id>/state         opening|closing|open|closed|stopped (retained)
 //
+// Solar heat protection (Phase 6, v0.6.0) adds a hub-wide block — an illuminance sensor,
+// a state sensor, an enable switch, and two writable lux thresholds (the `number` entities
+// an HA-side calibration card writes back into):
+//   subscribe  <base>/solar/enable/set         ON | OFF
+//   subscribe  <base>/solar/trip_lux/set       lux (must stay above clear_lux)
+//   subscribe  <base>/solar/clear_lux/set      lux (must stay below trip_lux)
+//   publish    <base>/solar/lux                current lux                 (retained)
+//   publish    <base>/solar/state              disabled|idle|counting-trip|tripped|counting-clear
+//   publish    <base>/solar/{enable,trip_lux,clear_lux}   echoed config    (retained)
+//
 // Uses PubSubClient (blocking). Safe because the web UI is served by the async
 // web server on its own task — a stalled broker never freezes the interface.
 #pragma once
@@ -22,6 +32,8 @@ void   loop();            // pump the client + reconnect + publish shutter state
 void   reconfigure();     // re-read AppConfig and reconnect (call after the MQTT page applies)
 void   shuttersChanged(); // flag a shutter config mutation — discovery + state re-publish
                           // happen on the next loop() (safe to call from the web task)
+void   solarChanged();    // flag a solar config mutation — re-publish the solar state topics
+                          // on the next loop() (safe to call from the web task)
 
 bool   connected();
 String stateText();       // "disabled" | "connecting" | "connected" | "error: ..."

@@ -10,7 +10,8 @@
 //   Shutters        per-blind definitions + calibration (NVS)     [Phase 2 real]
 //   Mqtt            HA covers/buttons + discovery + state         [Phase 4 real, v0.4.0]
 //   HomeKit         HomeSpan bridge (Window Covering / shutter)   [Phase 5 real, v0.5.0]
-//   LightSensor     VEML7700 solar protection                   [stub, Phase 6]
+//   LightSensor     VEML7700 ambient light on Wire1              [Phase 6 real, v0.6.0]
+//   SolarLogic      trip/clear heat-protection state machine     [Phase 6 real, v0.6.0]
 //
 // The `-direct` variants run on a bare ESP32 dev board; the `-pca9685` variants
 // expect a PCA9685 on I2C (see platformio.ini / ADR 0008). No servos required to boot.
@@ -28,6 +29,7 @@
 #include "Mqtt.h"
 #include "HomeKit.h"
 #include "LightSensor.h"
+#include "SolarLogic.h"
 
 #ifndef FW_VERSION
 #define FW_VERSION "0.0.0"
@@ -55,7 +57,8 @@ void setup() {
   Shutters::begin();       // load per-blind definitions + calibration from NVS
   Mqtt::begin();
   HomeKit::begin();
-  LightSensor::begin();
+  LightSensor::begin();    // VEML7700 on its own I2C bus (Wire1)
+  SolarLogic::begin();     // trip/clear heat-protection state machine
 
   LOGI("main", "ready");
 }
@@ -65,5 +68,7 @@ void loop() {
   ServoController::loop();   // advances the non-blocking servo sweep, if running
   Mqtt::loop();             // pump MQTT client + non-blocking reconnect
   HomeKit::loop();          // pump HomeSpan (HAP) + deferred pairing reset
+  LightSensor::loop();      // sample the VEML7700 (~1 Hz)
+  SolarLogic::loop();       // advance the trip/clear state machine
   delay(5);
 }
