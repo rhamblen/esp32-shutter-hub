@@ -8,7 +8,7 @@ Enclosures and mechanical parts for the hub and the per-shutter actuator modules
 | ---- | ---- | ----- |
 | `hub-enclosure/` | Wall-mounted hub box | Compartments for AITRIP trigger, XL4015 (vent slots above), ESP32-D, PCA9685; servo-cable exits; VEML7700 light window |
 | `actuator-module/` | P1 — servo cradle bracket | MG90D pocket 23.1×12.5, M2 tab bosses @27.5 mm, ~3 mm base with slotted holes (±4 mm x/y); screws flat to the bottom rail's rear face (hidden, recommended) or room face |
-| `slat-hook/` | P2 — slat-hook crank | Clips over the bottom slat ≥10 mm inboard of the tilt rod; M2 ball-stud hole at 26 mm radius, phase −10° (rear) / −170° (front); spare holes 22 / 30 mm |
+| `slat-hook/` | P2 — slat-clip crank (**produced**: `slat-clip-crank.3mf`) | Zemismart-style sleeve clip + added drill boss; wedges onto the 8 mm slat, M2 ball stud drilled 12 mm from the rear edge → pin 26.6 mm @ −16°; see [slat-hook/README.md](slat-hook/README.md) |
 | `servo-arm/` | P3 — 22 mm servo arm (optional) | Only for the 34 mm-crank torque variant; stock 20 mm horn is the baseline |
 | `servo-test-bracket/` | Phase 0 proving rig | Temporary mount to run the force test |
 

@@ -6,6 +6,16 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Added
+- **[cad/slat-hook/slat-clip-crank.3mf](cad/slat-hook/slat-clip-crank.3mf)** — first produced CAD
+  part (P2): the owner's Zemismart-style slat sleeve clip, reverse-engineered from the mesh
+  (mouth 8.35 mm wedging tight on the measured 8 mm slat; 5 mm rod-bar jaw unused), with a solid
+  drill boss added under the bottom strap. Drilled 12 mm from the slat's rear edge it gives the
+  rear pull-down crank pin (26.6 mm @ −16°); matching solved linkage: stock 20 mm horn, M2×35
+  pushrod at 58 mm, servo axis (+21, −49) on the rail rear face — ~129° sweep, jam margin 9.9 mm,
+  torque ratio ≤0.79, everything hidden behind the panel. Fitting/drilling instructions in
+  [cad/slat-hook/README.md](cad/slat-hook/README.md).
+
 ### Documentation
 Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, no version change.**
 
