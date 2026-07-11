@@ -90,28 +90,33 @@ through the gears and demanding perfect alignment).
 > Full analysis, collision checks and an interactive simulator:
 > **[docs/tilt-linkage-design.html](tilt-linkage-design.html)** (open locally in a browser).
 
-| Element             | Baseline value (pending site measurements)                    |
-| ------------------- | -------------------------------------------------------------- |
-| Servo arm radius    | **25 mm** printed arm (spare holes at 22 / 28 mm)               |
-| Rocker radius R     | 36 mm (slat pivot → tilt-rod staple centre)                     |
-| Pushrod             | M2 ball-link, **hole-to-hole 50 mm** (M2×50 cut down, or M2×35) |
-| Servo axis          | 8 mm room-side of the pivot plane, 60 mm below bottom slat pivot|
-| Servo sweep         | ~140° of 180° → full 90° slat travel, near-linear mid-stroke    |
-| Torque (worst case) | servo sees ≤0.78× slat friction → ≈2.8 kg·cm available at slats |
-| Rail pocket         | ≈39 × 45 × 14 mm routed into the bottom rail **rear** face      |
+The frame/rail is **28 mm thick (measured)**, which rules out any mortised pocket. Both surviving
+layouts surface-mount the servo cradle flat on a face of the bottom rail and drive a printed
+**slat-hook bracket** (clips over the bottom slat — the tilt rod itself sits flush at closed and
+cannot be gripped). Each layout works with one slat closure direction only:
 
-The linkage approaches dead-centre exactly at fully-closed: the servo holds the shutters shut with
-almost no torque and has maximum force available to break the closed friction. Mounting the servo
-shaft **outboard** (toward the stile) merely mirrors the rotation — handled entirely by endpoint
-calibration, no firmware change.
+| Element             | **A — rear mount (recommended, hidden)**  | B — front mount (visible)   |
+| ------------------- | ------------------------------------------ | --------------------------- |
+| Closure direction   | rear slat edge UP at closed                | rear slat edge DOWN         |
+| Slat-hook crank pin | 26 mm radius, phase −10°                   | 26 mm radius, phase −170°   |
+| Servo arm           | stock **20 mm** horn                       | stock **20 mm** horn        |
+| Pushrod hole-to-hole| **58 mm** → M2×40 (58–68) or M2×35         | **52 mm** → M2×30 (48–58)   |
+| Servo axis (x, y)   | (+23, −47) = ½ frame + ½ servo + 3 mm plate| (−21, −41)                  |
+| Servo sweep         | ~122° of 180° → 90° slat travel            | ~123°                       |
+| Torque (worst case) | ≤0.84× → ≈2.6 kg·cm at slats               | ≤0.86× → ≈2.6 kg·cm         |
+| Depth used          | ≤43 mm — within the rod's own sweep        | ~27 mm proud into the room  |
+
+Jam margin is ≥10 mm of effective horn arm throughout both layouts (no dead-centre). The slat hook
+must sit **≥10 mm inboard of the tilt rod's plane** so the rod passes beside the pushrod (they cross
+in x–y but live in different vertical planes). Servo shaft points inboard; a flipped/mirrored servo
+only reverses rotation, which the per-shutter µs endpoint calibration absorbs — no firmware change.
 
 ### Linkage parts (chosen)
 
-- **M2 × 50 mm ball-link pushrod** — link-rod 50 mm; total adjustable 75–85 mm; hole-to-hole
-  68–78 mm as supplied. **Cut ~9 mm off each threaded end** for the working 50 mm hole-to-hole
-  (each end keeps ~10 mm of thread), or order **M2 × 35 mm** rods (53–63 mm) instead. 304 stainless
-  rod + nylon ball ends.
-- Threaded ends give length adjustment (±5 mm) and low backlash.
+- **M2 ball-link pushrod** — rear mount wants **58 mm hole-to-hole** (M2×40, range 58–68, or M2×35
+  at full extension); front mount wants **52 mm** (M2×30, range 48–58). The owned M2×50s (68–78 mm)
+  are too long uncut; keep as spares. 304 stainless rod + nylon ball ends; threaded ends give
+  ±5 mm adjustment and low backlash.
 
 ---
 

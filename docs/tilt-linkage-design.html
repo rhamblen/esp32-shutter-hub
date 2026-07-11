@@ -61,6 +61,12 @@
     background: var(--accent); color: var(--paper); border: none; padding: 6px 14px; cursor: pointer;
   }
   button.play:focus-visible, input:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .presets { display: flex; gap: 8px; margin-bottom: 12px; }
+  .presets button {
+    flex: 1; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; padding: 7px 6px;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line); cursor: pointer;
+  }
+  .presets button.active { background: var(--accent); color: var(--paper); border-color: var(--accent); }
   aside .group { border: 1px solid var(--line); background: var(--panel); margin-bottom: 12px; }
   aside .group h2 {
     font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
@@ -148,14 +154,18 @@
             radius <code>R</code> — it never rotates. The servo drives the rod's bottom pin through the
             ball-link pushrod. Scrub the slider to run the mechanism; anything that collides or jams
             is flagged on the right. Faint arcs show the swept envelope; the shaded zone is the
-            bottom rail — if copper parts enter it, that volume must be pocketed out of the rail's
-            rear face. Measure your shutter, type the numbers in, and re-check the flags.
+            bottom rail — solid wood, so the linkage must stay out of it. The green arm is the
+            printed slat-hook crank. Measure your shutter, type the numbers in, and re-check the flags.
           </p>
         </div>
       </div>
     </div>
 
     <aside>
+      <div class="presets">
+        <button type="button" data-preset="rear" class="active">Rear mount (hidden)</button>
+        <button type="button" data-preset="front">Front mount (room side)</button>
+      </div>
       <div class="readouts" id="readouts"></div>
       <ul class="flags" id="flags"></ul>
       <div class="group">
@@ -192,23 +202,33 @@
     </section>
 
     <section>
-      <h2><span class="no">2</span>Baseline geometry (pending site measurements)</h2>
+      <h2><span class="no">2</span>Two workable layouts (28 mm frame, measured)</h2>
+      <p>
+        With the frame measured at <strong>28 mm thick</strong>, the mortised-pocket concept is dead
+        (a 39 mm pocket cannot live in a 28 mm rail) — but surface mounting works on <em>either</em>
+        face of the bottom rail. Both layouts drive a printed <em>slat-hook bracket</em> (clips over
+        the bottom slat — no screws in the slat, no connection to the flush-fitting tilt rod) and are
+        near-perfect mirror images. The one physical difference: each mount only works with one slat
+        closure direction.
+      </p>
       <div class="tblwrap"><table>
-        <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
-        <tr><td>Servo arm radius</td><td class="num">25 mm</td><td>3D-printed arm over the stock horn; add 22 / 28 mm spare holes for tuning</td></tr>
-        <tr><td>Pushrod hole-to-hole</td><td class="num">50 mm</td><td>M2×50 rod cut ~9 mm off each threaded end — or order M2×35 rods (53–63 mm range)</td></tr>
-        <tr><td>Servo axis position</td><td class="num">x −8, y −60 mm</td><td>8 mm room-side of the slat-pivot plane, 60 mm below the bottom slat pivot</td></tr>
-        <tr><td>Servo sweep used</td><td class="num">~140° of 180°</td><td>≈20° two-sided margin for calibration; mapping is near-linear mid-stroke</td></tr>
-        <tr><td>Slat travel</td><td class="num">−90° → 0°</td><td>fully closed → fully open; which “closed” direction is a mounting/phase choice</td></tr>
-        <tr><td>Torque ratio (worst)</td><td class="num">≤ 0.78</td><td>servo never sees more than 0.78× slat friction torque; ~2.8 kg·cm available at slats</td></tr>
-        <tr><td>Rear-most excursion</td><td class="num">36 mm</td><td>equals the tilt rod's own swing — needs no extra window depth</td></tr>
-        <tr><td>Rail pocket</td><td class="num">≈39 × 45 × 14 mm</td><td>routed into the bottom rail <em>rear</em> face; invisible from the room</td></tr>
+        <tr><th>Parameter</th><th>Option A — rear mount (recommended)</th><th>Option B — front mount</th></tr>
+        <tr><td>Where</td><td class="num">rail's window-side face — <strong>hidden</strong></td><td class="num">rail's room-side face — visible</td></tr>
+        <tr><td>Closure direction</td><td class="num">rear slat edge UP at closed</td><td class="num">rear slat edge DOWN at closed</td></tr>
+        <tr><td>Crank (slat hook pin)</td><td class="num">26 mm radius, phase −10°</td><td class="num">26 mm radius, phase −170°</td></tr>
+        <tr><td>Servo arm</td><td class="num">20 mm — stock horn</td><td class="num">20 mm — stock horn</td></tr>
+        <tr><td>Pushrod hole-to-hole</td><td class="num">58 mm → M2×40 (58–68) or M2×35</td><td class="num">52 mm → M2×30 (48–58)</td></tr>
+        <tr><td>Servo axis (x, y)</td><td class="num">(+23, −47) = 14 + 6.1 + 3 mm plate</td><td class="num">(−21, −41)</td></tr>
+        <tr><td>Servo sweep</td><td class="num">~122°</td><td class="num">~123°</td></tr>
+        <tr><td>Jam margin (min horn arm)</td><td class="num">10.8 mm — no dead-centre</td><td class="num">10.8 mm — no dead-centre</td></tr>
+        <tr><td>Torque ratio (worst)</td><td class="num">≤ 0.84 → ~2.6 kg·cm at slats</td><td class="num">≤ 0.86 → ~2.6 kg·cm at slats</td></tr>
+        <tr><td>Depth used</td><td class="num">x ≤ 43 mm — within the rod's own sweep</td><td class="num">~27 mm proud into the room</td></tr>
       </table></div>
       <p class="callout">
-        The near-dead-centre at the fully-closed end is a feature: the servo holds the shutters shut
-        with almost no torque (good for the solar/battery budget) and has maximum force available to
-        break the closed-position friction. Firmware endpoint calibration must simply never command
-        past the closed endpoint.
+        Option A hides everything behind the panel and needs no more window depth than the hidden
+        tilt rod already sweeps — but it closes the slats room-side-edge-down. If the shutters must
+        close the other way (room-side edge up), use Option B and accept the visible servo. Compare
+        both live with the preset buttons above.
       </p>
     </section>
 
@@ -217,7 +237,7 @@
       <ol class="cols2">
         <li><strong>R</strong> — slat pivot pin to tilt-rod staple centre (assumed 36 mm).</li>
         <li><strong>Slat pitch</strong> — pivot to pivot (assumed 63 mm).</li>
-        <li><strong>Panel / rail thickness</strong> — front face to rear face (assumed 44 mm).</li>
+        <li><strong>Panel / rail thickness</strong> — front face to rear face (<em>measured: 28 mm</em>).</li>
         <li><strong>Rail top below pivot</strong> — bottom slat pivot down to the top edge of the bottom rail (assumed 45 mm). <em>This decides whether the rail pocket is needed at all.</em></li>
         <li><strong>Rear clearance</strong> — slat-pivot plane to glass / window frame (assumed ≥46 mm; the rod itself already needs ~40).</li>
         <li><strong>Rod plane offset</strong> — stile inner face to tilt-rod centreline (sets the bracket's sideways stand-off; not in the 2-D sim).</li>
@@ -231,27 +251,41 @@
       <h2><span class="no">4</span>Mounting, rotation direction &amp; the window frame</h2>
       <p>
         The servo output shaft must be <strong>parallel to the slat pivot axes</strong> (rotation in
-        the same plane as the slats). That leaves exactly two ways round, and they are mirror images:
+        the same plane as the slats). On a rail-face mount the body lies flat along the rail, so both
+        shaft directions fit — point the shaft <strong>inboard</strong> (toward the panel centre) so
+        the horn plane lands on the slat-hook plane, with the body extending toward the stile.
+        Flipping the servo <strong>changes nothing kinematically</strong> — only the rotation sense
+        reverses, and the firmware's per-shutter closed/open µs endpoints absorb that entirely
+        (closed simply gets the other end of the pulse range). No code change, no new maths.
       </p>
-      <div class="tblwrap"><table>
-        <tr><th>Orientation</th><th>Body sits</th><th>Rotation sense</th><th>Verdict</th></tr>
-        <tr><td><strong>Shaft pointing inboard</strong> (toward panel centre)</td>
-            <td>between the horn plane and the stile — needs ~30 mm of sideways room that the rod offset (~15 mm) doesn't give</td>
-            <td>as simulated</td><td>usually <strong>doesn't fit</strong></td></tr>
-        <tr><td><strong>Shaft pointing outboard</strong> (toward the stile / window frame)</td>
-            <td>inboard of the rod plane, under the slats' span — clear of the window frame</td>
-            <td>mirrored (reversed)</td><td><strong>recommended</strong></td></tr>
-      </table></div>
       <p>
-        Flipping the servo <strong>changes nothing kinematically</strong> — the linkage geometry is
-        identical, only the direction of rotation reverses. The firmware already stores per-shutter
-        closed/open endpoints in µs, so a reversed servo is handled entirely by calibration (closed
-        simply gets the other end of the pulse range). No code change, no new maths.
+        <strong>Sideways (plane) offset:</strong> the slat pivots live inside the stile, so a
+        stile-side servo would sit ~20 mm off the crank's plane. That is tolerable within limits: a
+        <em>constant</em> out-of-plane offset <code>dz</code> just shortens the pushrod's effective
+        in-plane length to <code>√(L² − dz²)</code> (enter that value as the pushrod length in the
+        simulator) and the ball links run at a fixed angle <code>atan(dz/L)</code>. Nylon M2 ball links
+        articulate ~±15°, so keep <code>dz ≤ L/4</code> and split the angle by tilting both ball studs.
+        The recommended mounts avoid the issue entirely: the cradle sits on the rail face, and the
+        horn's position along the shaft direction is set by the bracket — slide it to put the horn
+        plane on the crank plane (dz ≈ 0).
+      </p>
+      <p>
+        <strong>Why a slat hook, not a rod clamp:</strong> the tilt rod sits flush against the
+        slat edges / frame at closed, leaving nothing to grip, and its pin is locked at 36 mm radius,
+        phase 0. A bracket hooked over the <em>bottom slat</em> (like the Zemismart-style clip) is a
+        proper crank whose radius <em>and</em> phase are free — that freedom is what makes both
+        surface-mount layouts solvable at all. It also comes off without a trace.
+      </p>
+      <p>
+        <strong>Slat hook vs the tilt rod (rear mount):</strong> in x–y the pushrod and the hanging
+        tilt rod cross paths, but they live in different vertical planes — put the hook (and therefore
+        the horn plane) <strong>≥10 mm inboard of the rod's plane</strong> and the rod passes beside
+        the linkage, never through it.
       </p>
       <p>
         Two more fit constraints: mount <em>everything on the panel</em> (never bridge panel → frame,
         or the panel can no longer hinge open for cleaning) and leave a flexible service loop in the
-        servo lead at the hinge side. The horn plane must line up with the tilt-rod plane to within
+        servo lead at the hinge side. The horn plane must line up with the crank plane to within
         ~2 mm — the ball links absorb small residual misalignment (~5°).
       </p>
     </section>
@@ -320,17 +354,14 @@
       <div class="tblwrap"><table>
         <tr><th>#</th><th>Part</th><th>Key features</th><th>Print notes</th></tr>
         <tr><td class="num">P1</td><td><strong>Servo cradle bracket</strong></td>
-            <td>MG90D pocket (23.1 × 12.5), M2 tab bosses @27.5 mm, base plate with <em>slotted</em> Ø3.5 holes giving ±4 mm x/y adjustment, sideways stand-off arm to put the horn plane on the rod plane</td>
+            <td>MG90D pocket (23.1 × 12.5), M2 tab bosses @27.5 mm, ~3 mm base plate with <em>slotted</em> Ø3.5 holes giving ±4 mm x/y adjustment; screws flat to the rail's rear face (Option A, axis at +23, −47) or room face (Option B, −21, −41); shaft points inboard so the horn plane lands on the hook plane</td>
             <td>PETG, 40 %+ infill, pocket axis vertical, no supports</td></tr>
-        <tr><td class="num">P2</td><td><strong>Servo arm, 25 mm</strong></td>
-            <td>Sandwiches the stock single-arm horn (two M2 clamp screws through existing horn holes); M2 ball-link holes at 22 / 25 / 28 mm from axis; ~4 mm thick</td>
+        <tr><td class="num">P2</td><td><strong>Slat-hook bracket (crank)</strong></td>
+            <td>C-hook clips over the bottom slat near the stile, ≥10 mm inboard of the tilt rod's plane (fit to measured slat thickness + a light snap); arm carries an M2 ball-stud hole at <strong>26 mm radius</strong>, phase <strong>−10°</strong> (A) or <strong>−170°</strong> (B); spare holes at 22 / 30 mm. Same idea as the Zemismart clip but with the pin where the solver wants it</td>
+            <td>PETG, printed flat on its side, 5 perimeters; hook slot ±0.1 mm</td></tr>
+        <tr><td class="num">P3</td><td><strong>22 mm servo arm</strong> <em>(optional)</em></td>
+            <td>Only if the bench force test wants more travel margin: pairs with the 34 mm crank hole for ~135° sweep at ratio ≤0.80; sandwiches the stock horn, two M2 clamp screws</td>
             <td>PETG/ABS, printed flat, 100 % infill or 5 perimeters</td></tr>
-        <tr><td class="num">P3</td><td><strong>Tilt-rod pin adapter</strong></td>
-            <td>Clamps the bottom of the hidden tilt rod (slot to measured rod cross-section + M3 pinch screw); M2 hole for the lower ball link, positioned so the pin sits on the bottom staple line (keeps R = 36)</td>
-            <td>PETG, slot axis vertical for strength across the clamp</td></tr>
-        <tr><td class="num">P4</td><td><strong>Pocket cover plate</strong> <em>(only if the rail pocket is needed)</em></td>
-            <td>Flush cover over the routed pocket with a slot for the pushrod's travel fan; two countersunk screws</td>
-            <td>any material, 3 perimeters</td></tr>
       </table></div>
       <p>
         P1's slotted base plus the pushrod's threaded ball ends (±5 mm) give every adjustment needed
@@ -343,11 +374,12 @@
     <section>
       <h2><span class="no">7</span>Torque budget</h2>
       <p>
-        MG90D usable torque ≈ 2.2 kg·cm (stall 2.4–2.8). Worst-case transmission ratio 0.78 means
-        ≥ <strong>2.8 kg·cm available at the slat crank</strong>, i.e. ~0.78 kg of tangential force
-        at the rod pin. The measured rod pull force (checklist item 8) must come in under
-        ~0.6 kg for comfortable margin; the slat tension screws are the adjustment if it doesn't.
-        Peak coupler loads near the closed dead-centre stay well inside the M2 ball links' rating.
+        MG90D usable torque ≈ 2.2 kg·cm (stall 2.4–2.8). Worst-case transmission ratio ≤0.84 (A) /
+        ≤0.86 (B) means ≥ <strong>~2.6 kg·cm available at the slat crank</strong> — equivalent to
+        ~0.7 kg of tangential force at the tilt rod's 36 mm radius. The measured rod pull force
+        (checklist item 8) must come in under ~0.6 kg for comfortable margin; the slat tension
+        screws are the adjustment if it doesn't. Peak coupler loads stay well inside the M2 ball
+        links' rating in both options.
       </p>
       <p class="callout">
         This page is self-contained: the exact solver used for every number above is the JavaScript
@@ -360,18 +392,22 @@
 
 <script>
 'use strict';
-const P = {
-  R: 36, slatW: 75, pitch: 63, panelT: 44, railTop: 45, rearClear: 46,
-  armR: 25, rodL: 50, Sx: -8, Sy: -60, closedDeg: -90, openDeg: 0,
+const PRESETS = {
+  rear:  { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
+           armR: 20, rodL: 58, Sx: 23, Sy: -47, crankR: 26, crankPh: -10, closedDeg: 90, openDeg: 0 },
+  front: { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
+           armR: 20, rodL: 52, Sx: -21, Sy: -41, crankR: 26, crankPh: -170, closedDeg: -90, openDeg: 0 },
 };
+const P = Object.assign({}, PRESETS.rear);
 const SHUTTER_FIELDS = [
-  ['R','Pivot → rod pin radius','mm'], ['slatW','Slat width','mm'], ['pitch','Slat pitch','mm'],
+  ['R','Pivot → rod staple radius','mm'], ['slatW','Slat width','mm'], ['pitch','Slat pitch','mm'],
   ['panelT','Panel / rail thickness','mm'], ['railTop','Rail top below pivot','mm'],
   ['rearClear','Rear clearance from pivot plane','mm'],
 ];
 const LINK_FIELDS = [
   ['armR','Servo arm radius','mm'], ['rodL','Pushrod hole-to-hole','mm'],
   ['Sx','Servo axis x (+ = rear)','mm'], ['Sy','Servo axis y (− = down)','mm'],
+  ['crankR','Crank pin radius','mm'], ['crankPh','Crank pin phase','°'],
   ['closedDeg','Slat angle, closed','°'], ['openDeg','Slat angle, open','°'],
 ];
 const N = 121, D2R = Math.PI/180, R2D = 180/Math.PI;
@@ -405,22 +441,29 @@ function segRail(a, b) { // distance from segment to solid rail box (0 = inside/
   for (let i = 0; i < 4; i++) d = Math.min(d, segSeg(a, b, c[i], c[(i+1)%4]));
   return d;
 }
-const pinAt = t => [P.R*Math.cos(t), P.R*Math.sin(t)];
+// Drive pin: on the tilt rod when crankR=R & crankPh=0, or on a printed slat-hook
+// bracket (crank rigid with the bottom slat) at any radius/phase.
+const pinAt = t => {
+  const a = t + P.crankPh*D2R;
+  return [P.crankR*Math.cos(a), P.crankR*Math.sin(a)];
+};
 
 function march(a1, sweep, dir) {
   // Walk the horn through its sweep, tracking the coupler's assembly branch.
   const S = [P.Sx, P.Sy], tc = P.closedDeg*D2R;
   let prev = pinAt(tc);
   const st = { rows: [], ok: true, fail: null, minArmH: 1e9, maxRatio: 0,
-               env: {x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9}, railHit: false, slatHit: false, rearHit: false };
+               env: {x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9}, railHit: false, slatHit: false, rearHit: false,
+               railX0: 1e9, railY0: 1e9 };
   for (let i = 0; i < N; i++) {
     const phi = a1 + dir*sweep*i/(N-1);
     const H = [S[0]+P.armR*Math.cos(phi), S[1]+P.armR*Math.sin(phi)];
-    const sols = circInt([0,0], P.R, H, P.rodL);
+    const sols = circInt([0,0], P.crankR, H, P.rodL);
     if (!sols.length) { st.ok = false; st.fail = 'assembly'; break; }
     const Pn = sols.reduce((b,q) => (q[0]-prev[0])**2+(q[1]-prev[1])**2 < (b[0]-prev[0])**2+(b[1]-prev[1])**2 ? q : b);
     prev = Pn;
-    const th = Math.atan2(Pn[1], Pn[0]);
+    let th = Math.atan2(Pn[1], Pn[0]) - P.crankPh*D2R;
+    if (th > Math.PI) th -= 2*Math.PI; else if (th < -Math.PI) th += 2*Math.PI;
     let ux = Pn[0]-H[0], uy = Pn[1]-H[1]; const ul = Math.hypot(ux,uy); ux/=ul; uy/=ul;
     const armH = Math.abs((H[0]-S[0])*uy - (H[1]-S[1])*ux);
     const armC = Math.abs(Pn[0]*uy - Pn[1]*ux);
@@ -430,12 +473,18 @@ function march(a1, sweep, dir) {
     const sd = [Math.cos(th), Math.sin(th)], hw = P.slatW/2 + 1.5;
     const sa = [-hw*sd[0], -hw*sd[1]], sb = [hw*sd[0], hw*sd[1]];
     if (segSeg(S, H, sa, sb) < 5) st.slatHit = true;
-    const drs = segSeg(H, Pn, sa, sb);
-    if (drs < 3.5 && Math.hypot(Pn[0]-sb[0], Pn[1]-sb[1]) > 14) st.slatHit = true;
+    // pushrod vs bottom slat: exempt the last 12mm next to its own pin (the pin
+    // rides on the bracket/staple, so proximity there is by construction)
+    const rl = Math.hypot(H[0]-Pn[0], H[1]-Pn[1]);
+    const Pt = [Pn[0] + 12*(H[0]-Pn[0])/rl, Pn[1] + 12*(H[1]-Pn[1])/rl];
+    if (segSeg(H, Pt, sa, sb) < 3.5) st.slatHit = true;
     if (segRail(S, H) < 2 || segRail(H, Pn) < 2) st.railHit = true;
     if (Math.max(H[0], Pn[0]) > P.rearClear) st.rearHit = true;
     st.env.x0 = Math.min(st.env.x0, H[0]); st.env.x1 = Math.max(st.env.x1, H[0], Pn[0]);
     st.env.y0 = Math.min(st.env.y0, H[1]); st.env.y1 = Math.max(st.env.y1, H[1]);
+    for (const q of [H, Pn]) if (Math.abs(q[0]) <= P.panelT/2 && q[1] < -P.railTop) {
+      st.railX0 = Math.min(st.railX0, q[0]); st.railY0 = Math.min(st.railY0, q[1]);
+    }
     st.rows.push({phi, H, P: Pn, th, armH, armC});
   }
   if (st.ok) {
@@ -445,16 +494,19 @@ function march(a1, sweep, dir) {
     st.mono = mono;
     st.travel = Math.abs(ths[ths.length-1] - ths[0]) * R2D;
     if (Math.abs(ths[ths.length-1] - P.openDeg*D2R) > 4*D2R) { st.ok = false; st.fail = 'branch'; }
-    // does the mechanism (or servo body) breach the rail's FRONT wall? A rear-face
-    // pocket can hide the mechanism, but it must leave ~7mm of front wall standing.
+    // does the mechanism (or servo body) breach the rail's FRONT wall? Only points
+    // INSIDE the rail volume count — a rear-face pocket can hide those, but it must
+    // leave ~7mm of front wall standing. Parts out in the room are fine.
     const frontLimit = -(P.panelT/2 - 7);
     const bodyX0 = P.Sx - 6.1, bodyBelowRail = P.Sy + 5 < -P.railTop;
-    st.frontHit = (st.env.y0 < -P.railTop && st.env.x0 < frontLimit) || (bodyBelowRail && bodyX0 < frontLimit);
-    // pocket needed in the rail rear face (bounding the mechanism + servo body below rail top)
-    if (st.railHit && !st.frontHit) {
-      const x0 = Math.min(st.env.x0, bodyBelowRail ? bodyX0 : 1e9);
-      const y0 = Math.min(st.env.y0, bodyBelowRail ? P.Sy - 23 : 1e9);
-      st.pocket = { depth: P.panelT/2 - x0 + 3, height: -P.railTop - y0 + 5 };
+    if (bodyBelowRail && bodyX0 > -P.panelT/2 && P.Sx + 6.1 > -P.panelT/2) {
+      st.railX0 = Math.min(st.railX0, Math.max(bodyX0, -P.panelT/2));
+      st.railY0 = Math.min(st.railY0, P.Sy - 23);
+    }
+    st.frontHit = st.railX0 < frontLimit;
+    // pocket needed in the rail rear face (bounding what actually sits inside the rail)
+    if (st.railHit && !st.frontHit && st.railX0 < 1e8) {
+      st.pocket = { depth: P.panelT/2 - st.railX0 + 3, height: -P.railTop - st.railY0 + 5 };
     }
   }
   return st;
@@ -525,6 +577,14 @@ function drawScene(sol, idx) {
       s.push(`<rect x="${a[0]}" y="${a[1]}" width="${w}" height="${h}" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>`);
       const c = px(S); s.push(`<circle cx="${c[0]}" cy="${c[1]}" r="3.2" fill="var(--accent)"/>`);
       s.push(`<text x="${a[0]-4}" y="${a[1]+h+14}" font-family="var(--mono)" font-size="10" fill="var(--accent)">MG90D</text>`); }
+    // crank: slat-hook bracket arm (or rod-pin adapter when it coincides with the staple)
+    { const q = P.crankR*Math.cos(P.crankPh*D2R);
+      const base = [q*Math.cos(th), q*Math.sin(th)];
+      s.push(poly([base, row.P], `stroke="var(--ok)" stroke-width="3.5" stroke-linecap="round" fill="none" opacity=".95"`));
+      if (Math.abs(P.crankR - P.R) > 2 || Math.abs(P.crankPh) > 3) {
+        const b = px(row.P);
+        s.push(`<text x="${b[0]+8}" y="${b[1]+14}" font-family="var(--mono)" font-size="10" fill="var(--ok)">SLAT HOOK</text>`);
+      } }
     // horn + pushrod + pin adapter
     s.push(poly([S, row.H], `stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" fill="none"`));
     s.push(poly([row.H, row.P], `stroke="var(--steel)" stroke-width="3" stroke-linecap="round" fill="none"`));
@@ -570,6 +630,8 @@ function drawReadouts(sol) {
     add('Torque ratio', `≤ ${sol.maxRatio.toFixed(2)}`);
     add('Slat torque avail.', `${(SERVO_TORQUE/Math.max(sol.maxRatio,.05)).toFixed(1)} <small>kg·cm</small>`);
     add('Rear-most point', `${sol.env.x1.toFixed(0)} <small>mm</small>`);
+    const frontMost = Math.min(sol.env.x0, P.Sx - 6.1);
+    if (frontMost < -P.panelT/2) add('Front protrusion', `${(-P.panelT/2 - frontMost).toFixed(0)} <small>mm into room</small>`);
     if (sol.pocket) add('Rail pocket', `${sol.pocket.depth.toFixed(0)}×${sol.pocket.height.toFixed(0)} <small>mm D×H</small>`);
   } else { add('Status', 'no solution'); }
   R_.innerHTML = cells.join('');
@@ -631,6 +693,18 @@ function buildFields(defs, mount) {
 }
 buildFields(SHUTTER_FIELDS, 'shutterFields');
 buildFields(LINK_FIELDS, 'linkFields');
+for (const btn of document.querySelectorAll('.presets button')) {
+  btn.addEventListener('click', () => {
+    Object.assign(P, PRESETS[btn.dataset.preset]);
+    for (const [k] of [...SHUTTER_FIELDS, ...LINK_FIELDS]) {
+      const el = document.getElementById('f_'+k);
+      if (el) el.value = P[k];
+    }
+    document.querySelectorAll('.presets button').forEach(b => b.classList.toggle('active', b === btn));
+    scrub.value = 0;
+    recompute();
+  });
+}
 recompute();
 </script>
 

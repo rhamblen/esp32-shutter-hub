@@ -9,18 +9,24 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 ### Added
 - **[docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)** — self-contained interactive
   design document for the tilt-rod mechanism: exact four-bar solver + animated simulator (enter
-  your shutter measurements, scrub the servo, get collision/torque flags), MG90D mount dimensions,
-  and the 3D-printed parts list (P1 cradle bracket, P2 25 mm arm, P3 rod-pin adapter, P4 pocket
-  cover).
+  your shutter measurements, scrub the servo, get collision/torque flags, switch mounting presets),
+  MG90D mount dimensions, and the 3D-printed parts list (P1 servo cradle, P2 slat-hook crank,
+  P3 optional 22 mm arm).
 
 ### Changed
 - **Tilt-rod kinematics corrected** in `docs/project-brief.md` §1 and `cad/README.md`. The original
   10 mm horn : 20 mm arm sizing treated the rod as a venetian-style *twisting* wand (~8 mm travel);
   the plantation hidden tilt rod actually **translates on a 36 mm arc** (~36 mm up + ~36 mm out,
-  ~51 mm point-to-point), so the linkage is a genuine four-bar. New baseline: 25 mm printed servo
-  arm, pushrod cut to 50 mm hole-to-hole, servo axis at (−8, −60) mm from the bottom slat pivot,
-  ~140° sweep → 90° slat travel, worst-case torque ratio 0.78 (≈2.8 kg·cm at the slats).
+  ~51 mm point-to-point), so the linkage is a genuine four-bar.
   `docs/diagrams/linkage-geometry.svg` is marked superseded.
+- **Baseline linkage design settled after measuring the frame at 28 mm thick** (rules out any
+  mortised pocket; the tilt rod sits flush at closed so it cannot be clamped). Both layouts drive a
+  printed **slat-hook crank** (26 mm pin) with the stock 20 mm horn: **A (recommended, hidden)** —
+  cradle on the bottom rail's *rear* face, axis (+23, −47), 58 mm pushrod, phase −10°, closes rear
+  slat edge up; **B (visible)** — room-side face, axis (−21, −41), 52 mm pushrod, phase −170°,
+  closes rear edge down. Both: ~122° sweep → 90° slat travel, jam margin ≥10 mm, torque ratio
+  ≤0.86 (≈2.6 kg·cm at the slats). Slat hook sits ≥10 mm inboard of the rod's plane so rod and
+  pushrod never meet.
 
 ### Documentation
 Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, no version change.**
