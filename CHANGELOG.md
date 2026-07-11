@@ -11,7 +11,11 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
   design document for the tilt-rod mechanism: exact four-bar solver + animated simulator (enter
   your shutter measurements, scrub the servo, get collision/torque flags, switch mounting presets),
   MG90D mount dimensions, and the 3D-printed parts list (P1 servo cradle, P2 slat-hook crank,
-  P3 optional 22 mm arm).
+  P3 optional 22 mm arm). Served live via **GitHub Pages** (enabled, `main /docs`):
+  <https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>.
+- **[docs/diagrams/linkage-geometry.svg](docs/diagrams/linkage-geometry.svg)** regenerated from the
+  solver: three-pose (closed / mid / open) dimensioned drawing of the rear-mount linkage, replacing
+  the superseded twist-rod sketch; embedded in the README again.
 
 ### Changed
 - **Tilt-rod kinematics corrected** in `docs/project-brief.md` §1 and `cad/README.md`. The original

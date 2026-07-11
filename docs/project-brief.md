@@ -86,9 +86,10 @@ through the gears and demanding perfect alignment).
 > venetian-blind wand that *twists* (a few mm of pushrod travel). A plantation hidden tilt rod
 > **translates without rotating**: every point of it rides a 36 mm arc about its slat's pivot, so
 > closed → open moves the rod's bottom pin **~36 mm up and ~36 mm outward** (~51 mm point-to-point).
-> The mechanism is a genuine four-bar (servo crank → ball-link coupler → slat-corner rocker).
+> The mechanism is a genuine four-bar (servo crank → ball-link coupler → slat-hook rocker).
 > Full analysis, collision checks and an interactive simulator:
-> **[docs/tilt-linkage-design.html](tilt-linkage-design.html)** (open locally in a browser).
+> **<https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>**
+> (source: [docs/tilt-linkage-design.html](tilt-linkage-design.html)).
 
 The frame/rail is **28 mm thick (measured)**, which rules out any mortised pocket. Both surviving
 layouts surface-mount the servo cradle flat on a face of the bottom rail and drive a printed

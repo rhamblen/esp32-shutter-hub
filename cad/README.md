@@ -28,8 +28,10 @@ together so the parts stay editable.
 - Shutter geometry: frame/rail thickness **28 mm (measured)**; still to measure: rocker radius
   R ≈ 36 mm, slat pitch ≈ 63 mm, rail top ≈ 45 mm below the bottom pivot, rear depth ≥ 43 mm.
 
-The earlier sketch [`../docs/diagrams/linkage-geometry.svg`](../docs/diagrams/linkage-geometry.svg)
-shows the superseded twist-rod concept; the HTML design doc is authoritative.
+[`../docs/diagrams/linkage-geometry.svg`](../docs/diagrams/linkage-geometry.svg) shows the
+three-pose geometry (closed / mid / open), generated from the same solver. The HTML design doc is
+authoritative and served live at
+<https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>.
 
 > Status: **to be produced.** Phase 0 prints the servo-test-bracket + shutter-arm first; final
 > enclosures come in Phase 7.

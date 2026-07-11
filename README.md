@@ -32,11 +32,14 @@ of shutters is configuration, not code.
 
 **Actuator linkage**
 
-The tilt-rod drive is a four-bar linkage — full kinematic analysis, clearance checks, MG90D mount
-dimensions and the 3D-print list live in the interactive
-**[tilt-linkage design doc](docs/tilt-linkage-design.html)** (self-contained HTML; download and open
-in a browser, or serve via GitHub Pages). The older
-[linkage-geometry.svg](docs/diagrams/linkage-geometry.svg) shows a superseded concept.
+![Tilt linkage geometry](docs/diagrams/linkage-geometry.svg)
+
+The tilt-rod drive is a four-bar linkage: MG90D (hidden on the rear face of the bottom rail) →
+stock 20 mm horn → M2 ball-link pushrod → printed slat-hook crank on the bottom slat. Full
+kinematic analysis, an **animated simulator** (enter your shutter's measurements, get
+collision/torque flags), MG90D mount dimensions and the 3D-print list live in the interactive
+design doc: **<https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>**
+(source: [docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)).
 
 ## Hardware (locked)
 
