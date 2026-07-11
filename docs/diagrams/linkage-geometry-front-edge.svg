@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640">
+<rect width="1000" height="640" fill="#fdfcf9"/>
+<text x="20" y="30" font-family="Consolas,Menlo,monospace" font-size="13" fill="#2a2d31" text-anchor="start" font-weight="600">TILT LINKAGE v0.9.1 — FRONT-EDGE HOOK, SERVO TUCKED UNDER THE SLAT (HIDDEN)</text>
+<text x="20" y="48" font-family="Consolas,Menlo,monospace" font-size="10.5" fill="#6d6a61" text-anchor="start">MG90D + stock 20 mm horn · hook pin 24 mm on the front-edge line (pin: 06:00 closed → 03:00 open) · M2×25 pushrod 46 mm · servo axis (+32, −30)</text>
+<line x1="229.6" y1="67.0" x2="229.6" y2="587.0" stroke="#6d6a61" stroke-width="1" stroke-linecap="round" opacity="0.55" stroke-dasharray="6 4"/>
+<text x="234" y="579" font-family="Consolas,Menlo,monospace" font-size="9" fill="#6d6a61" text-anchor="start">window side</text>
+<rect x="73.6" y="457.0" width="72.8" height="130.0" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2" opacity=".6"/>
+<text x="110" y="581" font-family="Consolas,Menlo,monospace" font-size="9" fill="#b08d5b" text-anchor="middle">rail</text>
+<polygon points="104.8,437.5 104.8,242.5 115.2,242.5 115.2,437.5" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2"/>
+<circle cx="110.0" cy="340.0" r="2.2" fill="none" stroke="#2a2d31" stroke-width="1.4"/>
+<polygon points="104.8,273.7 104.8,78.7 115.2,78.7 115.2,273.7" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2"/>
+<circle cx="110.0" cy="176.2" r="2.2" fill="none" stroke="#2a2d31" stroke-width="1.4"/>
+<line x1="110.0" y1="259.4" x2="110.0" y2="51.4" stroke="#2a2d31" stroke-width="3.2" stroke-linecap="round" opacity="0.75"/>
+<circle cx="110.0" cy="246.4" r="2.6" fill="#fdfcf9" stroke="#2a2d31" stroke-width="1.4"/>
+<circle cx="110.0" cy="82.6" r="2.6" fill="#fdfcf9" stroke="#2a2d31" stroke-width="1.4"/>
+<text x="118" y="75" font-family="Consolas,Menlo,monospace" font-size="9" fill="#6d6a61" text-anchor="start">tilt rod</text>
+<line x1="110.0" y1="418.0" x2="110.0" y2="402.4" stroke="#4a7c59" stroke-width="3.2" stroke-linecap="round" opacity="1"/>
+<circle cx="110.0" cy="402.4" r="3.4" fill="#fdfcf9" stroke="#4a7c59" stroke-width="2"/>
+<text x="102" y="420" font-family="Consolas,Menlo,monospace" font-size="9" fill="#4a7c59" text-anchor="start">front-edge hook pin</text>
+<line x1="210.7" y1="467.0" x2="110.0" y2="402.4" stroke="#3d6a8a" stroke-width="2.6" stroke-linecap="round" opacity="1"/>
+<circle cx="210.7" cy="467.0" r="3.4" fill="#fdfcf9" stroke="#3d6a8a" stroke-width="2"/>
+<rect x="177.3" y="404.5" width="31.7" height="59.3" fill="#b3541e" fill-opacity=".14" stroke="#b3541e" stroke-width="1.4"/>
+<line x1="193.2" y1="418.0" x2="210.7" y2="467.0" stroke="#b3541e" stroke-width="4" stroke-linecap="round" opacity="1"/>
+<circle cx="193.2" cy="418.0" r="2.8" fill="#b3541e" stroke="#b3541e" stroke-width="1.4"/>
+<text x="215" y="434" font-family="Consolas,Menlo,monospace" font-size="9" fill="#b3541e" text-anchor="start">MG90D</text>
+<text x="175" y="584" font-family="Consolas,Menlo,monospace" font-size="10.5" fill="#2a2d31" text-anchor="middle" font-weight="600">CLOSED — slats +90° (pin at 06:00)</text>
+<line x1="110.0" y1="340.0" x2="193.2" y2="340.0" stroke="#6d6a61" stroke-width="0.8" stroke-linecap="round" opacity="1" stroke-dasharray="2 3"/>
+<line x1="193.2" y1="340.0" x2="193.2" y2="418.0" stroke="#6d6a61" stroke-width="0.8" stroke-linecap="round" opacity="1" stroke-dasharray="2 3"/>
+<text x="146" y="334" font-family="Consolas,Menlo,monospace" font-size="9" fill="#6d6a61" text-anchor="start">32</text>
+<text x="199" y="382" font-family="Consolas,Menlo,monospace" font-size="9" fill="#6d6a61" text-anchor="start">30</text>
+<text x="94" y="343" font-family="Consolas,Menlo,monospace" font-size="9" fill="#6d6a61" text-anchor="end">pivot</text>
+<line x1="559.6" y1="67.0" x2="559.6" y2="587.0" stroke="#6d6a61" stroke-width="1" stroke-linecap="round" opacity="0.55" stroke-dasharray="6 4"/>
+<rect x="403.6" y="457.0" width="72.8" height="130.0" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2" opacity=".6"/>
+<polygon points="369.8,407.9 502.6,265.0 510.2,272.1 377.4,415.0" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2"/>
+<circle cx="440.0" cy="340.0" r="2.2" fill="none" stroke="#2a2d31" stroke-width="1.4"/>
+<polygon points="369.8,244.1 502.6,101.2 510.2,108.3 377.4,251.2" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2"/>
+<circle cx="440.0" cy="176.2" r="2.2" fill="none" stroke="#2a2d31" stroke-width="1.4"/>
+<line x1="503.7" y1="284.4" x2="503.7" y2="76.4" stroke="#2a2d31" stroke-width="3.2" stroke-linecap="round" opacity="0.75"/>
+<circle cx="503.7" cy="271.4" r="2.6" fill="#fdfcf9" stroke="#2a2d31" stroke-width="1.4"/>
+<circle cx="503.7" cy="107.6" r="2.6" fill="#fdfcf9" stroke="#2a2d31" stroke-width="1.4"/>
+<line x1="386.9" y1="397.1" x2="397.5" y2="385.7" stroke="#4a7c59" stroke-width="3.2" stroke-linecap="round" opacity="1"/>
+<circle cx="397.5" cy="385.7" r="3.4" fill="#fdfcf9" stroke="#4a7c59" stroke-width="2"/>
+<line x1="491.7" y1="459.4" x2="397.5" y2="385.7" stroke="#3d6a8a" stroke-width="2.6" stroke-linecap="round" opacity="1"/>
+<circle cx="491.7" cy="459.4" r="3.4" fill="#fdfcf9" stroke="#3d6a8a" stroke-width="2"/>
+<text x="452" y="423" font-family="Consolas,Menlo,monospace" font-size="9" fill="#3d6a8a" text-anchor="start">M2 pushrod 46</text>
+<rect x="507.3" y="404.5" width="31.7" height="59.3" fill="#b3541e" fill-opacity=".14" stroke="#b3541e" stroke-width="1.4"/>
+<line x1="523.2" y1="418.0" x2="491.7" y2="459.4" stroke="#b3541e" stroke-width="4" stroke-linecap="round" opacity="1"/>
+<circle cx="523.2" cy="418.0" r="2.8" fill="#b3541e" stroke="#b3541e" stroke-width="1.4"/>
+<text x="505" y="584" font-family="Consolas,Menlo,monospace" font-size="10.5" fill="#2a2d31" text-anchor="middle" font-weight="600">MID — slats +45°</text>
+<line x1="889.6" y1="67.0" x2="889.6" y2="587.0" stroke="#6d6a61" stroke-width="1" stroke-linecap="round" opacity="0.55" stroke-dasharray="6 4"/>
+<rect x="733.6" y="457.0" width="72.8" height="130.0" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2" opacity=".6"/>
+<polygon points="672.5,334.8 867.5,334.8 867.5,345.2 672.5,345.2" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2"/>
+<circle cx="770.0" cy="340.0" r="2.2" fill="none" stroke="#2a2d31" stroke-width="1.4"/>
+<polygon points="672.5,171.0 867.5,171.0 867.5,181.4 672.5,181.4" fill="#d9b98c" stroke="#b08d5b" stroke-width="1.2"/>
+<circle cx="770.0" cy="176.2" r="2.2" fill="none" stroke="#2a2d31" stroke-width="1.4"/>
+<line x1="863.6" y1="353.0" x2="863.6" y2="145.0" stroke="#2a2d31" stroke-width="3.2" stroke-linecap="round" opacity="0.75"/>
+<circle cx="863.6" cy="340.0" r="2.6" fill="#fdfcf9" stroke="#2a2d31" stroke-width="1.4"/>
+<circle cx="863.6" cy="176.2" r="2.6" fill="#fdfcf9" stroke="#2a2d31" stroke-width="1.4"/>
+<line x1="692.0" y1="340.0" x2="707.6" y2="340.0" stroke="#4a7c59" stroke-width="3.2" stroke-linecap="round" opacity="1"/>
+<circle cx="707.6" cy="340.0" r="3.4" fill="#fdfcf9" stroke="#4a7c59" stroke-width="2"/>
+<line x1="801.3" y1="414.3" x2="707.6" y2="340.0" stroke="#3d6a8a" stroke-width="2.6" stroke-linecap="round" opacity="1"/>
+<circle cx="801.3" cy="414.3" r="3.4" fill="#fdfcf9" stroke="#3d6a8a" stroke-width="2"/>
+<rect x="837.3" y="404.5" width="31.7" height="59.3" fill="#b3541e" fill-opacity=".14" stroke="#b3541e" stroke-width="1.4"/>
+<line x1="853.2" y1="418.0" x2="801.3" y2="414.3" stroke="#b3541e" stroke-width="4" stroke-linecap="round" opacity="1"/>
+<circle cx="853.2" cy="418.0" r="2.8" fill="#b3541e" stroke="#b3541e" stroke-width="1.4"/>
+<text x="835" y="584" font-family="Consolas,Menlo,monospace" font-size="10.5" fill="#2a2d31" text-anchor="middle" font-weight="600">OPEN — slats 0° (pin at 03:00 room side)</text>
+<text x="20" y="612" font-family="Consolas,Menlo,monospace" font-size="10" fill="#6d6a61" text-anchor="start">Hook grips the slat's FRONT edge; pin swings 06:00 → 03:00. Servo hides in the corner under the bottom slat, 18 mm behind the rail rear face — invisible from the room.</text>
+<text x="20" y="627" font-family="Consolas,Menlo,monospace" font-size="10" fill="#6d6a61" text-anchor="start">~114° servo sweep → 90° slat travel, jam margin 11 mm, torque ratio ≤0.85. Interactive: tilt-linkage-design.html (v0.9.0 layouts retained there).</text>
+</svg>

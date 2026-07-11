@@ -51,6 +51,32 @@ Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, n
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
 
+## [0.9.1] — 2026-07-11
+
+**Documentation-only revision of the v0.9.0 mechanical design — no firmware change, no binaries,
+no GitHub Release.** The v0.9.0 documentation and simulator presets are retained.
+
+### Changed
+- **Hook attachment corrected to the slat's front edge** (owner observation): the drive pin hangs
+  at 06:00 (straight down) at closed and sweeps to 03:00 (horizontal, room side) at open — the
+  bottom-front quadrant, not v0.9.0's top-rear arc. Closure sense is unchanged (rear edge up at
+  closed); the crank phase flips to −180°. New solved baseline (preset "v0.9.1 front-edge hook" in
+  the simulator, now the default): hook pin **24 mm on the front-edge line**, stock 20 mm horn,
+  **M2×25 pushrod at 46 mm** hole-to-hole (no cutting), servo axis **(+32, −30)** — tucked into the
+  corner under the bottom slat, 18 mm behind the rail rear face, still fully **hidden**. ~114°
+  servo sweep → 90° slat travel, jam margin 11.3 mm, torque ratio ≤0.85 (≈2.6 kg·cm at slats),
+  near-linear mapping. Envelope x ∈ [−24, +39]: rear stays within the tilt rod's own sweep; the
+  hook tip sits ~10 mm proud of the panel face at open.
+
+### Added
+- **[docs/diagrams/linkage-geometry-front-edge.svg](docs/diagrams/linkage-geometry-front-edge.svg)**
+  — solver-generated three-pose drawing of the v0.9.1 layout; now embedded in the README. The
+  v0.9.0 drawing `linkage-geometry.svg` is kept.
+
+### Notes
+- The v0.9.0 rear/front layouts remain valid only if the hook can place its pin near the rear edge
+  (longer under-slat strap, Zemismart-style); both stay available as simulator presets.
+
 ## [0.9.0] — 2026-07-11
 
 **Documentation-only version — the mechanical design of the tilt-linkage actuator, settled and

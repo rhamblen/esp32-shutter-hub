@@ -20,11 +20,12 @@ together so the parts stay editable.
 
 - Servo: MG90D case 22.8 × 12.2 × 28.5 mm; tabs 32.5 mm span, Ø2.2 holes @ 27.5 mm centres;
   shaft axis ≈6 mm from the front face; 21T Ø4.8 spline. Verify with calipers — clones vary ±0.3 mm.
-- Linkage (corrected four-bar): stock 20 mm horn + slat-hook crank (26 mm pin) + M2 ball-link
-  pushrod at **58 mm hole-to-hole** (rear mount; 52 mm for front mount). ~122° servo sweep → 90°
-  slat travel, jam margin ≥10 mm, torque ratio ≤0.86.
-- Servo axis (rear mount): 23 mm behind the slat-pivot plane (½ frame + ½ servo + 3 mm plate),
-  47 mm below the bottom slat pivot — cradle flat on the rail's rear face, fully hidden.
+- Linkage (v0.9.1 four-bar): stock 20 mm horn + **front-edge** slat hook (pin 24 mm on the
+  front-edge line; 06:00 closed → 03:00 open) + **M2×25** ball-link pushrod at **46 mm**
+  hole-to-hole. ~114° servo sweep → 90° slat travel, jam margin 11.3 mm, torque ratio ≤0.85.
+- Servo axis (v0.9.1): **(+32, −30)** from the bottom slat pivot — tucked under the slat, 18 mm
+  behind the rail rear face, fully hidden; P1 cradle gets a ~12 mm riser foot off the rail face.
+  (v0.9.0 rear/front variants retained in the design doc as presets.)
 - Shutter geometry: frame/rail thickness **28 mm (measured)**; still to measure: rocker radius
   R ≈ 36 mm, slat pitch ≈ 63 mm, rail top ≈ 45 mm below the bottom pivot, rear depth ≥ 43 mm.
 

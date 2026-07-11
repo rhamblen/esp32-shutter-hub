@@ -163,8 +163,9 @@
 
     <aside>
       <div class="presets">
-        <button type="button" data-preset="rear" class="active">Rear mount (hidden)</button>
-        <button type="button" data-preset="front">Front mount (room side)</button>
+        <button type="button" data-preset="frontEdge" class="active">v0.9.1 front-edge hook</button>
+        <button type="button" data-preset="rear">v0.9.0 rear</button>
+        <button type="button" data-preset="front">v0.9.0 front</button>
       </div>
       <div class="readouts" id="readouts"></div>
       <ul class="flags" id="flags"></ul>
@@ -202,17 +203,33 @@
     </section>
 
     <section>
-      <h2><span class="no">2</span>Two workable layouts (28 mm frame, measured)</h2>
+      <h2><span class="no">2</span>Baseline v0.9.1 — front-edge hook (plus the v0.9.0 layouts)</h2>
       <p>
-        With the frame measured at <strong>28 mm thick</strong>, the mortised-pocket concept is dead
-        (a 39 mm pocket cannot live in a 28 mm rail) — but surface mounting works on <em>either</em>
-        face of the bottom rail. Both layouts drive a printed <em>slat-hook bracket</em> (clips over
-        the bottom slat — no screws in the slat, no connection to the flush-fitting tilt rod) and are
-        near-perfect mirror images. The one physical difference: each mount only works with one slat
-        closure direction.
+        <strong>v0.9.1 revision:</strong> on the real shutters the hook grips the slat's
+        <em>front edge</em>, so the drive pin hangs at <strong>06:00 (straight down) at closed</strong>
+        and sweeps to <strong>03:00 (horizontal, room side) at open</strong> — the bottom-front
+        quadrant, not the top-rear arc of v0.9.0. Same closure sense (rear edge up at closed); only
+        the crank phase flips to −180°. The solver's answer keeps the servo <em>hidden</em>: it tucks
+        into the corner just <em>under the bottom slat and behind the rail</em>, closer to the slat
+        than any earlier layout.
       </p>
       <div class="tblwrap"><table>
-        <tr><th>Parameter</th><th>Option A — rear mount (recommended)</th><th>Option B — front mount</th></tr>
+        <tr><th>Parameter</th><th>v0.9.1 — front-edge hook (baseline)</th></tr>
+        <tr><td>Crank (slat hook pin)</td><td class="num">24 mm radius, phase −180° (on the front-edge line)</td></tr>
+        <tr><td>Pin motion</td><td class="num">06:00 at closed → 03:00 room-side at open</td></tr>
+        <tr><td>Servo arm</td><td class="num">20 mm — stock horn</td></tr>
+        <tr><td>Pushrod hole-to-hole</td><td class="num">46 mm → M2×25 (43–53), no cutting</td></tr>
+        <tr><td>Servo axis (x, y)</td><td class="num">(+32, −30) — 18 mm behind the rail rear face, 30 mm below the slat pivot; hidden</td></tr>
+        <tr><td>Servo sweep</td><td class="num">~114° → 90° slat travel, near-linear</td></tr>
+        <tr><td>Jam margin / torque ratio</td><td class="num">11.3 mm / ≤ 0.85 → ~2.6 kg·cm at slats</td></tr>
+        <tr><td>Envelope</td><td class="num">x ∈ [−24, +39] — rear within the rod's sweep; hook tip ~10 mm proud at open</td></tr>
+      </table></div>
+      <p>
+        The v0.9.0 layouts below remain valid <em>if</em> the hook can place its pin near the rear
+        edge (e.g. a longer under-slat strap like the Zemismart clip) — kept for reference:
+      </p>
+      <div class="tblwrap"><table>
+        <tr><th>Parameter</th><th>v0.9.0 A — rear mount</th><th>v0.9.0 B — front mount</th></tr>
         <tr><td>Where</td><td class="num">rail's window-side face — <strong>hidden</strong></td><td class="num">rail's room-side face — visible</td></tr>
         <tr><td>Closure direction</td><td class="num">rear slat edge UP at closed</td><td class="num">rear slat edge DOWN at closed</td></tr>
         <tr><td>Crank (slat hook pin)</td><td class="num">26 mm radius, phase −10°</td><td class="num">26 mm radius, phase −170°</td></tr>
@@ -225,10 +242,9 @@
         <tr><td>Depth used</td><td class="num">x ≤ 43 mm — within the rod's own sweep</td><td class="num">~27 mm proud into the room</td></tr>
       </table></div>
       <p class="callout">
-        Option A hides everything behind the panel and needs no more window depth than the hidden
-        tilt rod already sweeps — but it closes the slats room-side-edge-down. If the shutters must
-        close the other way (room-side edge up), use Option B and accept the visible servo. Compare
-        both live with the preset buttons above.
+        All three presets are live in the simulator above. v0.9.1 is the build baseline: hidden
+        servo, stock horn, M2×25 pushrod, and the shortest hook arm — the front-edge grip keeps the
+        clip clear of the tilt-rod staples entirely.
       </p>
     </section>
 
@@ -357,7 +373,7 @@
             <td>MG90D pocket (23.1 × 12.5), M2 tab bosses @27.5 mm, ~3 mm base plate with <em>slotted</em> Ø3.5 holes giving ±4 mm x/y adjustment; screws flat to the rail's rear face (Option A, axis at +23, −47) or room face (Option B, −21, −41); shaft points inboard so the horn plane lands on the hook plane</td>
             <td>PETG, 40 %+ infill, pocket axis vertical, no supports</td></tr>
         <tr><td class="num">P2</td><td><strong>Slat-hook bracket (crank)</strong></td>
-            <td>C-hook clips over the bottom slat near the stile, ≥10 mm inboard of the tilt rod's plane (fit to measured slat thickness + a light snap); arm carries an M2 ball-stud hole at <strong>26 mm radius</strong>, phase <strong>−10°</strong> (A) or <strong>−170°</strong> (B); spare holes at 22 / 30 mm. Same idea as the Zemismart clip but with the pin where the solver wants it</td>
+            <td>C-hook clips over the bottom slat's <strong>front edge</strong> near the stile, ≥10 mm inboard of the tilt rod's plane (fit to measured slat thickness + a light snap); arm carries an M2 ball-stud hole at <strong>24 mm radius on the front-edge line</strong> (v0.9.1 baseline; spare holes at 21 / 27 mm). v0.9.0 rear/front variants need a longer under-slat strap placing the pin at 26 mm, phase −10° / −170°</td>
             <td>PETG, printed flat on its side, 5 perimeters; hook slot ±0.1 mm</td></tr>
         <tr><td class="num">P3</td><td><strong>22 mm servo arm</strong> <em>(optional)</em></td>
             <td>Only if the bench force test wants more travel margin: pairs with the 34 mm crank hole for ~135° sweep at ratio ≤0.80; sandwiches the stock horn, two M2 clamp screws</td>
@@ -393,12 +409,14 @@
 <script>
 'use strict';
 const PRESETS = {
+  frontEdge: { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
+           armR: 20, rodL: 46, Sx: 32, Sy: -30, crankR: 24, crankPh: -180, closedDeg: 90, openDeg: 0 },
   rear:  { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
            armR: 20, rodL: 58, Sx: 23, Sy: -47, crankR: 26, crankPh: -10, closedDeg: 90, openDeg: 0 },
   front: { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
            armR: 20, rodL: 52, Sx: -21, Sy: -41, crankR: 26, crankPh: -170, closedDeg: -90, openDeg: 0 },
 };
-const P = Object.assign({}, PRESETS.rear);
+const P = Object.assign({}, PRESETS.frontEdge);
 const SHUTTER_FIELDS = [
   ['R','Pivot → rod staple radius','mm'], ['slatW','Slat width','mm'], ['pitch','Slat pitch','mm'],
   ['panelT','Panel / rail thickness','mm'], ['railTop','Rail top below pivot','mm'],

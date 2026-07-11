@@ -91,10 +91,19 @@ through the gears and demanding perfect alignment).
 > **<https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>**
 > (source: [docs/tilt-linkage-design.html](tilt-linkage-design.html)).
 
-The frame/rail is **28 mm thick (measured)**, which rules out any mortised pocket. Both surviving
-layouts surface-mount the servo cradle flat on a face of the bottom rail and drive a printed
-**slat-hook bracket** (clips over the bottom slat — the tilt rod itself sits flush at closed and
-cannot be gripped). Each layout works with one slat closure direction only:
+The frame/rail is **28 mm thick (measured)**, which rules out any mortised pocket. The servo
+surface-mounts and drives a printed **slat-hook bracket** (clips over the bottom slat — the tilt
+rod itself sits flush at closed and cannot be gripped).
+
+**v0.9.1 baseline (as installed — hook on the slat's *front edge*):** pin 24 mm on the front-edge
+line (hangs 06:00 at closed → 03:00 room-side at open), stock 20 mm horn, **M2×25 pushrod at
+46 mm** hole-to-hole, servo axis **(+32, −30)** — tucked under the bottom slat, 18 mm behind the
+rail rear face, fully hidden. ~114° sweep → 90° slat travel, jam margin 11.3 mm, torque ratio
+≤0.85 (≈2.6 kg·cm at slats). Drawing:
+[diagrams/linkage-geometry-front-edge.svg](diagrams/linkage-geometry-front-edge.svg).
+
+The v0.9.0 layouts below remain valid only if the hook's pin can sit near the rear edge (longer
+under-slat strap); each works with one closure direction only:
 
 | Element             | **A — rear mount (recommended, hidden)**  | B — front mount (visible)   |
 | ------------------- | ------------------------------------------ | --------------------------- |
