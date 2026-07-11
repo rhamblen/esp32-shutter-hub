@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<title>Shutter tilt linkage — design & simulator</title>
+<style>
+  :root {
+    --paper: #f6f4ee; --panel: #fdfcf9; --ink: #2a2d31; --line: #cdc8bc;
+    --grid: #e7e3d8; --muted: #6d6a61; --accent: #b3541e; --accent-soft: #b3541e22;
+    --steel: #3d6a8a; --ok: #4a7c59; --warn: #a33b2e; --warn-bg: #a33b2e14;
+    --wood: #d9b98c; --wood-edge: #b08d5b; --keepout: #a33b2e0f;
+    --mono: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #17191d; --panel: #1e2126; --ink: #d8dbde; --line: #3a3e45;
+      --grid: #24272d; --muted: #8b8f96; --accent: #e0784a; --accent-soft: #e0784a26;
+      --steel: #7aa7c7; --ok: #7cb08a; --warn: #d97663; --warn-bg: #d9766318;
+      --wood: #8a6f4d; --wood-edge: #6b5439; --keepout: #d9766314;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #17191d; --panel: #1e2126; --ink: #d8dbde; --line: #3a3e45;
+    --grid: #24272d; --muted: #8b8f96; --accent: #e0784a; --accent-soft: #e0784a26;
+    --steel: #7aa7c7; --ok: #7cb08a; --warn: #d97663; --warn-bg: #d9766318;
+    --wood: #8a6f4d; --wood-edge: #6b5439; --keepout: #d9766314;
+  }
+  :root[data-theme="light"] {
+    --paper: #f6f4ee; --panel: #fdfcf9; --ink: #2a2d31; --line: #cdc8bc;
+    --grid: #e7e3d8; --muted: #6d6a61; --accent: #b3541e; --accent-soft: #b3541e22;
+    --steel: #3d6a8a; --ok: #4a7c59; --warn: #a33b2e; --warn-bg: #a33b2e14;
+    --wood: #d9b98c; --wood-edge: #b08d5b; --keepout: #a33b2e0f;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); margin: 0; }
+  .sheet { max-width: 1180px; margin: 0 auto; padding: 20px 20px 48px; }
+  header.titleblock {
+    display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline;
+    border: 1.5px solid var(--ink); padding: 12px 16px; margin-bottom: 16px;
+  }
+  header.titleblock h1 {
+    font-family: var(--mono); font-size: 15px; letter-spacing: .14em;
+    text-transform: uppercase; margin: 0; font-weight: 600;
+  }
+  header.titleblock .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .06em; }
+  .workspace { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; }
+  @media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } }
+  .drawing-card { border: 1px solid var(--line); background: var(--panel); }
+  .drawing-wrap { overflow-x: auto; }
+  svg.drawing { display: block; width: 100%; height: auto; }
+  .scrub {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    border-top: 1px solid var(--line); font-family: var(--mono); font-size: 12px;
+  }
+  .scrub input[type=range] { flex: 1; accent-color: var(--accent); min-width: 120px; }
+  .scrub .pos { min-width: 190px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  button.play {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    background: var(--accent); color: var(--paper); border: none; padding: 6px 14px; cursor: pointer;
+  }
+  button.play:focus-visible, input:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  aside .group { border: 1px solid var(--line); background: var(--panel); margin-bottom: 12px; }
+  aside .group h2 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-weight: 600;
+  }
+  .fields { padding: 8px 12px 12px; display: grid; grid-template-columns: 1fr 78px; gap: 6px 10px; align-items: center; }
+  .fields label { font-size: 12.5px; }
+  .fields .u { color: var(--muted); font-size: 11px; margin-left: 2px; }
+  .fields input {
+    font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+    padding: 4px 6px; width: 100%;
+  }
+  .readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 12px; }
+  .readouts .cell { background: var(--panel); padding: 8px 10px; }
+  .readouts .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-family: var(--mono); }
+  .readouts .v { font-family: var(--mono); font-size: 16px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .readouts .v small { font-size: 11px; color: var(--muted); }
+  .flags { margin: 0 0 12px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .flags li {
+    font-size: 12.5px; padding: 7px 10px; border-left: 3px solid var(--ok);
+    background: var(--panel); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .flags li.bad { border-left-color: var(--warn); background: var(--warn-bg); }
+  .flags li b { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 1px; }
+  .below { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 900px) { .below { grid-template-columns: 1fr; } }
+  .plot-card { border: 1px solid var(--line); background: var(--panel); padding: 10px 12px; }
+  .plot-card h2 { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  .plot-card svg { display: block; width: 100%; height: auto; }
+  .note { font-size: 12.5px; color: var(--muted); line-height: 1.55; max-width: 65ch; }
+  .note code { font-family: var(--mono); font-size: 11.5px; }
+  @media (prefers-reduced-motion: reduce) { button.play { display: none; } }
+  .doc { margin-top: 32px; display: grid; gap: 24px; }
+  .doc section { border: 1px solid var(--line); background: var(--panel); padding: 18px 22px 22px; }
+  .doc h2 {
+    font-family: var(--mono); font-size: 13px; letter-spacing: .13em; text-transform: uppercase;
+    font-weight: 600; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  .doc h2 .no { color: var(--accent); margin-right: 10px; }
+  .doc p, .doc li { font-size: 13.5px; line-height: 1.6; max-width: 76ch; }
+  .doc p { margin: 0 0 10px; }
+  .doc code { font-family: var(--mono); font-size: 12px; background: var(--accent-soft); padding: 1px 4px; }
+  .doc table { border-collapse: collapse; font-size: 13px; margin: 8px 0 4px; width: 100%; }
+  .doc .tblwrap { overflow-x: auto; }
+  .doc th, .doc td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  .doc th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .doc td.num, .doc td .num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .doc .dim-svg { max-width: 720px; margin: 8px auto; }
+  .doc .dim-svg svg { width: 100%; height: auto; display: block; }
+  .doc .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; font-size: 13px; max-width: 76ch; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 28px; }
+  @media (max-width: 760px) { .cols2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+
+<div class="sheet">
+  <header class="titleblock">
+    <h1>Shutter tilt linkage — kinematic simulator</h1>
+    <span class="meta">ESP32 Shutter Hub · MG90D + M2 ball-link pushrod · side view, dims in mm</span>
+    <span class="meta">x+ = toward window · y+ = up · origin = bottom slat pivot</span>
+  </header>
+
+  <div class="workspace">
+    <div>
+      <div class="drawing-card">
+        <div class="drawing-wrap"><svg id="dwg" class="drawing" viewBox="0 0 760 560" role="img" aria-label="Side view of shutter slats, tilt rod, servo and pushrod linkage"></svg></div>
+        <div class="scrub">
+          <button class="play" id="playBtn" type="button">Run</button>
+          <input type="range" id="scrub" min="0" max="120" value="0" step="1" aria-label="Servo position">
+          <span class="pos" id="posLabel">—</span>
+        </div>
+      </div>
+      <div class="below">
+        <div class="plot-card">
+          <h2>Servo angle → slat angle</h2>
+          <svg id="plot" viewBox="0 0 360 230"></svg>
+        </div>
+        <div class="plot-card">
+          <h2>Reading the drawing</h2>
+          <p class="note">
+            The tilt rod hangs off every slat's rear corner, so it translates along a circular arc of
+            radius <code>R</code> — it never rotates. The servo drives the rod's bottom pin through the
+            ball-link pushrod. Scrub the slider to run the mechanism; anything that collides or jams
+            is flagged on the right. Faint arcs show the swept envelope; the shaded zone is the
+            bottom rail — if copper parts enter it, that volume must be pocketed out of the rail's
+            rear face. Measure your shutter, type the numbers in, and re-check the flags.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="readouts" id="readouts"></div>
+      <ul class="flags" id="flags"></ul>
+      <div class="group">
+        <h2>Shutter — measure these</h2>
+        <div class="fields" id="shutterFields"></div>
+      </div>
+      <div class="group">
+        <h2>Linkage — design variables</h2>
+        <div class="fields" id="linkFields"></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="doc">
+    <section>
+      <h2><span class="no">1</span>Why this linkage — the correction</h2>
+      <p>
+        Earlier project docs sized the linkage as if the shutter had a venetian-blind style
+        <em>twisting</em> wand (a few mm of pushrod travel). A plantation hidden tilt rod is different:
+        the rod hangs off the <strong>rear corner of every slat</strong> and <strong>translates without
+        rotating</strong>. Every point of the rod rides a circular arc of radius
+        <code>R ≈ 36&nbsp;mm</code> centred on its slat's pivot. Going from fully closed to open the
+        rod's bottom pin moves <strong>~36&nbsp;mm up <em>and</em> ~36&nbsp;mm outward</strong> — a
+        point-to-point stroke of ~51&nbsp;mm. The old 10&nbsp;mm-horn : 20&nbsp;mm-arm plan delivered
+        ~16&nbsp;mm and could never have worked.
+      </p>
+      <p>
+        The mechanism is therefore a genuine four-bar: servo arm (crank) → ball-link pushrod
+        (coupler) → slat corner (rocker, radius R). The simulator above solves the exact kinematics,
+        tracks the assembly branch (several plausible-looking layouts turn out to run off along the
+        wrong branch and jam — they are rejected automatically), and checks collisions against the
+        bottom rail, the moving slats and the rear clearance to the glass.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="no">2</span>Baseline geometry (pending site measurements)</h2>
+      <div class="tblwrap"><table>
+        <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Servo arm radius</td><td class="num">25 mm</td><td>3D-printed arm over the stock horn; add 22 / 28 mm spare holes for tuning</td></tr>
+        <tr><td>Pushrod hole-to-hole</td><td class="num">50 mm</td><td>M2×50 rod cut ~9 mm off each threaded end — or order M2×35 rods (53–63 mm range)</td></tr>
+        <tr><td>Servo axis position</td><td class="num">x −8, y −60 mm</td><td>8 mm room-side of the slat-pivot plane, 60 mm below the bottom slat pivot</td></tr>
+        <tr><td>Servo sweep used</td><td class="num">~140° of 180°</td><td>≈20° two-sided margin for calibration; mapping is near-linear mid-stroke</td></tr>
+        <tr><td>Slat travel</td><td class="num">−90° → 0°</td><td>fully closed → fully open; which “closed” direction is a mounting/phase choice</td></tr>
+        <tr><td>Torque ratio (worst)</td><td class="num">≤ 0.78</td><td>servo never sees more than 0.78× slat friction torque; ~2.8 kg·cm available at slats</td></tr>
+        <tr><td>Rear-most excursion</td><td class="num">36 mm</td><td>equals the tilt rod's own swing — needs no extra window depth</td></tr>
+        <tr><td>Rail pocket</td><td class="num">≈39 × 45 × 14 mm</td><td>routed into the bottom rail <em>rear</em> face; invisible from the room</td></tr>
+      </table></div>
+      <p class="callout">
+        The near-dead-centre at the fully-closed end is a feature: the servo holds the shutters shut
+        with almost no torque (good for the solar/battery budget) and has maximum force available to
+        break the closed-position friction. Firmware endpoint calibration must simply never command
+        past the closed endpoint.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="no">3</span>Measure these before printing</h2>
+      <ol class="cols2">
+        <li><strong>R</strong> — slat pivot pin to tilt-rod staple centre (assumed 36 mm).</li>
+        <li><strong>Slat pitch</strong> — pivot to pivot (assumed 63 mm).</li>
+        <li><strong>Panel / rail thickness</strong> — front face to rear face (assumed 44 mm).</li>
+        <li><strong>Rail top below pivot</strong> — bottom slat pivot down to the top edge of the bottom rail (assumed 45 mm). <em>This decides whether the rail pocket is needed at all.</em></li>
+        <li><strong>Rear clearance</strong> — slat-pivot plane to glass / window frame (assumed ≥46 mm; the rod itself already needs ~40).</li>
+        <li><strong>Rod plane offset</strong> — stile inner face to tilt-rod centreline (sets the bracket's sideways stand-off; not in the 2-D sim).</li>
+        <li><strong>Rod cross-section</strong> — width × thickness of the tilt rod (sizes the clamp adapter).</li>
+        <li><strong>Rod pull force</strong> — hook a luggage/kitchen scale on the tilt rod and pull along its travel. Target ≤ 0.6 kg; if higher, slacken the slat tension screws.</li>
+      </ol>
+      <p>Feed 1–5 into the simulator above and re-check the flags before committing to prints.</p>
+    </section>
+
+    <section>
+      <h2><span class="no">4</span>Mounting, rotation direction &amp; the window frame</h2>
+      <p>
+        The servo output shaft must be <strong>parallel to the slat pivot axes</strong> (rotation in
+        the same plane as the slats). That leaves exactly two ways round, and they are mirror images:
+      </p>
+      <div class="tblwrap"><table>
+        <tr><th>Orientation</th><th>Body sits</th><th>Rotation sense</th><th>Verdict</th></tr>
+        <tr><td><strong>Shaft pointing inboard</strong> (toward panel centre)</td>
+            <td>between the horn plane and the stile — needs ~30 mm of sideways room that the rod offset (~15 mm) doesn't give</td>
+            <td>as simulated</td><td>usually <strong>doesn't fit</strong></td></tr>
+        <tr><td><strong>Shaft pointing outboard</strong> (toward the stile / window frame)</td>
+            <td>inboard of the rod plane, under the slats' span — clear of the window frame</td>
+            <td>mirrored (reversed)</td><td><strong>recommended</strong></td></tr>
+      </table></div>
+      <p>
+        Flipping the servo <strong>changes nothing kinematically</strong> — the linkage geometry is
+        identical, only the direction of rotation reverses. The firmware already stores per-shutter
+        closed/open endpoints in µs, so a reversed servo is handled entirely by calibration (closed
+        simply gets the other end of the pulse range). No code change, no new maths.
+      </p>
+      <p>
+        Two more fit constraints: mount <em>everything on the panel</em> (never bridge panel → frame,
+        or the panel can no longer hinge open for cleaning) and leave a flexible service loop in the
+        servo lead at the hinge side. The horn plane must line up with the tilt-rod plane to within
+        ~2 mm — the ball links absorb small residual misalignment (~5°).
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="no">5</span>MG90D dimensions for the mount</h2>
+      <div class="dim-svg">
+      <svg viewBox="0 0 720 300" role="img" aria-label="Dimensioned drawing of MG90D micro servo, side and front elevations">
+        <g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+          <!-- side elevation -->
+          <g transform="translate(70,40)">
+            <rect x="24.25" y="30" width="114" height="120" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+            <rect x="0"  y="52" width="24.25" height="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+            <rect x="138.25" y="52" width="24.25" height="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+            <circle cx="12.1" cy="58" r="5.5" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.3"/>
+            <circle cx="150.4" cy="58" r="5.5" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.3"/>
+            <rect x="42" y="8" width="24" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+            <rect x="49" y="-8" width="10" height="16" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.4"/>
+            <line x1="54" y1="-14" x2="54" y2="160" stroke="var(--muted)" stroke-width=".7" stroke-dasharray="6 3"/>
+            <line x1="24.25" y1="158" x2="138.25" y2="158" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="81" y="172" text-anchor="middle">22.8</text>
+            <line x1="0" y1="186" x2="162.5" y2="186" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="81" y="200" text-anchor="middle">32.5 over tabs</text>
+            <line x1="12.1" y1="216" x2="150.4" y2="216" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="81" y="230" text-anchor="middle">27.5 hole centres · Ø2.2</text>
+            <line x1="24.25" y1="-20" x2="54" y2="-20" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="39" y="-26" text-anchor="middle">≈6.0</text>
+            <line x1="176" y1="30" x2="176" y2="150" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="184" y="94">28.5</text>
+            <line x1="196" y1="52" x2="196" y2="64" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="204" y="62">tab ≈2.4 thick</text>
+            <text x="81" y="100" text-anchor="middle" fill="var(--accent)">MG90D — side</text>
+            <text x="54" y="-40" text-anchor="middle" fill="var(--muted)">21T spline Ø4.8 · M2.5 horn screw</text>
+          </g>
+          <!-- front elevation -->
+          <g transform="translate(440,40)">
+            <rect x="0" y="30" width="61" height="120" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+            <rect x="12" y="8" width="37" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+            <rect x="25.5" y="-8" width="10" height="16" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.4"/>
+            <line x1="0" y1="158" x2="61" y2="158" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="30" y="172" text-anchor="middle">12.2</text>
+            <text x="30" y="100" text-anchor="middle" fill="var(--accent)">front</text>
+            <line x1="80" y1="150" x2="120" y2="150" stroke="var(--muted)" stroke-width=".7"/>
+            <text x="126" y="153" fill="var(--muted)">cable exits low, rear face</text>
+          </g>
+        </g>
+      </svg>
+      </div>
+      <div class="tblwrap"><table>
+        <tr><th>Dimension</th><th>Value</th><th>Bracket consequence</th></tr>
+        <tr><td>Case L × W × H</td><td class="num">22.8 × 12.2 × 28.5 mm</td><td>print pocket 23.1 × 12.5 mm (+0.3 clearance)</td></tr>
+        <tr><td>Mounting tabs</td><td class="num">32.5 mm span, ≈2.4 mm thick</td><td>tab shelf in the cradle; screws from above</td></tr>
+        <tr><td>Tab holes</td><td class="num">Ø2.2 @ 27.5 mm centres</td><td>M2 self-tappers into printed bosses</td></tr>
+        <tr><td>Shaft axis inset</td><td class="num">≈6.0 mm from front face</td><td>sets the bracket datum → axis lands at (−8, −60)</td></tr>
+        <tr><td>Output spline</td><td class="num">21T, Ø4.8, M2.5 screw</td><td>printed arm sandwiches the stock horn instead of printing splines</td></tr>
+        <tr><td>Horn plane above tab face</td><td class="num">≈12 mm (typ.)</td><td>sets the sideways stand-off to the rod plane</td></tr>
+      </table></div>
+      <p class="callout">
+        Clone servos vary by ±0.3 mm — verify the marked dimensions with calipers before printing,
+        especially case length, tab hole centres and the horn-plane height.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="no">6</span>3D-printed parts</h2>
+      <div class="tblwrap"><table>
+        <tr><th>#</th><th>Part</th><th>Key features</th><th>Print notes</th></tr>
+        <tr><td class="num">P1</td><td><strong>Servo cradle bracket</strong></td>
+            <td>MG90D pocket (23.1 × 12.5), M2 tab bosses @27.5 mm, base plate with <em>slotted</em> Ø3.5 holes giving ±4 mm x/y adjustment, sideways stand-off arm to put the horn plane on the rod plane</td>
+            <td>PETG, 40 %+ infill, pocket axis vertical, no supports</td></tr>
+        <tr><td class="num">P2</td><td><strong>Servo arm, 25 mm</strong></td>
+            <td>Sandwiches the stock single-arm horn (two M2 clamp screws through existing horn holes); M2 ball-link holes at 22 / 25 / 28 mm from axis; ~4 mm thick</td>
+            <td>PETG/ABS, printed flat, 100 % infill or 5 perimeters</td></tr>
+        <tr><td class="num">P3</td><td><strong>Tilt-rod pin adapter</strong></td>
+            <td>Clamps the bottom of the hidden tilt rod (slot to measured rod cross-section + M3 pinch screw); M2 hole for the lower ball link, positioned so the pin sits on the bottom staple line (keeps R = 36)</td>
+            <td>PETG, slot axis vertical for strength across the clamp</td></tr>
+        <tr><td class="num">P4</td><td><strong>Pocket cover plate</strong> <em>(only if the rail pocket is needed)</em></td>
+            <td>Flush cover over the routed pocket with a slot for the pushrod's travel fan; two countersunk screws</td>
+            <td>any material, 3 perimeters</td></tr>
+      </table></div>
+      <p>
+        P1's slotted base plus the pushrod's threaded ball ends (±5 mm) give every adjustment needed
+        to hit the geometry without re-printing. The Phase 0 force-test bracket in
+        <code>cad/servo-test-bracket/</code> stays as planned — run the bench force test before
+        committing to four sets of parts.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="no">7</span>Torque budget</h2>
+      <p>
+        MG90D usable torque ≈ 2.2 kg·cm (stall 2.4–2.8). Worst-case transmission ratio 0.78 means
+        ≥ <strong>2.8 kg·cm available at the slat crank</strong>, i.e. ~0.78 kg of tangential force
+        at the rod pin. The measured rod pull force (checklist item 8) must come in under
+        ~0.6 kg for comfortable margin; the slat tension screws are the adjustment if it doesn't.
+        Peak coupler loads near the closed dead-centre stay well inside the M2 ball links' rating.
+      </p>
+      <p class="callout">
+        This page is self-contained: the exact solver used for every number above is the JavaScript
+        embedded in this file (view source). Change a measurement in the panel at the top and every
+        readout, flag and the animation recompute live.
+      </p>
+    </section>
+  </div>
+</div>
+
+<script>
+'use strict';
+const P = {
+  R: 36, slatW: 75, pitch: 63, panelT: 44, railTop: 45, rearClear: 46,
+  armR: 25, rodL: 50, Sx: -8, Sy: -60, closedDeg: -90, openDeg: 0,
+};
+const SHUTTER_FIELDS = [
+  ['R','Pivot → rod pin radius','mm'], ['slatW','Slat width','mm'], ['pitch','Slat pitch','mm'],
+  ['panelT','Panel / rail thickness','mm'], ['railTop','Rail top below pivot','mm'],
+  ['rearClear','Rear clearance from pivot plane','mm'],
+];
+const LINK_FIELDS = [
+  ['armR','Servo arm radius','mm'], ['rodL','Pushrod hole-to-hole','mm'],
+  ['Sx','Servo axis x (+ = rear)','mm'], ['Sy','Servo axis y (− = down)','mm'],
+  ['closedDeg','Slat angle, closed','°'], ['openDeg','Slat angle, open','°'],
+];
+const N = 121, D2R = Math.PI/180, R2D = 180/Math.PI;
+const SERVO_TORQUE = 2.2; // kg·cm usable (MG90D ~2.4-2.8 stall)
+
+function circInt(c0, r0, c1, r1) {
+  const dx = c1[0]-c0[0], dy = c1[1]-c0[1], d = Math.hypot(dx, dy);
+  if (d < 1e-9 || d > r0+r1 || d < Math.abs(r0-r1)) return [];
+  const a = (r0*r0 - r1*r1 + d*d) / (2*d), h2 = r0*r0 - a*a;
+  if (h2 < 0) return [];
+  const h = Math.sqrt(h2), mx = c0[0]+a*dx/d, my = c0[1]+a*dy/d;
+  return [[mx+h*dy/d, my-h*dx/d], [mx-h*dy/d, my+h*dx/d]];
+}
+function segPt(a, b, p) {
+  const vx = b[0]-a[0], vy = b[1]-a[1], L2 = vx*vx+vy*vy;
+  if (!L2) return Math.hypot(p[0]-a[0], p[1]-a[1]);
+  const t = Math.max(0, Math.min(1, ((p[0]-a[0])*vx+(p[1]-a[1])*vy)/L2));
+  return Math.hypot(p[0]-a[0]-t*vx, p[1]-a[1]-t*vy);
+}
+function segSeg(p1, p2, p3, p4) {
+  const ccw = (a,b,c) => (c[1]-a[1])*(b[0]-a[0]) > (b[1]-a[1])*(c[0]-a[0]);
+  if (ccw(p1,p3,p4) !== ccw(p2,p3,p4) && ccw(p1,p2,p3) !== ccw(p1,p2,p4)) return 0;
+  return Math.min(segPt(p1,p2,p3), segPt(p1,p2,p4), segPt(p3,p4,p1), segPt(p3,p4,p2));
+}
+function segRail(a, b) { // distance from segment to solid rail box (0 = inside/through)
+  const x0 = -P.panelT/2, x1 = P.panelT/2, y1 = -P.railTop, y0 = y1 - 200;
+  const inside = p => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1;
+  if (inside(a) || inside(b)) return 0;
+  const c = [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+  let d = 1e9;
+  for (let i = 0; i < 4; i++) d = Math.min(d, segSeg(a, b, c[i], c[(i+1)%4]));
+  return d;
+}
+const pinAt = t => [P.R*Math.cos(t), P.R*Math.sin(t)];
+
+function march(a1, sweep, dir) {
+  // Walk the horn through its sweep, tracking the coupler's assembly branch.
+  const S = [P.Sx, P.Sy], tc = P.closedDeg*D2R;
+  let prev = pinAt(tc);
+  const st = { rows: [], ok: true, fail: null, minArmH: 1e9, maxRatio: 0,
+               env: {x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9}, railHit: false, slatHit: false, rearHit: false };
+  for (let i = 0; i < N; i++) {
+    const phi = a1 + dir*sweep*i/(N-1);
+    const H = [S[0]+P.armR*Math.cos(phi), S[1]+P.armR*Math.sin(phi)];
+    const sols = circInt([0,0], P.R, H, P.rodL);
+    if (!sols.length) { st.ok = false; st.fail = 'assembly'; break; }
+    const Pn = sols.reduce((b,q) => (q[0]-prev[0])**2+(q[1]-prev[1])**2 < (b[0]-prev[0])**2+(b[1]-prev[1])**2 ? q : b);
+    prev = Pn;
+    const th = Math.atan2(Pn[1], Pn[0]);
+    let ux = Pn[0]-H[0], uy = Pn[1]-H[1]; const ul = Math.hypot(ux,uy); ux/=ul; uy/=ul;
+    const armH = Math.abs((H[0]-S[0])*uy - (H[1]-S[1])*ux);
+    const armC = Math.abs(Pn[0]*uy - Pn[1]*ux);
+    st.minArmH = Math.min(st.minArmH, armH);
+    if (armC > 2) st.maxRatio = Math.max(st.maxRatio, armH/armC);
+    // instantaneous collisions (bottom slat + rail + rear limit)
+    const sd = [Math.cos(th), Math.sin(th)], hw = P.slatW/2 + 1.5;
+    const sa = [-hw*sd[0], -hw*sd[1]], sb = [hw*sd[0], hw*sd[1]];
+    if (segSeg(S, H, sa, sb) < 5) st.slatHit = true;
+    const drs = segSeg(H, Pn, sa, sb);
+    if (drs < 3.5 && Math.hypot(Pn[0]-sb[0], Pn[1]-sb[1]) > 14) st.slatHit = true;
+    if (segRail(S, H) < 2 || segRail(H, Pn) < 2) st.railHit = true;
+    if (Math.max(H[0], Pn[0]) > P.rearClear) st.rearHit = true;
+    st.env.x0 = Math.min(st.env.x0, H[0]); st.env.x1 = Math.max(st.env.x1, H[0], Pn[0]);
+    st.env.y0 = Math.min(st.env.y0, H[1]); st.env.y1 = Math.max(st.env.y1, H[1]);
+    st.rows.push({phi, H, P: Pn, th, armH, armC});
+  }
+  if (st.ok) {
+    const ths = st.rows.map(r => r.th);
+    let mono = true;
+    for (let i = 1; i < ths.length; i++) if ((ths[i]-ths[i-1]) * (ths[1]-ths[0]) <= 0) mono = false;
+    st.mono = mono;
+    st.travel = Math.abs(ths[ths.length-1] - ths[0]) * R2D;
+    if (Math.abs(ths[ths.length-1] - P.openDeg*D2R) > 4*D2R) { st.ok = false; st.fail = 'branch'; }
+    // does the mechanism (or servo body) breach the rail's FRONT wall? A rear-face
+    // pocket can hide the mechanism, but it must leave ~7mm of front wall standing.
+    const frontLimit = -(P.panelT/2 - 7);
+    const bodyX0 = P.Sx - 6.1, bodyBelowRail = P.Sy + 5 < -P.railTop;
+    st.frontHit = (st.env.y0 < -P.railTop && st.env.x0 < frontLimit) || (bodyBelowRail && bodyX0 < frontLimit);
+    // pocket needed in the rail rear face (bounding the mechanism + servo body below rail top)
+    if (st.railHit && !st.frontHit) {
+      const x0 = Math.min(st.env.x0, bodyBelowRail ? bodyX0 : 1e9);
+      const y0 = Math.min(st.env.y0, bodyBelowRail ? P.Sy - 23 : 1e9);
+      st.pocket = { depth: P.panelT/2 - x0 + 3, height: -P.railTop - y0 + 5 };
+    }
+  }
+  return st;
+}
+function solve() {
+  const S = [P.Sx, P.Sy], PA = pinAt(P.closedDeg*D2R), PB = pinAt(P.openDeg*D2R);
+  const HA = circInt(S, P.armR, PA, P.rodL), HB = circInt(S, P.armR, PB, P.rodL);
+  if (!HA.length || !HB.length) return {ok: false, fail: HA.length ? 'open unreachable' : 'closed unreachable'};
+  let best = null;
+  for (const ha of HA) for (const hb of HB) for (const dir of [1,-1]) {
+    const a1 = Math.atan2(ha[1]-S[1], ha[0]-S[0]), a2 = Math.atan2(hb[1]-S[1], hb[0]-S[0]);
+    let sweep = (dir*(a2-a1)) % (2*Math.PI); if (sweep < 0) sweep += 2*Math.PI;
+    if (sweep*R2D > 200) continue;
+    const st = march(a1, sweep, dir);
+    if (!st.ok) continue;
+    st.a1 = a1; st.dir = dir; st.sweep = sweep;
+    const score = (st.mono ? 1000 : 0) + Math.min(st.minArmH, 26) + 0.1*sweep*R2D
+      - 10*Math.max(0, st.maxRatio - 0.85) - (st.slatHit ? 500 : 0) - (st.rearHit ? 200 : 0)
+      - (st.frontHit ? 400 : 0);
+    if (!best || score > best.score) { best = st; best.score = score; }
+  }
+  return best || {ok: false, fail: 'no continuous path from closed to open'};
+}
+
+// ---------- drawing ----------
+const SC = 4.0, OX = 320, OY = 150; // world mm -> svg px, origin position
+const px = p => [OX + p[0]*SC, OY - p[1]*SC];
+function poly(pts, attrs) {
+  return `<polyline points="${pts.map(p => px(p).map(v => v.toFixed(1)).join(',')).join(' ')}" ${attrs}/>`;
+}
+function drawScene(sol, idx) {
+  const s = [];
+  const row = sol.ok ? sol.rows[idx] : null;
+  const th = row ? row.th : P.closedDeg*D2R;
+  // grid
+  for (let gx = -70; gx <= 100; gx += 10) { const [X] = px([gx,0]); s.push(`<line x1="${X}" y1="0" x2="${X}" y2="560" stroke="var(--grid)" stroke-width="${gx===0?1.2:0.6}"/>`); }
+  for (let gy = -100; gy <= 90; gy += 10) { const [,Y] = px([0,gy]); s.push(`<line x1="0" y1="${Y}" x2="760" y2="${Y}" stroke="var(--grid)" stroke-width="${gy===0?1.2:0.6}"/>`); }
+  // rear clearance limit + glass hint
+  { const [X] = px([P.rearClear, 0]);
+    s.push(`<line x1="${X}" y1="10" x2="${X}" y2="550" stroke="var(--warn)" stroke-width="1" stroke-dasharray="7 5" opacity=".55"/>`);
+    s.push(`<text x="${X+5}" y="24" font-family="var(--mono)" font-size="10" fill="var(--warn)" opacity=".8">rear limit ${P.rearClear}</text>`); }
+  // bottom rail (solid)
+  { const a = px([-P.panelT/2, -P.railTop]), b = px([P.panelT/2, -P.railTop - 95]);
+    s.push(`<rect x="${a[0]}" y="${a[1]}" width="${b[0]-a[0]}" height="${b[1]-a[1]}" fill="var(--wood)" stroke="var(--wood-edge)" stroke-width="1.4" opacity=".55"/>`);
+    s.push(`<text x="${a[0]+6}" y="${b[1]-8}" font-family="var(--mono)" font-size="10" fill="var(--wood-edge)">BOTTOM RAIL</text>`); }
+  // slats (3 shown) + pivots + rod pins
+  const pins = [];
+  for (let k = 0; k < 3; k++) {
+    const c = [0, k*P.pitch], hw = P.slatW/2, dx = Math.cos(th), dy = Math.sin(th);
+    const nx = -dy*1.6, ny = dx*1.6;
+    const q = [[c[0]-hw*dx+nx, c[1]-hw*dy+ny],[c[0]+hw*dx+nx, c[1]+hw*dy+ny],[c[0]+hw*dx-nx, c[1]+hw*dy-ny],[c[0]-hw*dx-nx, c[1]-hw*dy-ny]];
+    s.push(`<polygon points="${q.map(p => px(p).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="var(--wood)" stroke="var(--wood-edge)" stroke-width="1.3"/>`);
+    const cc = px(c); s.push(`<circle cx="${cc[0]}" cy="${cc[1]}" r="2.6" fill="none" stroke="var(--ink)" stroke-width="1.2"/>`);
+    pins.push([c[0]+P.R*dx, c[1]+P.R*dy]);
+  }
+  // tilt rod through pins
+  const rodTop = [pins[2][0], pins[2][1]+14], rodBot = [pins[0][0], pins[0][1]-6];
+  s.push(poly([rodBot, rodTop], `stroke="var(--ink)" stroke-width="4" stroke-linecap="round" opacity=".8" fill="none"`));
+  for (const pin of pins) { const c = px(pin); s.push(`<circle cx="${c[0]}" cy="${c[1]}" r="3" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.4"/>`); }
+  s.push(`<text x="${px(rodTop)[0]+7}" y="${px(rodTop)[1]+4}" font-family="var(--mono)" font-size="10" fill="var(--muted)">TILT ROD</text>`);
+  if (sol.ok && row) {
+    const S = [P.Sx, P.Sy];
+    // swept envelopes (horn tip + pin arc)
+    s.push(poly(sol.rows.map(r => r.H), `stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 4" fill="none" opacity=".5"`));
+    s.push(poly(sol.rows.map(r => r.P), `stroke="var(--steel)" stroke-width="1" stroke-dasharray="3 4" fill="none" opacity=".5"`));
+    // servo body: rectangle below/around axis, drawn axis-centred for clarity
+    { const a = px([S[0]-6.1, S[1]+5]), w = 12.2*SC, h = 22.8*SC;
+      s.push(`<rect x="${a[0]}" y="${a[1]}" width="${w}" height="${h}" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>`);
+      const c = px(S); s.push(`<circle cx="${c[0]}" cy="${c[1]}" r="3.2" fill="var(--accent)"/>`);
+      s.push(`<text x="${a[0]-4}" y="${a[1]+h+14}" font-family="var(--mono)" font-size="10" fill="var(--accent)">MG90D</text>`); }
+    // horn + pushrod + pin adapter
+    s.push(poly([S, row.H], `stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" fill="none"`));
+    s.push(poly([row.H, row.P], `stroke="var(--steel)" stroke-width="3" stroke-linecap="round" fill="none"`));
+    for (const [pt, col] of [[row.H, 'var(--accent)'], [row.P, 'var(--steel)']]) {
+      const c = px(pt); s.push(`<circle cx="${c[0]}" cy="${c[1]}" r="4" fill="var(--panel)" stroke="${col}" stroke-width="2"/>`);
+    }
+    // dimension callouts for servo axis
+    const c = px(S), o = px([0,0]);
+    s.push(`<line x1="${o[0]}" y1="${o[1]}" x2="${c[0]}" y2="${o[1]}" stroke="var(--muted)" stroke-width=".8" stroke-dasharray="2 3"/>`);
+    s.push(`<line x1="${c[0]}" y1="${o[1]}" x2="${c[0]}" y2="${c[1]}" stroke="var(--muted)" stroke-width=".8" stroke-dasharray="2 3"/>`);
+    s.push(`<text x="${c[0]+8}" y="${(o[1]+c[1])/2}" font-family="var(--mono)" font-size="10" fill="var(--muted)">${P.Sy}</text>`);
+    s.push(`<text x="${(o[0]+c[0])/2-10}" y="${o[1]-5}" font-family="var(--mono)" font-size="10" fill="var(--muted)">${P.Sx}</text>`);
+  } else {
+    s.push(`<text x="380" y="280" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--warn)">NO VALID LINKAGE — ${sol.fail || ''}</text>`);
+  }
+  document.getElementById('dwg').innerHTML = s.join('');
+}
+function drawPlot(sol) {
+  const el = document.getElementById('plot');
+  if (!sol.ok) { el.innerHTML = ''; return; }
+  const w = 360, h = 230, m = {l: 42, r: 10, t: 10, b: 30};
+  const sw = sol.sweep*R2D;
+  const xs = v => m.l + (w-m.l-m.r) * v/sw;
+  const lo = Math.min(P.closedDeg, P.openDeg), hi = Math.max(P.closedDeg, P.openDeg);
+  const ys = v => h-m.b - (h-m.t-m.b) * (v-lo)/(hi-lo);
+  const s = [];
+  for (const g of [lo, (lo+hi)/2, hi]) s.push(`<line x1="${m.l}" y1="${ys(g)}" x2="${w-m.r}" y2="${ys(g)}" stroke="var(--grid)"/><text x="${m.l-6}" y="${ys(g)+3}" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--muted)">${g.toFixed(0)}°</text>`);
+  for (const g of [0, sw/2, sw]) s.push(`<line x1="${xs(g)}" y1="${m.t}" x2="${xs(g)}" y2="${h-m.b}" stroke="var(--grid)"/><text x="${xs(g)}" y="${h-m.b+14}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--muted)">${g.toFixed(0)}°</text>`);
+  s.push(`<line x1="${xs(0)}" y1="${ys(P.closedDeg)}" x2="${xs(sw)}" y2="${ys(P.openDeg)}" stroke="var(--muted)" stroke-dasharray="3 4" stroke-width="1"/>`);
+  const pts = sol.rows.map((r,i) => `${xs(sol.sweep*R2D*i/(N-1)).toFixed(1)},${ys(r.th*R2D).toFixed(1)}`).join(' ');
+  s.push(`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>`);
+  s.push(`<text x="${w-m.r}" y="${m.t+10}" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--muted)">dashed = perfectly linear</text>`);
+  el.innerHTML = s.join('');
+}
+function drawReadouts(sol) {
+  const R_ = document.getElementById('readouts');
+  const cells = [];
+  const add = (k, v) => cells.push(`<div class="cell"><div class="k">${k}</div><div class="v">${v}</div></div>`);
+  if (sol.ok) {
+    add('Servo sweep', `${(sol.sweep*R2D).toFixed(0)}° <small>of 180</small>`);
+    add('Slat travel', `${sol.travel.toFixed(0)}°`);
+    add('Jam margin', `${sol.minArmH.toFixed(1)} <small>mm arm</small>`);
+    add('Torque ratio', `≤ ${sol.maxRatio.toFixed(2)}`);
+    add('Slat torque avail.', `${(SERVO_TORQUE/Math.max(sol.maxRatio,.05)).toFixed(1)} <small>kg·cm</small>`);
+    add('Rear-most point', `${sol.env.x1.toFixed(0)} <small>mm</small>`);
+    if (sol.pocket) add('Rail pocket', `${sol.pocket.depth.toFixed(0)}×${sol.pocket.height.toFixed(0)} <small>mm D×H</small>`);
+  } else { add('Status', 'no solution'); }
+  R_.innerHTML = cells.join('');
+  const flags = [];
+  const flag = (bad, title, txt) => flags.push(`<li class="${bad ? 'bad' : ''}"><b>${title}</b>${txt}</li>`);
+  if (sol.ok) {
+    flag(sol.railHit, 'Bottom rail', sol.railHit
+      ? (sol.frontHit
+          ? 'Mechanism breaches the rail FRONT face — a rear pocket cannot hide this. Move the servo or shorten the arm.'
+          : `Mechanism enters the rail — rout a pocket ≈${sol.pocket ? sol.pocket.depth.toFixed(0) : '?'} mm deep × ${sol.pocket ? sol.pocket.height.toFixed(0) : '?'} mm tall × ~14 mm wide into the rail rear face (invisible from the room).`)
+      : 'Clear of the rail as drawn.');
+    flag(sol.slatHit, 'Slat clearance', sol.slatHit ? 'Horn or pushrod fouls the bottom slat during the stroke.' : 'Clears the moving slats.');
+    flag(sol.rearHit, 'Rear clearance', sol.rearHit ? 'Stroke swings past the rear limit — needs more panel-to-glass depth.' : 'Within the rear limit.');
+    flag(sol.minArmH < 2, 'Dead centre', sol.minArmH < 2 ? 'Horn and pushrod nearly line up — the servo can jam at this end. Trim the endpoint in calibration.' : `Smallest effective horn arm ${sol.minArmH.toFixed(1)} mm (at fully closed — helps hold shut).`);
+    flag(sol.maxRatio > 1.1, 'Torque', `Servo sees ≤ ${sol.maxRatio.toFixed(2)}× the slat friction torque; MG90D gives ~${(SERVO_TORQUE/Math.max(sol.maxRatio,.05)).toFixed(1)} kg·cm at the slats.`);
+  } else {
+    flag(true, 'No linkage', `${sol.fail}. Adjust pushrod length, arm radius or servo position until both endpoints are reachable by one continuous stroke.`);
+  }
+  document.getElementById('flags').innerHTML = flags.join('');
+}
+
+let SOL = {ok: false}, playing = false, playDir = 1;
+const scrub = document.getElementById('scrub'), posLabel = document.getElementById('posLabel');
+function recompute() {
+  SOL = solve();
+  scrub.max = N-1;
+  if (+scrub.value > N-1) scrub.value = 0;
+  drawReadouts(SOL); drawPlot(SOL); render();
+}
+function render() {
+  const i = Math.min(+scrub.value, N-1);
+  drawScene(SOL, i);
+  if (SOL.ok) {
+    const r = SOL.rows[i];
+    posLabel.textContent = `servo ${(SOL.sweep*R2D*i/(N-1)).toFixed(0)}° · slat ${(r.th*R2D).toFixed(0)}°`;
+  } else posLabel.textContent = '—';
+}
+scrub.addEventListener('input', render);
+document.getElementById('playBtn').addEventListener('click', () => {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? 'Stop' : 'Run';
+  if (playing) requestAnimationFrame(step);
+});
+function step() {
+  if (!playing) return;
+  let v = +scrub.value + playDir*1.4;
+  if (v >= N-1) { v = N-1; playDir = -1; } else if (v <= 0) { v = 0; playDir = 1; }
+  scrub.value = Math.round(v); render();
+  requestAnimationFrame(step);
+}
+function buildFields(defs, mount) {
+  const el = document.getElementById(mount);
+  el.innerHTML = defs.map(([k, lab, u]) =>
+    `<label for="f_${k}">${lab}<span class="u">${u}</span></label><input id="f_${k}" type="number" step="1" value="${P[k]}">`).join('');
+  for (const [k] of defs) document.getElementById('f_'+k).addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    if (Number.isFinite(v)) { P[k] = v; recompute(); }
+  });
+}
+buildFields(SHUTTER_FIELDS, 'shutterFields');
+buildFields(LINK_FIELDS, 'linkFields');
+recompute();
+</script>
+
+</body>
+</html>

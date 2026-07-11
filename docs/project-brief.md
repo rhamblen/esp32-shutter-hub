@@ -80,31 +80,38 @@ The servo is mounted **beside/behind the frame edge**, parallel to it, driving t
 a pushrod — not coupled directly to the rod (avoids the Zemismart mistake of routing all force
 through the gears and demanding perfect alignment).
 
-### Linkage geometry (mechanical advantage)
+### Linkage geometry (four-bar, corrected)
 
-| Element             | Value                                   |
-| ------------------- | --------------------------------------- |
-| Servo horn radius   | 10 mm (horns drilled at 8 / 10 / 12 mm) |
-| Shutter arm radius  | 20 mm (3D-printed arm holes: 15/20/25mm)|
-| Ratio               | ~2:1 → half force, double travel        |
-| Pushrod             | **M2 × 50 mm** ball-link (see §Parts)   |
+> **Correction (2026-07):** the original 10 mm horn : 20 mm arm sizing treated the tilt rod as a
+> venetian-blind wand that *twists* (a few mm of pushrod travel). A plantation hidden tilt rod
+> **translates without rotating**: every point of it rides a 36 mm arc about its slat's pivot, so
+> closed → open moves the rod's bottom pin **~36 mm up and ~36 mm outward** (~51 mm point-to-point).
+> The mechanism is a genuine four-bar (servo crank → ball-link coupler → slat-corner rocker).
+> Full analysis, collision checks and an interactive simulator:
+> **[docs/tilt-linkage-design.html](tilt-linkage-design.html)** (open locally in a browser).
 
-Rough travel: servo ~90° with a 10 mm horn ≈ 16 mm pushrod travel → ≈ 8 mm at a 20 mm shutter arm —
-enough to swing the tilt rod through its full range. The multi-hole arm lets you retune torque vs.
-travel without redesigning parts:
+| Element             | Baseline value (pending site measurements)                    |
+| ------------------- | -------------------------------------------------------------- |
+| Servo arm radius    | **25 mm** printed arm (spare holes at 22 / 28 mm)               |
+| Rocker radius R     | 36 mm (slat pivot → tilt-rod staple centre)                     |
+| Pushrod             | M2 ball-link, **hole-to-hole 50 mm** (M2×50 cut down, or M2×35) |
+| Servo axis          | 8 mm room-side of the pivot plane, 60 mm below bottom slat pivot|
+| Servo sweep         | ~140° of 180° → full 90° slat travel, near-linear mid-stroke    |
+| Torque (worst case) | servo sees ≤0.78× slat friction → ≈2.8 kg·cm available at slats |
+| Rail pocket         | ≈39 × 45 × 14 mm routed into the bottom rail **rear** face      |
 
-| Servo horn | Shutter arm | Result           |
-| ---------- | ----------- | ---------------- |
-| 10 mm      | 25 mm       | maximum force    |
-| 10 mm      | 20 mm       | balanced (start) |
-| 10 mm      | 15 mm       | maximum travel   |
+The linkage approaches dead-centre exactly at fully-closed: the servo holds the shutters shut with
+almost no torque and has maximum force available to break the closed friction. Mounting the servo
+shaft **outboard** (toward the stile) merely mirrors the rotation — handled entirely by endpoint
+calibration, no firmware change.
 
 ### Linkage parts (chosen)
 
-- **M2 × 50 mm ball-link pushrod** — link-rod 50 mm; total adjustable 75–85 mm; **hole-to-hole
-  68–78 mm** (this is the working ball-centre-to-ball-centre length). 304 stainless rod + nylon
-  ball ends. A couple of **M2 × 60 mm** kept as backup for mounting flexibility.
-- Threaded ends give length adjustment and low backlash; rod can be cut shorter if needed.
+- **M2 × 50 mm ball-link pushrod** — link-rod 50 mm; total adjustable 75–85 mm; hole-to-hole
+  68–78 mm as supplied. **Cut ~9 mm off each threaded end** for the working 50 mm hole-to-hole
+  (each end keeps ~10 mm of thread), or order **M2 × 35 mm** rods (53–63 mm) instead. 304 stainless
+  rod + nylon ball ends.
+- Threaded ends give length adjustment (±5 mm) and low backlash.
 
 ---
 

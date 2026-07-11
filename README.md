@@ -32,7 +32,11 @@ of shutters is configuration, not code.
 
 **Actuator linkage**
 
-![Linkage geometry](docs/diagrams/linkage-geometry.svg)
+The tilt-rod drive is a four-bar linkage — full kinematic analysis, clearance checks, MG90D mount
+dimensions and the 3D-print list live in the interactive
+**[tilt-linkage design doc](docs/tilt-linkage-design.html)** (self-contained HTML; download and open
+in a browser, or serve via GitHub Pages). The older
+[linkage-geometry.svg](docs/diagrams/linkage-geometry.svg) shows a superseded concept.
 
 ## Hardware (locked)
 

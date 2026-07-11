@@ -6,6 +6,22 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Added
+- **[docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)** — self-contained interactive
+  design document for the tilt-rod mechanism: exact four-bar solver + animated simulator (enter
+  your shutter measurements, scrub the servo, get collision/torque flags), MG90D mount dimensions,
+  and the 3D-printed parts list (P1 cradle bracket, P2 25 mm arm, P3 rod-pin adapter, P4 pocket
+  cover).
+
+### Changed
+- **Tilt-rod kinematics corrected** in `docs/project-brief.md` §1 and `cad/README.md`. The original
+  10 mm horn : 20 mm arm sizing treated the rod as a venetian-style *twisting* wand (~8 mm travel);
+  the plantation hidden tilt rod actually **translates on a 36 mm arc** (~36 mm up + ~36 mm out,
+  ~51 mm point-to-point), so the linkage is a genuine four-bar. New baseline: 25 mm printed servo
+  arm, pushrod cut to 50 mm hole-to-hole, servo axis at (−8, −60) mm from the bottom slat pivot,
+  ~140° sweep → 90° slat travel, worst-case torque ratio 0.78 (≈2.8 kg·cm at the slats).
+  `docs/diagrams/linkage-geometry.svg` is marked superseded.
+
 ### Documentation
 Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, no version change.**
 
