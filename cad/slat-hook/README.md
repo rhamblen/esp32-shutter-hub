@@ -1,4 +1,9 @@
-# P2 — slat-clip crank (`slat-clip-crank.3mf`)
+# P2 — slat-clip crank
+
+**⬇ Download:** [slat-clip-crank.3mf](https://github.com/rhamblen/esp32-shutter-hub/raw/main/cad/slat-hook/slat-clip-crank.3mf)
+· [slat-clip-crank.stl](https://github.com/rhamblen/esp32-shutter-hub/raw/main/cad/slat-hook/slat-clip-crank.stl)
+(identical geometry; use whichever your slicer prefers)
+
 
 The Zemismart-style rod-to-slat coupler (`clip1.3mf`) with a **solid drill boss** added under the
 bottom strap. Clipped onto the bottom slat it becomes the linkage's crank; an M2 ball-stud through

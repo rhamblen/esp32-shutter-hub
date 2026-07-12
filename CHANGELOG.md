@@ -6,6 +6,12 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
+### Added
+- **STL export + one-click downloads.** [cad/slat-hook/slat-clip-crank.stl](cad/slat-hook/slat-clip-crank.stl)
+  sits alongside the 3MF (identical geometry). The README and `cad/README.md` now carry a
+  **Download the 3D-print files** table with direct `/raw/` links so the parts can be saved without
+  navigating the repo tree.
+
 ### Documentation
 Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, no version change.**
 

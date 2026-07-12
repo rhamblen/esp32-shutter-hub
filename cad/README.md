@@ -2,6 +2,19 @@
 
 Enclosures and mechanical parts for the hub and the per-shutter actuator modules.
 
+## ⬇ Download print files
+
+Direct download links (click to save — no GitHub account needed). Both `.3mf` (with print
+metadata) and `.stl` are provided for each ready part.
+
+| Part | 3MF | STL | Status |
+| ---- | --- | --- | ------ |
+| **P2 — slat-clip crank** | [⬇ .3mf](https://github.com/rhamblen/esp32-shutter-hub/raw/main/cad/slat-hook/slat-clip-crank.3mf) | [⬇ .stl](https://github.com/rhamblen/esp32-shutter-hub/raw/main/cad/slat-hook/slat-clip-crank.stl) | ✅ ready to print |
+| **P1 — servo cradle** | _pending_ | _pending_ | 📐 drawings only ([servo-cradle-p1.svg](../docs/diagrams/servo-cradle-p1.svg)) |
+
+> Tip: on the GitHub file page for any part, the **Download raw file** button (top-right ⬇ icon)
+> saves it too. To grab everything at once, use the green **Code → Download ZIP** on the repo home.
+
 ## Contents (as produced)
 
 | Path | Part | Notes |

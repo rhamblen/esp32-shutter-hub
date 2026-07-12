@@ -45,8 +45,16 @@ Full kinematic analysis, an **animated simulator** (enter your shutter's measure
 collision/torque flags; v0.9.0–0.9.2 layouts are selectable presets), MG90D mount dimensions and
 the 3D-print list live in the interactive design doc:
 **<https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>**
-(source: [docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)). Printed parts:
-[cad/slat-hook](cad/slat-hook) (P2, produced) and cradle P1 (drawings in the design doc).
+(source: [docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)).
+
+**⬇ Download the 3D-print files** (right-click → Save, or just click — these are direct downloads):
+
+| Part | 3MF | STL | Status |
+| ---- | --- | --- | ------ |
+| P2 — slat-clip crank | [slat-clip-crank.3mf](https://github.com/rhamblen/esp32-shutter-hub/raw/main/cad/slat-hook/slat-clip-crank.3mf) | [slat-clip-crank.stl](https://github.com/rhamblen/esp32-shutter-hub/raw/main/cad/slat-hook/slat-clip-crank.stl) | ✅ ready — see [fitting notes](cad/slat-hook/README.md) |
+| P1 — servo cradle | _pending_ | _pending_ | 📐 drawings only ([§7](https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html)) |
+
+Full parts list and print settings: **[cad/README.md](cad/README.md)**.
 
 ## Hardware (locked)
 
