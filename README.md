@@ -32,17 +32,21 @@ of shutters is configuration, not code.
 
 **Actuator linkage**
 
-![Tilt linkage geometry v0.9.1](docs/diagrams/linkage-geometry-front-edge.svg)
+![Tilt linkage geometry](docs/diagrams/linkage-geometry.svg)
 
-The tilt-rod drive is a four-bar linkage (v0.9.1): MG90D hidden in the corner under the bottom
-slat, behind the rail → stock 20 mm horn → M2×25 ball-link pushrod → printed hook on the bottom
-slat's **front edge** (pin swings 06:00 closed → 03:00 open). Full kinematic analysis, an
-**animated simulator** (enter your shutter's measurements, get collision/torque flags; the v0.9.0
-layouts are kept as presets — see also
-[linkage-geometry.svg](docs/diagrams/linkage-geometry.svg)), MG90D mount dimensions and the
-3D-print list live in the interactive design doc:
+The tilt-rod drive is a four-bar linkage. **Build baseline (v0.9.2):** the owner's Zemismart-style
+clip on the bottom slat is the crank; a tape-mounted MG90D on the rail's rear face → stock 20 mm
+horn → M2×35 pushrod → clip pin drives all slats through 90°, everything hidden behind the panel
+(rear pull-down). The servo cradle tapes on with no screws:
+
+![P1 servo cradle](docs/diagrams/servo-cradle-p1.svg)
+
+Full kinematic analysis, an **animated simulator** (enter your shutter's measurements, get
+collision/torque flags; v0.9.0–0.9.2 layouts are selectable presets), MG90D mount dimensions and
+the 3D-print list live in the interactive design doc:
 **<https://rhamblen.github.io/esp32-shutter-hub/tilt-linkage-design.html>**
-(source: [docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)).
+(source: [docs/tilt-linkage-design.html](docs/tilt-linkage-design.html)). Printed parts:
+[cad/slat-hook](cad/slat-hook) (P2, produced) and cradle P1 (drawings in the design doc).
 
 ## Hardware (locked)
 

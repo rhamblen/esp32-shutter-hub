@@ -6,16 +6,6 @@ Phases map loosely to minor versions (Phase 1 → v0.1.0).
 
 ## [Unreleased]
 
-### Added
-- **[cad/slat-hook/slat-clip-crank.3mf](cad/slat-hook/slat-clip-crank.3mf)** — first produced CAD
-  part (P2): the owner's Zemismart-style slat sleeve clip, reverse-engineered from the mesh
-  (mouth 8.35 mm wedging tight on the measured 8 mm slat; 5 mm rod-bar jaw unused), with a solid
-  drill boss added under the bottom strap. Drilled 12 mm from the slat's rear edge it gives the
-  rear pull-down crank pin (26.6 mm @ −16°); matching solved linkage: stock 20 mm horn, M2×35
-  pushrod at 58 mm, servo axis (+21, −49) on the rail rear face — ~129° sweep, jam margin 9.9 mm,
-  torque ratio ≤0.79, everything hidden behind the panel. Fitting/drilling instructions in
-  [cad/slat-hook/README.md](cad/slat-hook/README.md).
-
 ### Documentation
 Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, no version change.**
 
@@ -60,6 +50,41 @@ Documentation-only audit against the v0.6.2 firmware. **No code, no behaviour, n
   variants (`esp32d-direct`, `esp32d-pca9685`) are shipped day-to-day; the C3 variants are deferred.
   **Flash the LittleFS image alongside the firmware** or the device serves the embedded recovery
   page. See [firmware/README.md](firmware/README.md).
+
+## [0.9.2] — 2026-07-12
+
+**Documentation-only — the complete mechanical build package for the tilt actuator.** No firmware
+change (stays v0.7.2), no binaries, no GitHub Release. This is the settled, buildable design: the
+owner's real slat clip drives a fully hidden rear pull-down linkage through a tape-mounted servo
+cradle.
+
+### Added
+- **[cad/slat-hook/slat-clip-crank.3mf](cad/slat-hook/slat-clip-crank.3mf)** (P2, produced): the
+  owner's Zemismart-style slat sleeve clip, reverse-engineered from the mesh (mouth 8.35 mm wedges
+  tight on the measured 8 mm slat — clip fit **confirmed on the real slat**; the 5 mm rod-bar jaw
+  is unused), with a solid drill boss added under the bottom strap. Drilled 12 mm from the slat's
+  rear edge it gives the rear pull-down crank pin (**26.6 mm @ −16°**). Fitting/drilling notes in
+  [cad/slat-hook/README.md](cad/slat-hook/README.md).
+- **P1 servo cradle — tape-mount design + drawings** (design doc §7 and
+  [docs/diagrams/servo-cradle-p1.svg](docs/diagrams/servo-cradle-p1.svg)): three orthographic
+  views. The servo **case** is bonded into the pocket with a second VHB strip — **no screws, the
+  mounting tabs are unused** (side walls stop 8 mm short so the tab flange sits proud); plate
+  40×34×2.4 VHB'd to the rail's rear face; 4 mm cable gallery with an **open lay-in slot** along
+  the long edge so the plug never threads through. 3MF still to be cut on approval.
+- **Simulator gains a "v0.9.2 build" preset** (now the default): clip pin 26.6 @ −16°, servo axis
+  (+24.7, −49) for the taped stack, M2×35 pushrod at 58 mm, stock 20 mm horn.
+
+### Changed
+- **Build baseline finalised.** Measuring the slat at **8 mm / 6 mm** and taping the case (adds a
+  second ~1.1 mm layer) sets the servo axis at **(+24.7, −49)** = 10.7 mm off the rail rear face.
+  Re-solved: **~132° sweep → 90° slat travel, jam margin 9.3 mm, torque ratio ≤0.77** (≈2.9 kg·cm
+  at the slats), rear-most point 44.7 mm from the pivot plane (needs ≥ ~34 mm rail-face-to-glass).
+  Everything stays behind the panel; slats close rear-edge-up.
+
+### Notes
+- Remaining before printing four sets: the rod pull-force test (≤0.6 kg target) and confirming the
+  pivot→staple radius ≈ 36 mm and rail-face-to-glass depth. Feed measurements into the live
+  simulator and confirm all flags stay green.
 
 ## [0.9.1] — 2026-07-11
 

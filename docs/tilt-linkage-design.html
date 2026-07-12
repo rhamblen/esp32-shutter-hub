@@ -163,7 +163,8 @@
 
     <aside>
       <div class="presets">
-        <button type="button" data-preset="frontEdge" class="active">v0.9.1 front-edge hook</button>
+        <button type="button" data-preset="build" class="active">v0.9.2 build</button>
+        <button type="button" data-preset="frontEdge">v0.9.1 f-edge</button>
         <button type="button" data-preset="rear">v0.9.0 rear</button>
         <button type="button" data-preset="front">v0.9.0 front</button>
       </div>
@@ -388,7 +389,141 @@
     </section>
 
     <section>
-      <h2><span class="no">7</span>Torque budget</h2>
+      <h2><span class="no">7</span>P1 servo cradle — tape-mount design (for review)</h2>
+      <p>
+        Two layers of double-sided tape (VHB-class, ~1.1 mm each): one bonds the plate to the bottom
+        rail's <strong>rear face</strong>, the other bonds the servo <strong>case</strong> into the
+        pocket — <strong>no screws, the mounting tabs are not used.</strong> The stack (VHB + 2.4 plate +
+        VHB + half-body) sets the axis 10.7 mm off the rail face; the linkage is re-solved for exactly that:
+      </p>
+      <div class="tblwrap"><table>
+        <tr><th>Parameter</th><th>Value</th></tr>
+        <tr><td>Servo axis</td><td class="num">(+24.7, −49) from slat pivot = 10.7 mm off the rail face, 4.0 mm below the rail top</td></tr>
+        <tr><td>Crank (clip pin)</td><td class="num">26.6 mm @ −16° — `slat-clip-crank.3mf` drilled 12 mm from the rear edge</td></tr>
+        <tr><td>Pushrod / horn</td><td class="num">M2×35 at 58 mm hole-to-hole · stock 20 mm horn</td></tr>
+        <tr><td>Sweep / jam margin / ratio</td><td class="num">132° · 9.3 mm · ≤ 0.77 (≈2.9 kg·cm at slats)</td></tr>
+        <tr><td>Rear-most point</td><td class="num">44.7 mm from pivot plane → needs ≥ ~34 mm rail-face-to-glass. Verify.</td></tr>
+      </table></div>
+
+      <div class="dim-svg">
+      <svg viewBox="0 0 980 560" role="img" aria-label="Three orthographic views of the P1 tape-mounted servo cradle, no screw tabs">
+        <g font-family="var(--mono)" font-size="10" fill="var(--ink)">
+          <!-- ================= VIEW A: side (x-y), scale 4 -->
+          <g transform="translate(105,70)">
+            <text x="0" y="-20" font-size="11" font-weight="600">A — SIDE (section through servo axis)</text>
+            <!-- rail -->
+            <rect x="-56" y="16" width="56" height="200" fill="var(--accent-soft)" stroke="var(--wood-edge)" stroke-width="1.2"/>
+            <text x="-50" y="210" fill="var(--wood-edge)">RAIL</text>
+            <line x1="-90" y1="16" x2="30" y2="16" stroke="var(--muted)" stroke-width=".7" stroke-dasharray="5 4"/>
+            <text x="-88" y="11" fill="var(--muted)">rail top (−45)</text>
+            <!-- stack in x (scale 4): VHB 0..4.4, plate 4.4..14.0, VHB 14.0..18.4, body 18.4..67.2 -->
+            <rect x="0" y="4" width="4.4" height="104" fill="var(--warn)" opacity=".55"/>
+            <rect x="4.4" y="4" width="9.6" height="104" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3"/>
+            <rect x="14.0" y="4" width="4.4" height="91.2" fill="var(--warn)" opacity=".55"/>
+            <text x="-30" y="126" fill="var(--warn)">VHB ×2</text>
+            <!-- servo body 12.2(x)=48.8 wide, 22.8(y)=91.2 tall; top 3 above rail top -> y=4 -->
+            <rect x="18.4" y="4" width="48.8" height="91.2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+            <text x="24" y="56" fill="var(--accent)">MG90D</text>
+            <!-- tab flanges (unused): 2.7 thick, extend body in y; ghosted -->
+            <rect x="30" y="-14.4" width="10.8" height="18.4" fill="none" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+            <rect x="30" y="95.2" width="10.8" height="18.4" fill="none" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="44" y="-6" fill="var(--muted)" font-size="9">tabs (unused)</text>
+            <!-- cable gallery: 4mm under body -> below y=95.2, floor -->
+            <rect x="18.4" y="95.2" width="48.8" height="16" fill="var(--panel)" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="70" y="105" fill="var(--muted)" font-size="9">cable gallery 4</text>
+            <rect x="18.4" y="111.2" width="48.8" height="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.1"/>
+            <!-- axis: body center -> x=42.8 ; 4 below rail top -> y=32 -->
+            <circle cx="42.8" cy="32" r="3.4" fill="var(--accent)"/>
+            <line x1="42.8" y1="-28" x2="42.8" y2="120" stroke="var(--muted)" stroke-width=".7" stroke-dasharray="6 3"/>
+            <circle cx="42.8" cy="32" r="80" fill="none" stroke="var(--steel)" stroke-width="1" stroke-dasharray="4 5" opacity=".7"/>
+            <text x="104" y="20" fill="var(--steel)">horn sweep Ø40</text>
+            <!-- dims -->
+            <line x1="0" y1="150" x2="42.8" y2="150" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="10" y="162">10.7</text>
+            <line x1="78" y1="16" x2="78" y2="32" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="82" y="28">4.0</text>
+            <line x1="18.4" y1="128" x2="67.2" y2="128" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="34" y="140">12.2</text>
+          </g>
+          <!-- ================= VIEW B: front (z-y), scale 3 -->
+          <g transform="translate(430,70)">
+            <text x="0" y="-20" font-size="11" font-weight="600">B — FRONT (from the window side)</text>
+            <!-- plate 40(z) x 34(y) -> 120 x 102 -->
+            <rect x="0" y="0" width="120" height="102" rx="9" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+            <!-- body dashed: 22.5(z)=67.5 x 22.8(y)=68.4, at z-left, y 8..76.4 -->
+            <rect x="14" y="8" width="67.5" height="68.4" fill="none" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 3"/>
+            <text x="20" y="46" fill="var(--accent)" font-size="9">servo case</text>
+            <!-- shaft at inboard (+z) end -->
+            <circle cx="81.5" cy="34" r="7" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+            <text x="91" y="37" font-size="9">shaft → clip</text>
+            <!-- side walls run from cable end, STOP short of the shaft/tab end -->
+            <rect x="14" y="1" width="46" height="7" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <rect x="14" y="76.4" width="46" height="7" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="10" y="-8" font-size="9" fill="var(--accent)">walls stop short of tabs</text>
+            <!-- tab flanges proud, in clear air near shaft end -->
+            <rect x="60" y="-6" width="8" height="14" fill="none" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+            <rect x="60" y="76.4" width="8" height="14" fill="none" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="72" y="98" font-size="9" fill="var(--muted)">tab (unused, 2.7)</text>
+            <!-- cable gallery + open lay-in slot at the bottom (−y) -->
+            <rect x="14" y="90" width="67.5" height="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.1"/>
+            <line x1="14" y1="88" x2="81.5" y2="88" stroke="var(--steel)" stroke-width="1.6" stroke-dasharray="6 4"/>
+            <text x="6" y="118" fill="var(--steel)" font-size="9">open slot along the long edge — lay the lead in sideways, plug stays on</text>
+            <!-- dims -->
+            <line x1="0" y1="132" x2="120" y2="132" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="54" y="144">40</text>
+            <line x1="134" y1="0" x2="134" y2="102" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="139" y="55">34</text>
+          </g>
+          <!-- ================= VIEW C: top (x-z), scale 3 -->
+          <g transform="translate(105,340)">
+            <text x="0" y="-16" font-size="11" font-weight="600">C — TOP (looking down)</text>
+            <rect x="-70" y="0" width="70" height="110" fill="var(--accent-soft)" stroke="var(--wood-edge)" stroke-width="1.2"/>
+            <text x="-60" y="60" fill="var(--wood-edge)">RAIL</text>
+            <!-- stack strips: VHB 3.3, plate 7.2, VHB 3.3 -->
+            <rect x="0" y="0" width="3.3" height="110" fill="var(--warn)" opacity=".55"/>
+            <rect x="3.3" y="0" width="7.2" height="110" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <rect x="10.5" y="12" width="3.3" height="86" fill="var(--warn)" opacity=".55"/>
+            <!-- body 12.2(x)=36.6 ; 22.5(z)=67.5, inboard downward -->
+            <rect x="13.8" y="12" width="36.6" height="67.5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+            <text x="18" y="48" fill="var(--accent)" font-size="9">case</text>
+            <!-- shaft stub + horn/ball plane inboard -->
+            <circle cx="32.1" cy="79.5" r="5" fill="var(--accent)"/>
+            <line x1="-80" y1="95" x2="150" y2="95" stroke="var(--steel)" stroke-width="1" stroke-dasharray="5 4"/>
+            <text x="60" y="90" fill="var(--steel)" font-size="9">horn / clip-ball plane</text>
+            <text x="-80" y="126" fill="var(--muted)" font-size="9">→ slide along the rail to align with the clip ball, then stick</text>
+            <!-- dims -->
+            <line x1="13.8" y1="6" x2="50.4" y2="6" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="24" y="0">12.2</text>
+            <line x1="58" y1="12" x2="58" y2="79.5" stroke="var(--ink)" stroke-width=".8"/>
+            <text x="63" y="48">22.5</text>
+          </g>
+          <!-- notes -->
+          <g transform="translate(430,300)" font-size="10.5">
+            <text x="0" y="0" font-size="11" font-weight="600">NOTES</text>
+            <text x="0" y="20">1. Plate 40 × 34 × 2.4, corner r3 — ends just below the cable gallery (no waste).</text>
+            <text x="0" y="34">&#160;&#160;&#160;~13 cm² VHB per face ≫ the loads. Clean rail + case with IPA first.</text>
+            <text x="0" y="54">2. No screws: the servo CASE is bonded into the pocket with a second tape strip;</text>
+            <text x="0" y="68">&#160;&#160;&#160;two short side walls locate it and take the pushrod reaction in shear.</text>
+            <text x="0" y="82">&#160;&#160;&#160;Walls stop 8 mm short of the shaft end so the unused tabs sit proud in air.</text>
+            <text x="0" y="102">3. Cable exits the case bottom into a 4 mm gallery, out the open long-edge slot —</text>
+            <text x="0" y="116">&#160;&#160;&#160;the lead lays in sideways, the plug never threads through a hole.</text>
+            <text x="0" y="136">4. Shaft points inboard (toward the clip). Body top sits ~3 above the rail top —</text>
+            <text x="0" y="150">&#160;&#160;&#160;verified clear of the slat sweep. Peak tape load ≈ 8 N peel / 22 N shear.</text>
+            <text x="0" y="170">5. Print PETG, plate flat on the bed, 5 perimeters, no supports.</text>
+            <text x="0" y="190">6. Install: connect pushrod, dry-fit until horn plane matches the clip ball, mark,</text>
+            <text x="0" y="204">&#160;&#160;&#160;peel, stick, hold 30 s. Calibrate the endpoints in the web UI.</text>
+          </g>
+        </g>
+      </svg>
+      </div>
+      <p class="callout">
+        Review stage: on approval this becomes a print-ready 3MF (P1) committed with all drawings
+        to the repo.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="no">8</span>Torque budget</h2>
       <p>
         MG90D usable torque ≈ 2.2 kg·cm (stall 2.4–2.8). Worst-case transmission ratio ≤0.84 (A) /
         ≤0.86 (B) means ≥ <strong>~2.6 kg·cm available at the slat crank</strong> — equivalent to
@@ -409,6 +544,8 @@
 <script>
 'use strict';
 const PRESETS = {
+  build: { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
+           armR: 20, rodL: 58, Sx: 24.7, Sy: -49, crankR: 26.6, crankPh: -16, closedDeg: 90, openDeg: 0 },
   frontEdge: { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
            armR: 20, rodL: 46, Sx: 32, Sy: -30, crankR: 24, crankPh: -180, closedDeg: 90, openDeg: 0 },
   rear:  { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
@@ -416,7 +553,7 @@ const PRESETS = {
   front: { R: 36, slatW: 75, pitch: 63, panelT: 28, railTop: 45, rearClear: 46,
            armR: 20, rodL: 52, Sx: -21, Sy: -41, crankR: 26, crankPh: -170, closedDeg: -90, openDeg: 0 },
 };
-const P = Object.assign({}, PRESETS.frontEdge);
+const P = Object.assign({}, PRESETS.build);
 const SHUTTER_FIELDS = [
   ['R','Pivot → rod staple radius','mm'], ['slatW','Slat width','mm'], ['pitch','Slat pitch','mm'],
   ['panelT','Panel / rail thickness','mm'], ['railTop','Rail top below pivot','mm'],

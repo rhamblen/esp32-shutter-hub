@@ -92,14 +92,21 @@ through the gears and demanding perfect alignment).
 > (source: [docs/tilt-linkage-design.html](tilt-linkage-design.html)).
 
 The frame/rail is **28 mm thick (measured)**, which rules out any mortised pocket. The servo
-surface-mounts and drives a printed **slat-hook bracket** (clips over the bottom slat — the tilt
-rod itself sits flush at closed and cannot be gripped).
+surface-mounts and drives a **slat clip** on the bottom slat (the tilt rod itself sits flush at
+closed and cannot be gripped).
 
-**v0.9.1 baseline (as installed — hook on the slat's *front edge*):** pin 24 mm on the front-edge
-line (hangs 06:00 at closed → 03:00 room-side at open), stock 20 mm horn, **M2×25 pushrod at
-46 mm** hole-to-hole, servo axis **(+32, −30)** — tucked under the bottom slat, 18 mm behind the
-rail rear face, fully hidden. ~114° sweep → 90° slat travel, jam margin 11.3 mm, torque ratio
-≤0.85 (≈2.6 kg·cm at slats). Drawing:
+**v0.9.2 build baseline (settled):** the owner's Zemismart-style sleeve clip
+([cad/slat-hook](../cad/slat-hook)) wedges onto the 8 mm slat (fit confirmed); a drill boss under
+the bottom strap, drilled 12 mm from the rear edge, carries the M2 ball pin at **26.6 mm @ −16°**.
+The MG90D cradle **tapes** to the rail's rear face (case bonded in, no screws, tabs unused), axis
+**(+24.7, −49)**, stock 20 mm horn, **M2×35 pushrod at 58 mm**. ~132° sweep → 90° slat travel,
+jam margin 9.3 mm, torque ratio ≤0.77 (≈2.9 kg·cm at slats), rear-most 44.7 mm — everything hidden,
+slats close rear-edge-up. Cradle drawings:
+[diagrams/servo-cradle-p1.svg](diagrams/servo-cradle-p1.svg) and design doc §7.
+
+**v0.9.1 (front-edge hook variant, retained as a preset):** pin 24 mm on the front-edge
+line (06:00 closed → 03:00 room-side open), stock 20 mm horn, **M2×25 pushrod at
+46 mm**, servo axis **(+32, −30)**. ~114° sweep, jam margin 11.3 mm, ratio ≤0.85. Drawing:
 [diagrams/linkage-geometry-front-edge.svg](diagrams/linkage-geometry-front-edge.svg).
 
 The v0.9.0 layouts below remain valid only if the hook's pin can sit near the rear edge (longer
